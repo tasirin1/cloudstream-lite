@@ -77,17 +77,17 @@ object SubtitleHelper {
             // Go for partial matches but only use the best match
             var closestMatch: Pair<LanguageMetadata?, Int> = null to 0
 
-            for (lang in languages) {
+            for ((lang, lowerName, lowerNative) in languagesLowercase) {
                 val score = maxOf(
-                    Levenshtein.ratio(lowLangName, lang.languageName.lowercase()),
+                    Levenshtein.ratio(lowLangName, lowerName),
                     Levenshtein.ratio(
-                        lowLangName, lang.nativeName.lowercase()
+                        lowLangName, lowerNative
                     )
                 )
 
                 // Usually the languageName or nativeName is a substring of the entered name, for example in "English Subtitle"
-                if (lowLangName.contains(lang.languageName, ignoreCase = true) ||
-                    lowLangName.contains(lang.nativeName, ignoreCase = true) ||
+                if (lowLangName.contains(lowerName) ||
+                    lowLangName.contains(lowerNative) ||
                     // Arbitrary cutoff at 80.
                     score > 80
                 ) {
@@ -711,6 +711,11 @@ object SubtitleHelper {
         LanguageMetadata("Zhuang","Saɯ cueŋƅ, Saw cuengh","za","za","zha","zha",""),
         LanguageMetadata("Zulu","isiZulu","zu","zu","zul","zul",""),
     )
+
+    // Fork fix (audit #30): lowercase forms for the fuzzy language
+    // loop, computed once here instead of ~380 times per lookup.
+    val languagesLowercase: List<Triple<LanguageMetadata, String, String>> =
+        languages.map { Triple(it, it.languageName.lowercase(), it.nativeName.lowercase()) }
 
     val indexMapLanguageName = languages.withIndex().associate { (i, lang) -> lang.languageName.lowercase() to i}
     val indexMapNativeName = languages.withIndex().associate { (i, lang) -> lang.nativeName.lowercase() to i}
