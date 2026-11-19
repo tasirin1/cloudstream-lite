@@ -115,8 +115,8 @@ object ShortLink {
                 r = app.get(url, allowRedirects = true)
                 url = r.url
                 val link =
-                    Regex("<iframe[^<>]*src=\\'([^'>]*)\\'[^<>]*>").find(r.text)?.value
-                        ?: Regex("""action="(?:[^/]+.*?/[^/]+/([a-zA-Z0-9_]+))">""").find(r.text)?.value
+                    Regex("<iframe[^<>]*src=\\'([^'>]*)\\'[^<>]*>").find(r.text)?.groupValues?.get(1)
+                        ?: Regex("""action="(?:[^/]+.*?/[^/]+/([a-zA-Z0-9_]+))">""").find(r.text)?.groupValues?.get(1)
                         ?: Regex("""href","((.|\\n)*?)"""").findAll(r.text)
                             .elementAtOrNull(1)?.groupValues?.get(1)
 
@@ -126,7 +126,7 @@ object ShortLink {
             }
         }
 
-        val short = Regex("""^https?://.*?(https?://.*)""").find(url)?.value
+        val short = Regex("""^https?://.*?(https?://.*)""").find(url)?.groupValues?.get(1)
         if (short != null) {
             url = short
         }
@@ -141,7 +141,7 @@ object ShortLink {
         }
         if (url.contains("snip.")) {
             if (url.contains("out_generator")) {
-                url = Regex("url=(.*)\$").find(url)!!.value
+                url = Regex("url=(.*)\$").find(url)?.groupValues?.get(1) ?: url
             } else if (url.contains("/decode/")) {
                 url = app.get(url, allowRedirects = true).url
             }
