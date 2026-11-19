@@ -48,8 +48,15 @@ object SubtitleUtils {
         // We can't have the exact same file as a subtitle
         val isNotDisplayName = !name.equals(display, ignoreCase = true)
 
-        // Check if the file name starts with a cleaned version of the display name
-        val startsWithCleanDisplay = cleanDisplayName(name).startsWith(cleanDisplay, ignoreCase = true)
+        // Check if the file name starts with a cleaned version of the display name.
+        // Fork fix (audit #15): require a boundary after the prefix.
+        // A bare startsWith matched "Show S1 E1" against the subtitle
+        // of "Show S1 E10", deleting other episodes' subtitles.
+        val cleanedName = cleanDisplayName(name)
+        val startsWithCleanDisplay = cleanDisplay.isNotEmpty() &&
+            cleanedName.startsWith(cleanDisplay, ignoreCase = true) &&
+            (cleanedName.length == cleanDisplay.length ||
+                !cleanedName[cleanDisplay.length].isLetterOrDigit())
 
         return hasValidExtension && isNotDisplayName && startsWithCleanDisplay
     }
