@@ -289,22 +289,29 @@ actual class WebViewResolver actual constructor(
             }
         }
 
-        var loop = 0
-        // Timeouts after this amount, 60s
-        val totalTime = timeout
+        try {
+            var loop = 0
+            // Timeouts after this amount, 60s
+            val totalTime = timeout
 
-        val delayTime = 100L
+            val delayTime = 100L
 
-        // A bit sloppy, but couldn't find a better way
-        while (loop < totalTime / delayTime && !shouldExit) {
-            if (fixedRequest != null) return fixedRequest to extraRequestList
-            delay(delayTime)
-            loop += 1
+            // A bit sloppy, but couldn't find a better way
+            while (loop < totalTime / delayTime && !shouldExit) {
+                if (fixedRequest != null) return fixedRequest to extraRequestList
+                delay(delayTime)
+                loop += 1
+            }
+
+            Log.i(TAG, "Web-view timeout after ${totalTime / 1000}s")
+            return fixedRequest to extraRequestList
+        } finally {
+            // Audit sesi 15 #21: a cancelled caller exits through
+            // delay()'s CancellationException; without this the
+            // WebView was never destroyed and kept loading pages for
+            // the rest of the process lifetime.
+            destroyWebView()
         }
-
-        Log.i(TAG, "Web-view timeout after ${totalTime / 1000}s")
-        destroyWebView()
-        return fixedRequest to extraRequestList
     }
 }
 
