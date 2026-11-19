@@ -223,13 +223,16 @@ class DownloadQueueService : Service() {
 
                     // Cant start multiple downloads at once. If this is rerun it may start too many downloads.
                     if (newDownloads > 0) {
-                        _downloadInstances.update { instances ->
-                            val downloadInstance = DownloadQueueManager.popQueue(context)
-                            if (downloadInstance != null) {
-                                downloadInstance.startDownload()
+                        // Fork fix (audit #23): StateFlow.update may run
+                        // its lambda more than once under contention, so
+                        // side effects must not live inside it; a retry
+                        // could pop and start a download that is then
+                        // never tracked in downloadInstances.
+                        val downloadInstance = DownloadQueueManager.popQueue(context)
+                        if (downloadInstance != null) {
+                            downloadInstance.startDownload()
+                            _downloadInstances.update { instances ->
                                 instances + downloadInstance
-                            } else {
-                                instances
                             }
                         }
                     }
