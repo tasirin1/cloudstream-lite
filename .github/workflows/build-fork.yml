@@ -94,7 +94,15 @@ jobs:
         Berkas:
         - `cloudstream-stb-lite.apk` — satu-satunya varian (fork lite-only): STB 32-bit (B860H), armeabi-v7a. Tanda tangannya beda dari rilis sebelumnya (kunci sekali-pakai CI): hapus pemasangan lama dulu, baru pasang.
         NOTES
-        gh release create "${{ github.ref_name }}" \
-          --title "${{ github.ref_name }}" \
-          --notes-file release-notes.md \
-          app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk
+        # Idempotent: re-running a tag build whose release already
+        # exists replaces the APK instead of failing the whole run.
+        if gh release view "${{ github.ref_name }}" > /dev/null 2>&1; then
+          gh release upload "${{ github.ref_name }}" \
+            app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk \
+            --clobber
+        else
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file release-notes.md \
+            app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk
+        fi
