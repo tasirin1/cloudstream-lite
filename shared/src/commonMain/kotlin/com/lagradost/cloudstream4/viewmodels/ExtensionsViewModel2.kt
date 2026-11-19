@@ -124,22 +124,30 @@ data class PluginSortBy(
         return score(p1).compareTo(score(p0))
     }
 
+    // Fork fix (audit #29): memoize per plugin for the lifetime of
+    // this comparator; compare() used to recompute up to two full
+    // Levenshtein DPs for the same plugin on every comparison.
+    private val scoreCache = HashMap<String, Int>()
+
     fun score(plugin: Plugin): Int {
-        val score1 = Levenshtein.partialRatio(
-            plugin.info.name.lowercase(),
-            query
-        )
-        if (score1 > 80) {
-            return score1
+        return scoreCache.getOrPut(plugin.pluginUrl) {
+            val score1 = Levenshtein.partialRatio(
+                plugin.info.name.lowercase(),
+                query
+            )
+            if (score1 > 80) {
+                score1
+            } else {
+                val score2 = plugin.info.description?.take(64)?.lowercase()
+                    ?.let { description ->
+                        Levenshtein.partialRatio(
+                            description,
+                            query
+                        )
+                    } ?: 0
+                maxOf(score1, score2)
+            }
         }
-        val score2 = plugin.info.description?.take(64)?.lowercase()
-            ?.let { description ->
-                Levenshtein.partialRatio(
-                    description,
-                    query
-                )
-            } ?: 0
-        return maxOf(score1, score2)
     }
 }
 
