@@ -34,6 +34,11 @@ object DownloadQueueManager {
     private const val TAG = "DownloadQueueManager"
     const val QUEUE_KEY = "download_queue_key"
 
+    // Fork fix (audit #22): init() may run again when MainActivity is
+    // recreated; the persistence collector must only ever start once.
+    private val queuePersistenceStarted =
+        java.util.concurrent.atomic.AtomicBoolean(false)
+
     /** Flow of all active queued download, no active downloads.
      * This flow may see many changes, do not place expensive observers.
      * downloadInstances is the flow keeping track of active downloads.
@@ -51,9 +56,11 @@ object DownloadQueueManager {
      * Note that this may run twice without the service restarting
      * because MainActivity may be recreated. */
     fun init(context: Context) {
-        ioSafe {
-            _queue.collect { queue ->
-                setKey(QUEUE_KEY, queue)
+        if (queuePersistenceStarted.compareAndSet(false, true)) {
+            ioSafe {
+                _queue.collect { queue ->
+                    setKey(QUEUE_KEY, queue)
+                }
             }
         }
 
