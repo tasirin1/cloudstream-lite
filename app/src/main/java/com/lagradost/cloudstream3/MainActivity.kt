@@ -72,7 +72,6 @@ import com.lagradost.cloudstream3.CommonActivity.setActivityInstance
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.CommonActivity.updateLocale
 import com.lagradost.cloudstream3.CommonActivity.updateTheme
-import com.lagradost.cloudstream3.actions.temp.fcast.FcastManager
 import com.lagradost.cloudstream3.databinding.ActivityMainBinding
 import com.lagradost.cloudstream3.databinding.ActivityMainTvBinding
 import com.lagradost.cloudstream3.databinding.BottomResultviewPreviewBinding
@@ -1924,7 +1923,6 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
         //    runAutoUpdate()
         //}
 
-        FcastManager().init(this, false)
 
         APIRepository.dubStatusActive = getApiDubstatusSettings()
 

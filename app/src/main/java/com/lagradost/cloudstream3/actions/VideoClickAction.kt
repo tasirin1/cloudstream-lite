@@ -30,8 +30,6 @@ import com.lagradost.cloudstream3.actions.temp.PlayMirrorAction
 import com.lagradost.cloudstream3.actions.temp.ViewM3U8Action
 import com.lagradost.cloudstream3.actions.temp.VlcNightlyPackage
 import com.lagradost.cloudstream3.actions.temp.VlcPackage
-import com.lagradost.cloudstream3.actions.temp.WebVideoCastPackage
-import com.lagradost.cloudstream3.actions.temp.fcast.FcastAction
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.ui.result.LinkLoadingResult
 import com.lagradost.cloudstream3.ui.result.ResultEpisode
@@ -94,13 +92,6 @@ object VideoClickActionHolder {
          */
         JustPlayerPackage(),
         /**
-         * Mirror: https://github.com/futo-org/fcast/
-         * Source: https://gitlab.futo.org/videostreaming/fcast/
-         * Stars: 700
-         * Date: Sep 5, 2024
-         */
-        FcastAction(),
-        /**
          * Source: https://github.com/proninyaroslav/libretorrent/
          * Stars: 4.1k
          * Date: Feb 5, 2021
@@ -117,12 +108,6 @@ object VideoClickActionHolder {
          * See VLC
          */
         VlcNightlyPackage(),
-        /**
-         * Source: Proprietary https://www.webvideocaster.com/home/
-         * Reason: The built-in video caster is terrible, and no good FOSS alternatives exist.
-         * If a FOSS caster is found, this should be replaced.
-         */
-        WebVideoCastPackage(),
         /**
          * Source: https://github.com/mpv-android/mpv-android/pull/58/
          * See MPV
