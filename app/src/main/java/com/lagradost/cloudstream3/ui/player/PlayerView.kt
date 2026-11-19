@@ -466,6 +466,14 @@ class PlayerView @JvmOverloads constructor(
 
     /** Releases all player resources. */
     fun release() {
+        // Audit sesi 15 #20: the PiP receiver was only unregistered on
+        // a PiP-mode change; releasing without that event left it
+        // registered on the Activity, answering media controls into a
+        // dead player.
+        pipReceiver?.let {
+            safe { (context as? Activity)?.unregisterReceiver(it) }
+            pipReceiver = null
+        }
         player.release()
         player.releaseCallbacks()
         player = CS3IPlayer()
