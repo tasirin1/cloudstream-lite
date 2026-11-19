@@ -41,11 +41,11 @@ import kotlin.system.exitProcess
 
 class ExceptionHandler(
     val errorFile: File,
-    // Fork addition: a copy of the crash log in the public Downloads
-    // folder, so the log can be read without root/adb (e.g. on TV boxes).
-    // Declared before onError so the trailing lambda at the call site
-    // still binds to onError.
-    val downloadsErrorFile: File? = null,
+    // Fork addition: extra copies of the crash log in folders that can
+    // be read without root/adb (e.g. on TV boxes). Declared before
+    // onError so the trailing lambda at the call site still binds to
+    // onError.
+    val extraErrorFiles: List<File> = emptyList(),
     val onError: (() -> Unit)
 ) : Thread.UncaughtExceptionHandler {
 
@@ -65,11 +65,16 @@ class ExceptionHandler(
             }
         } catch (_: FileNotFoundException) {
         }
-        // Fork addition: mirror the log to Downloads, best effort only.
-        // Fails silently when storage permission is not granted.
-        try {
-            downloadsErrorFile?.let { errorFile.copyTo(it, overwrite = true) }
-        } catch (_: Exception) {
+        // Fork addition: mirror the log to the extra locations, best
+        // effort only. The app-specific external folder needs no
+        // permission; the public Downloads copy fails silently when
+        // storage permission is not granted.
+        for (extra in extraErrorFiles) {
+            try {
+                extra.parentFile?.mkdirs()
+                errorFile.copyTo(extra, overwrite = true)
+            } catch (_: Exception) {
+            }
         }
         // Fork addition: boot-loop guard. If the previous crash happened
         // less than 30s ago, do not restart the app again, otherwise a
@@ -103,28 +108,48 @@ class CloudStreamApp : Application(), SingletonImageLoader.Factory {
         // loading an image or GIF in a splash screen activity.
         // buildImageLoader(applicationContext)
 
-        @Suppress("DEPRECATION")
-        val downloadsErrorFile = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            "cloudstream_last_error.txt"
-        )
-        ExceptionHandler(
-            filesDir.resolve("last_error"),
-            downloadsErrorFile = downloadsErrorFile
-        ) {
-            val intent = context!!.packageManager.getLaunchIntentForPackage(context!!.packageName)
-            startActivity(Intent.makeRestartActivityTask(intent!!.component))
-        }.also {
-            exceptionHandler = it
-            Thread.setDefaultUncaughtExceptionHandler(it)
-        }
-
         AppDebug.isDebug = BuildConfig.DEBUG
     }
 
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)
         context = base
+        // Fork change: install the crash handler here instead of
+        // onCreate. attachBaseContext runs before ContentProviders and
+        // Application.onCreate, so even a crash during provider/startup
+        // initialization gets logged. The log is mirrored to the
+        // app-specific external folder (no storage permission needed,
+        // readable with any file manager) and to public Downloads
+        // (best effort, needs the storage permission on Android 6).
+        if (base != null) {
+            try {
+                val extras = mutableListOf<File>()
+                try {
+                    base.getExternalFilesDir(null)?.let {
+                        extras += File(it, "cloudstream_last_error.txt")
+                    }
+                } catch (_: Exception) {
+                }
+                @Suppress("DEPRECATION")
+                extras += File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    "cloudstream_last_error.txt"
+                )
+                ExceptionHandler(
+                    File(base.filesDir, "last_error"),
+                    extraErrorFiles = extras
+                ) {
+                    val intent =
+                        context!!.packageManager.getLaunchIntentForPackage(context!!.packageName)
+                    startActivity(Intent.makeRestartActivityTask(intent!!.component))
+                }.also {
+                    exceptionHandler = it
+                    Thread.setDefaultUncaughtExceptionHandler(it)
+                }
+            } catch (_: Exception) {
+                // Never let the crash handler setup crash the app itself.
+            }
+        }
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
