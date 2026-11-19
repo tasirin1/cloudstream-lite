@@ -181,7 +181,7 @@ open class TraktProvider : MainAPI() {
                 type = if (isAnime) TvType.AnimeMovie else TvType.Movie,
             ) {
                 this.uniqueUrl = uniqueUrl
-                this.name = mediaDetails.title
+                this.name = mediaDetails.title ?: mediaDetails.ids?.slug ?: ""
                 this.type = if (isAnime) TvType.AnimeMovie else TvType.Movie
                 this.posterUrl = posterUrl
                 this.year = mediaDetails.year
@@ -265,7 +265,7 @@ open class TraktProvider : MainAPI() {
                 episodes = episodes
             ) {
                 this.uniqueUrl = uniqueUrl
-                this.name = mediaDetails.title
+                this.name = mediaDetails.title ?: mediaDetails.ids?.slug ?: ""
                 this.type = if (isAnime) TvType.Anime else TvType.TvSeries
                 this.episodes = episodes
                 this.posterUrl = posterUrl
