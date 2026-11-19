@@ -24,12 +24,19 @@ import java.util.concurrent.ConcurrentHashMap
 
 /** Separate object with helper functions for the downloader */
 object DownloadUtils {
-    private val cachedBitmaps = ConcurrentHashMap<String, Bitmap>()
+    // Fork fix (audit #16): this cache used to grow without bound for
+    // the whole process lifetime; on the low-RAM STB target that is a
+    // slow memory leak. Cap it as a small access-ordered LRU instead.
+    private val cachedBitmaps = object : LinkedHashMap<String, Bitmap>(16, 0.75f, true) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<String, Bitmap>?
+        ): Boolean = size > 32
+    }
     internal fun Context.getImageBitmapFromUrl(
         url: String,
         headers: Map<String, String>? = null
     ): Bitmap? = safe {
-        cachedBitmaps[url]?.let {
+        synchronized(cachedBitmaps) { cachedBitmaps[url] }?.let {
             return@safe it
         }
 
@@ -51,7 +58,9 @@ object DownloadUtils {
         }
 
         bitmap?.let {
-            cachedBitmaps.putIfAbsent(url, it)
+            synchronized(cachedBitmaps) {
+                if (!cachedBitmaps.containsKey(url)) cachedBitmaps[url] = it
+            }
         }
 
         return@safe bitmap
