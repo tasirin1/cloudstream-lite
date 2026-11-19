@@ -24,9 +24,19 @@ value class DeviceLayout(private val value: Int) {
             val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager?
             // AFT = Fire TV
             val model = Build.MODEL.lowercase()
+            // Fork fix: many TV box firmwares (e.g. ZTE B860H) do not report
+            // UI_MODE_TYPE_TELEVISION, so the app started with the phone
+            // layout on a TV. Fall back to the leanback system feature and
+            // to the absence of a touchscreen, which phones always have.
+            val packageManager = context.packageManager
+            val hasLeanbackFeature =
+                packageManager?.hasSystemFeature("android.software.leanback") == true
+            val hasTouchscreen =
+                packageManager?.hasSystemFeature("android.hardware.touchscreen") != false
             return uiModeManager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION || Build.MODEL.contains(
                 "AFT"
             ) || model.contains("firestick") || model.contains("fire tv") || model.contains("chromecast")
+                    || hasLeanbackFeature || !hasTouchscreen
         }
         internal fun layoutToFlag(context : Context, from : Int): DeviceLayout {
             return when(from) {

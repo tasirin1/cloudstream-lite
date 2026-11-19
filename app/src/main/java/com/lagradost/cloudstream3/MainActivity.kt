@@ -2063,8 +2063,10 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
                     SetupFragmentExtensions.newInstance(false)
                 )
             }
-        } catch (e: Exception) {
-            logError(e)
+        } catch (t: Throwable) {
+            // Fork fix: was Exception only; an Error from fragment
+            // inflation on first run escaped and force closed the app.
+            logError(t)
         }
 
 //        Used to check current focus for TV
