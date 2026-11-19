@@ -55,20 +55,24 @@ jobs:
     # Release variant (dex without debug info), armeabi-v7a only,
     # English + Indonesian resources, no torrent native library.
     # The release output is unsigned (no upstream signing secrets in
-    # this fork), so it is signed with the same debug keystore that
-    # signed the debug APKs above, keeping it installable as an
-    # update over them.
+    # this fork), so it is signed with a throwaway keystore generated
+    # in this step. NOTE: its signature differs from the debug APKs,
+    # so the lite APK cannot update them in place; uninstall first.
     - name: Build STB lite release
       run: ./gradlew assemblePrereleaseRelease -PforkLite=true
 
-    - name: Sign STB lite APK with the debug key
+    - name: Sign STB lite APK with a throwaway key
       run: |
         BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
         IN=$(ls app/build/outputs/apk/prerelease/release/*armeabi-v7a*release-unsigned.apk)
         echo "Signing $IN with build-tools $BT"
+        keytool -genkeypair -keystore stb-lite.keystore \
+          -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+          -storepass android -keypass android \
+          -dname "CN=Android Debug,O=Android,C=US"
         "$BT/zipalign" -f 4 "$IN" app/build/outputs/apk/prerelease/release/stb-lite-aligned.apk
         "$BT/apksigner" sign \
-          --ks ~/.android/debug.keystore \
+          --ks stb-lite.keystore \
           --ks-pass pass:android --key-pass pass:android \
           --ks-key-alias androiddebugkey \
           --out app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk \
