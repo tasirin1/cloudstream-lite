@@ -166,7 +166,20 @@ data class MultiActiveQuery<T>(
     }
 
     suspend fun launch(label: T, block: suspend CoroutineScope.() -> Unit) {
-        val currentScope = CoroutineScope(currentCoroutineContext() + supervisor)
+        // Audit sesi 15 #13: parent the supervisor to the caller's job.
+        // Adding a standalone SupervisorJob() to the context REPLACES
+        // the caller's job, which detached every query from e.g.
+        // viewModelScope — plugin downloads kept running after the
+        // extensions screen (and its ViewModel) was gone.
+        val callerJob = currentCoroutineContext()[Job]
+        val activeSupervisor = mutex.withLock {
+            if (supervisor.parent !== callerJob) {
+                supervisor.cancel()
+                supervisor = SupervisorJob(callerJob)
+            }
+            supervisor
+        }
+        val currentScope = CoroutineScope(currentCoroutineContext() + activeSupervisor)
         val obj: suspend CoroutineScope.() -> Unit = {
             try {
                 withContext(dispatcher) {
