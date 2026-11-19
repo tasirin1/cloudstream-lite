@@ -111,9 +111,16 @@ object DownloadUtils {
             VideoDownloadManager.downloadThing(
                 context ?: return@ioSafe,
                 link,
-                "$fileName ${link.name}",
+                // Fork fix (audit #21): link.name comes from the
+                // provider; sanitize it before it becomes a file name.
+                "$fileName ${DownloadFileManagement.sanitizeFilename(link.name)}",
                 folder,
-                if (link.url.contains(".srt")) "srt" else "vtt",
+                // Fork fix (audit #20): keep the real subtitle format
+                // from the URL; ASS/TTML used to be saved as .vtt and
+                // then failed to parse in the player.
+                link.url.substringBefore('?').substringAfterLast('.', "")
+                    .lowercase()
+                    .takeIf { it in setOf("srt", "vtt", "ass", "ssa", "ttml") } ?: "vtt",
                 false,
                 null, createNotificationCallback = {}
             )
