@@ -43,45 +43,45 @@ jobs:
       uses: gradle/actions/setup-gradle@v5
 
     - name: Run Gradle
-      run: ./gradlew assemblePrereleaseDebug
+      run: ./gradlew assemblePrereleaseFullDebug
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v7
       with:
         name: cloudstream-prerelease-debug
-        path: "app/build/outputs/apk/prerelease/debug/*.apk"
+        path: "app/build/outputs/apk/prereleaseFull/debug/*.apk"
 
     # Fork addition: STB lite build for 32-bit TV boxes (B860H class).
-    # Release variant (dex without debug info), armeabi-v7a only,
-    # English + Indonesian resources, no torrent native library.
+    # The "lite" product flavor (release variant: dex without debug
+    # info, English + Indonesian resources, no torrent/FFmpeg/Zipline).
     # The release output is unsigned (no upstream signing secrets in
     # this fork), so it is signed with a throwaway keystore generated
     # in this step. NOTE: its signature differs from the debug APKs,
     # so the lite APK cannot update them in place; uninstall first.
     - name: Build STB lite release
-      run: ./gradlew assemblePrereleaseRelease -PforkLite=true
+      run: ./gradlew assemblePrereleaseLiteRelease
 
     - name: Sign STB lite APK with a throwaway key
       run: |
         BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-        IN=$(ls app/build/outputs/apk/prerelease/release/*armeabi-v7a*release-unsigned.apk)
+        IN=$(ls app/build/outputs/apk/prereleaseLite/release/*armeabi-v7a*release-unsigned.apk)
         echo "Signing $IN with build-tools $BT"
         keytool -genkeypair -keystore stb-lite.keystore \
           -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
           -storepass android -keypass android \
           -dname "CN=Android Debug,O=Android,C=US"
-        "$BT/zipalign" -f 4 "$IN" app/build/outputs/apk/prerelease/release/stb-lite-aligned.apk
+        "$BT/zipalign" -f 4 "$IN" app/build/outputs/apk/prereleaseLite/release/stb-lite-aligned.apk
         "$BT/apksigner" sign \
           --ks stb-lite.keystore \
           --ks-pass pass:android --key-pass pass:android \
           --ks-key-alias androiddebugkey \
-          --out app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk \
-          app/build/outputs/apk/prerelease/release/stb-lite-aligned.apk
-        "$BT/apksigner" verify --print-certs app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk | head -3
-        ls -la app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk
+          --out app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk \
+          app/build/outputs/apk/prereleaseLite/release/stb-lite-aligned.apk
+        "$BT/apksigner" verify --print-certs app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk | head -3
+        ls -la app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk
 
     - name: Upload STB lite Artifact
       uses: actions/upload-artifact@v7
       with:
         name: cloudstream-stb-lite
-        path: "app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk"
+        path: "app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk"

@@ -61,13 +61,6 @@ val generateGitHash = tasks.register<GenerateGitHashTask>("generateGitHash") {
     outputDir.set(layout.buildDirectory.dir("generated/git"))
 }
 
-// Fork addition: STB lite mode, enabled with -PforkLite=true.
-// Builds a single armeabi-v7a APK for low-end 32-bit TV boxes:
-// English + Indonesian resources only and no torrent native library.
-val forkLite = providers.gradleProperty("forkLite")
-    .map { it.equals("true", ignoreCase = true) }
-    .getOrElse(false)
-
 android {
     @Suppress("UnstableApiUsage")
     testOptions {
@@ -110,12 +103,6 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        if (forkLite) {
-            // The app ships dozens of locales; the STB lite build keeps
-            // only English and Indonesian strings.
-            resConfigs("en", "in")
-        }
-
         applicationId = "com.lagradost.cloudstream3"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
@@ -183,16 +170,18 @@ android {
         abi {
             isEnable = true
             reset()
-            if (forkLite) {
-                include("armeabi-v7a")
-            } else {
-                include("armeabi-v7a", "arm64-v8a")
-            }
+            include("armeabi-v7a", "arm64-v8a")
             isUniversalApk = false
         }
     }
 
     flavorDimensions.add("state")
+    // Fork addition: "edition" dimension. "full" is the upstream-like
+    // build; "lite" is the slim build for low-end 32-bit TV boxes
+    // (B860H class): fewer resources, no torrent/FFmpeg/Zipline code
+    // or native libraries. See the lite source sets and the
+    // androidComponents block below.
+    flavorDimensions.add("edition")
     productFlavors {
         create("stable") {
             dimension = "state"
@@ -207,6 +196,15 @@ android {
             }
             versionNameSuffix = "-PRE"
             versionCode = (System.currentTimeMillis() / 60000).toInt()
+        }
+        create("full") {
+            dimension = "edition"
+        }
+        create("lite") {
+            dimension = "edition"
+            // The app ships dozens of locales; lite keeps only
+            // English and Indonesian strings.
+            resConfigs("en", "in")
         }
     }
 
@@ -238,17 +236,25 @@ android {
             // Enables legacy JNI packaging to reduce APK size (similar to builds before minSdk 23).
             // Note: This may increase app startup time slightly.
             useLegacyPackaging = true
-            if (forkLite) {
-                // The torrent engine (Go runtime) is the single biggest
-                // native library (~4.8 MB compressed) and is only loaded
-                // when a torrent stream is opened. The STB lite build
-                // drops it; regular streaming is unaffected.
-                excludes.add("**/libgojni.so")
-            }
         }
     }
 
     namespace = "com.lagradost.cloudstream3"
+}
+
+// Fork addition: native libraries the lite edition must not carry.
+// libgojni.so is the torrent engine (Go runtime, ~4.8 MB compressed),
+// only loaded when a torrent stream is opened. libconscrypt_jni.so
+// belongs to the bundled Conscrypt provider, which lite's target
+// devices (Android < 24) never install (see RequestsHelper), and on
+// newer devices its absence degrades silently via safe{}.
+androidComponents {
+    onVariants { variant ->
+        if (variant.productFlavors.any { it.first == "edition" && it.second == "lite" }) {
+            variant.packaging.jniLibs.excludes.add("**/libgojni.so")
+            variant.packaging.jniLibs.excludes.add("**/libconscrypt_jni.so")
+        }
+    }
 }
 
 dependencies {
