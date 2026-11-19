@@ -715,15 +715,21 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
     }
 
     override fun onDestroy() {
-        filesToDelete.forEach { path ->
-            val result = File(path).deleteRecursively()
-            if (result) {
-                Log.d(TAG, "Deleted temporary file: $path")
-            } else {
-                Log.d(TAG, "Failed to delete temporary file: $path")
+        // Fork fix (audit #45): recursive deletes used to run on the
+        // main thread during teardown; on slow storage (the STB
+        // target) that visibly stalls activity recreation.
+        val toDelete = filesToDelete
+        filesToDelete = setOf()
+        ioSafe {
+            toDelete.forEach { path ->
+                val result = File(path).deleteRecursively()
+                if (result) {
+                    Log.d(TAG, "Deleted temporary file: $path")
+                } else {
+                    Log.d(TAG, "Failed to delete temporary file: $path")
+                }
             }
         }
-        filesToDelete = setOf()
         val broadcastIntent = Intent()
         broadcastIntent.action = "restart_service"
         broadcastIntent.setClass(this, VideoDownloadRestartReceiver::class.java)
