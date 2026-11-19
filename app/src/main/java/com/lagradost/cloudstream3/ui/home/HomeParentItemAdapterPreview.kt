@@ -791,12 +791,6 @@ class HomeParentItemAdapterPreview(
                 observe(viewModel.preview) {
                     updatePreview(it)
                 }
-                /*if (binding is FragmentHomeHeadTvBinding) {
-                    observe(viewModel.apiName) { name ->
-                        binding.homePreviewChangeApi.text = name
-                        binding.homePreviewReloadProvider.isGone = (name == noneApi.name)
-                    }
-                }*/
                 observe(viewModel.resumeWatching) {
                     updateResume(it)
                 }
