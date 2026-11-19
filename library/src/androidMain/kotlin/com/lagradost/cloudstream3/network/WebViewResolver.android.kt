@@ -251,7 +251,24 @@ actual class WebViewResolver actual constructor(
                         handler: SslErrorHandler?,
                         error: SslError?
                     ) {
-                        handler?.proceed() // Ignore ssl issues
+                        // Fork fix (audit #3): do not ignore every SSL
+                        // error. Only tolerate expiry/date/untrusted-chain
+                        // issues on the target host itself (the sketchy
+                        // sites this resolver exists for). A certificate
+                        // for the WRONG host, or any error on another
+                        // host, aborts the resolve instead of trusting
+                        // whatever a network attacker served.
+                        val targetHost = runCatching { java.net.URI(url).host }.getOrNull()
+                        val errorHost = error?.url?.let {
+                            runCatching { java.net.URI(it).host }.getOrNull()
+                        }
+                        val tolerable = error != null && errorHost != null &&
+                            errorHost == targetHost &&
+                            (error.primaryError == SslError.SSL_EXPIRED ||
+                                error.primaryError == SslError.SSL_NOTYETVALID ||
+                                error.primaryError == SslError.SSL_DATE_INVALID ||
+                                error.primaryError == SslError.SSL_UNTRUSTED)
+                        if (tolerable) handler?.proceed() else handler?.cancel()
                     }
                 }
                 webView?.loadUrl(url, headers.toMap())
