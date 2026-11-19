@@ -19,7 +19,11 @@ object DownloadFileManagement {
             tempName = tempName.replace(c, ' ')
         }
         if (removeSpaces) tempName = tempName.replace(" ", "")
-        return tempName.replace("  ", " ").trim(' ')
+        // Fork fix (audit #21): dots survived sanitizing, so a provider
+        // supplied name of ".." (or a leading-dot name) could escape or
+        // shadow entries in the download folder. Strip edge dots and
+        // never return an empty name.
+        return tempName.replace("  ", " ").trim(' ', '.').ifEmpty { "file" }
     }
 
     /**
