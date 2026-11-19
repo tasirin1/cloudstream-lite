@@ -1001,8 +1001,8 @@ class ResultViewModel2 : ViewModel() {
 
         val imdbId = getImdbIdFromSyncData(syncData)
         val tmdbId = getTMDbIdFromSyncData(syncData)
-        val malId = syncData?.get(AccountManager.malApi.idPrefix)
-        val aniListId = syncData?.get(AccountManager.aniListApi.idPrefix)
+        val malId = syncData?.get(LoadResponse.malIdPrefix)
+        val aniListId = syncData?.get(LoadResponse.aniListIdPrefix)
         val normalizedName = normalizeString(checkDuplicateData.name)
         val year = checkDuplicateData.year
 
@@ -1013,8 +1013,8 @@ class ResultViewModel2 : ViewModel() {
             val checks = listOf(
                 { imdbId != null && getImdbIdFromSyncData(librarySyncData) == imdbId },
                 { tmdbId != null && getTMDbIdFromSyncData(librarySyncData) == tmdbId },
-                { malId != null && librarySyncData?.get(AccountManager.malApi.idPrefix) == malId },
-                { aniListId != null && librarySyncData?.get(AccountManager.aniListApi.idPrefix) == aniListId },
+                { malId != null && librarySyncData?.get(LoadResponse.malIdPrefix) == malId },
+                { aniListId != null && librarySyncData?.get(LoadResponse.aniListIdPrefix) == aniListId },
                 { normalizedName == normalizeString(it.name) && yearCheck }
             )
 
@@ -1088,7 +1088,7 @@ class ResultViewModel2 : ViewModel() {
     private fun getImdbIdFromSyncData(syncData: Map<String, String>?): String? {
         return safe {
             val imdbId = readIdFromString(
-                syncData?.get(AccountManager.simklApi.idPrefix)
+                syncData?.get(LoadResponse.simklIdPrefix)
             )[SimklSyncServices.Imdb]
             if (imdbId == "null") null else imdbId
         }
@@ -1097,7 +1097,7 @@ class ResultViewModel2 : ViewModel() {
     private fun getTMDbIdFromSyncData(syncData: Map<String, String>?): String? {
         return safe {
             val tmdbId = readIdFromString(
-                syncData?.get(AccountManager.simklApi.idPrefix)
+                syncData?.get(LoadResponse.simklIdPrefix)
             )[SimklSyncServices.Tmdb]
             if (tmdbId == "null") null else tmdbId
         }
@@ -1668,12 +1668,9 @@ class ResultViewModel2 : ViewModel() {
                         this.year
                     )
 
-                    val kitsuId = AccountManager.kitsuApi.getAnimeIdByTitle(this.name)
-
                     val ids = arrayOf(
-                        AccountManager.malApi.idPrefix to res?.malId?.toString(),
-                        AccountManager.aniListApi.idPrefix to res?.aniId,
-                        AccountManager.kitsuApi.idPrefix to kitsuId
+                        LoadResponse.malIdPrefix to res?.malId?.toString(),
+                        LoadResponse.aniListIdPrefix to res?.aniId
                     )
 
                     if (ids.any { (id, new) ->

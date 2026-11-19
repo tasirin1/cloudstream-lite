@@ -4,12 +4,8 @@ import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.syncproviders.providers.Addic7ed
-import com.lagradost.cloudstream3.syncproviders.providers.AniListApi
-import com.lagradost.cloudstream3.syncproviders.providers.KitsuApi
 import com.lagradost.cloudstream3.syncproviders.providers.LocalList
-import com.lagradost.cloudstream3.syncproviders.providers.MALApi
 import com.lagradost.cloudstream3.syncproviders.providers.OpenSubtitlesApi
-import com.lagradost.cloudstream3.syncproviders.providers.SimklApi
 import com.lagradost.cloudstream3.syncproviders.providers.SubDlApi
 import com.lagradost.cloudstream3.syncproviders.providers.SubSourceApi
 import androidx.core.content.edit
@@ -24,10 +20,6 @@ import java.util.concurrent.TimeUnit
 abstract class AccountManager {
     companion object {
         const val NONE_ID: Int = -1
-        val malApi = MALApi()
-        val kitsuApi = KitsuApi()
-        val aniListApi = AniListApi()
-        val simklApi = SimklApi()
         val localListApi = LocalList()
 
         val openSubtitlesApi = OpenSubtitlesApi()
@@ -173,10 +165,6 @@ abstract class AccountManager {
         }
 
         val allApis = arrayOf(
-            SyncRepo(malApi),
-            SyncRepo(kitsuApi),
-            SyncRepo(aniListApi),
-            SyncRepo(simklApi),
             SyncRepo(localListApi),
             SubtitleRepo(openSubtitlesApi),
             SubtitleRepo(addic7ed),
@@ -224,10 +212,16 @@ abstract class AccountManager {
         // I do not want to place this in the init block as JVM initialization order is weird, and it may cause exceptions
         // accessing other classes
         fun initMainAPI() {
-            LoadResponse.malIdPrefix = malApi.idPrefix
-            LoadResponse.kitsuIdPrefix = kitsuApi.idPrefix
-            LoadResponse.aniListIdPrefix = aniListApi.idPrefix
-            LoadResponse.simklIdPrefix = simklApi.idPrefix
+            // Fork change: the external sync providers (MAL, Kitsu,
+            // AniList, Simkl) were removed on 2026-11-20 (owner slimming
+            // pick 3). The id prefixes stay as literals because
+            // extensions still send these ids in LoadResponse.syncData
+            // and local features (duplicate detection, filler check,
+            // Kitsu episode lookup) key off them.
+            LoadResponse.malIdPrefix = "mal"
+            LoadResponse.kitsuIdPrefix = "kitsu"
+            LoadResponse.aniListIdPrefix = "anilist"
+            LoadResponse.simklIdPrefix = "simkl"
         }
 
         val subtitleProviders = arrayOf(
@@ -237,10 +231,6 @@ abstract class AccountManager {
             SubtitleRepo(subSourceApi)
         )
         val syncApis = arrayOf(
-            SyncRepo(malApi),
-            SyncRepo(kitsuApi),
-            SyncRepo(aniListApi),
-            SyncRepo(simklApi),
             SyncRepo(localListApi)
         )
 
