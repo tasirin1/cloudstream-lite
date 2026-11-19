@@ -92,6 +92,9 @@ fun <T> normalSafeApiCall(apiCall: () -> T): T? {
 fun <T> safe(apiCall: () -> T): T? {
     return try {
         apiCall.invoke()
+    } catch (throwable: CancellationException) {
+        // Fork fix (audit #7): cancellation is not an error; never swallow it.
+        throw throwable
     } catch (throwable: Throwable) {
         logError(throwable)
         return null
@@ -103,6 +106,9 @@ fun <T> safe(apiCall: () -> T): T? {
 suspend fun <T> safeAsync(apiCall: suspend () -> T): T? {
     return try {
         apiCall.invoke()
+    } catch (throwable: CancellationException) {
+        // Fork fix (audit #7): cancellation is not an error; never swallow it.
+        throw throwable
     } catch (throwable: Throwable) {
         logError(throwable)
         return null
@@ -154,6 +160,8 @@ fun CoroutineScope.launchSafe(
     val obj: suspend CoroutineScope.() -> Unit = {
         try {
             block()
+        } catch (throwable: CancellationException) {
+            throw throwable
         } catch (throwable: Throwable) {
             logError(throwable)
         }
@@ -210,6 +218,8 @@ suspend fun <T> safeApiCall(
     return apiCall.ioWork { work ->
         try {
             Resource.Success(work.invoke())
+        } catch (throwable: CancellationException) {
+            throw throwable
         } catch (throwable: Throwable) {
             logError(throwable)
             throwAbleToResource(throwable)
