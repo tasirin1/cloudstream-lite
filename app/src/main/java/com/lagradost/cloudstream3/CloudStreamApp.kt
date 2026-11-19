@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
+import android.os.Environment
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -40,7 +41,10 @@ import kotlin.system.exitProcess
 
 class ExceptionHandler(
     val errorFile: File,
-    val onError: (() -> Unit)
+    val onError: (() -> Unit),
+    // Fork addition: a copy of the crash log in the public Downloads
+    // folder, so the log can be read without root/adb (e.g. on TV boxes).
+    val downloadsErrorFile: File? = null
 ) : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, error: Throwable) {
@@ -59,9 +63,31 @@ class ExceptionHandler(
             }
         } catch (_: FileNotFoundException) {
         }
+        // Fork addition: mirror the log to Downloads, best effort only.
+        // Fails silently when storage permission is not granted.
         try {
-            onError()
+            downloadsErrorFile?.let { errorFile.copyTo(it, overwrite = true) }
         } catch (_: Exception) {
+        }
+        // Fork addition: boot-loop guard. If the previous crash happened
+        // less than 30s ago, do not restart the app again, otherwise a
+        // deterministic startup crash loops forever (crash -> restart ->
+        // crash) and looks like endless force closes on TV boxes.
+        val allowRestart = try {
+            val guardFile = File(errorFile.parentFile, "last_crash_time")
+            val lastCrash = guardFile.takeIf { it.exists() }
+                ?.readText()?.trim()?.toLongOrNull() ?: 0L
+            val now = System.currentTimeMillis()
+            guardFile.writeText(now.toString())
+            now - lastCrash > 30_000
+        } catch (_: Exception) {
+            true
+        }
+        if (allowRestart) {
+            try {
+                onError()
+            } catch (_: Exception) {
+            }
         }
         exitProcess(1)
     }
@@ -75,7 +101,15 @@ class CloudStreamApp : Application(), SingletonImageLoader.Factory {
         // loading an image or GIF in a splash screen activity.
         // buildImageLoader(applicationContext)
 
-        ExceptionHandler(filesDir.resolve("last_error")) {
+        @Suppress("DEPRECATION")
+        val downloadsErrorFile = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+            "cloudstream_last_error.txt"
+        )
+        ExceptionHandler(
+            filesDir.resolve("last_error"),
+            downloadsErrorFile = downloadsErrorFile
+        ) {
             val intent = context!!.packageManager.getLaunchIntentForPackage(context!!.packageName)
             startActivity(Intent.makeRestartActivityTask(intent!!.component))
         }.also {
