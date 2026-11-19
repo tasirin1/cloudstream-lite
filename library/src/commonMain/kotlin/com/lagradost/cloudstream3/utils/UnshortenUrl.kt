@@ -174,7 +174,7 @@ object ShortLink {
         Regex("""<a[^>]+href="([^"]+)".*Continue""").findAll(page)
             .map { it.value.replace("""<a href="""", "") }
             .toList().forEach { link ->
-                if (link.contains("https://maxstream.video") || link.contains("https://uprot.net") && link != url) {
+                if ((link.contains("https://maxstream.video") || link.contains("https://uprot.net")) && link != url) {
                     return link
                 }
             }
