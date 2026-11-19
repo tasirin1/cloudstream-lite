@@ -1,5 +1,6 @@
 package com.lagradost.cloudstream3
 
+import android.text.format.Formatter.formatFileSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
