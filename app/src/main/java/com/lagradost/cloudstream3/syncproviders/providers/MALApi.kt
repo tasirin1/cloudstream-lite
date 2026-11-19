@@ -450,11 +450,13 @@ class MALApi : SyncAPI() {
                 null,
                 plot = this.node.synopsis,
                 releaseDate = if (this.node.startDate == null) null else try {
-                    Date.from(
+                    // Fork fix: Date.from(Instant) needs API 26 on Android;
+                    // the millis constructor is identical and always safe.
+                    Date(
                         Instant.from(
                             DateTimeFormatter.ofPattern(if (this.node.startDate.length == 4) "yyyy" else if (this.node.startDate.length == 7) "yyyy-MM" else "yyyy-MM-dd")
                                 .parse(this.node.startDate)
-                        )
+                        ).toEpochMilli()
                     )
                 } catch (_: RuntimeException) {
                     null

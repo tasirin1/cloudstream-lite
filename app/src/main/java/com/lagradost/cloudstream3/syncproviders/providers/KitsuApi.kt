@@ -509,9 +509,11 @@ class KitsuApi: SyncAPI() {
                 null,
                 plot = synopsis,
                 releaseDate = if (startDate == null) null else try {
-                    Date.from(LocalDate.parse(startDate).atStartOfDay()
+                    // Fork fix: Date.from(Instant) needs API 26 on Android;
+                    // the millis constructor is identical and always safe.
+                    Date(LocalDate.parse(startDate).atStartOfDay()
                         .atZone(ZoneId.systemDefault())
-                        .toInstant())
+                        .toInstant().toEpochMilli())
                 } catch (_: RuntimeException) {
                     null
                 }

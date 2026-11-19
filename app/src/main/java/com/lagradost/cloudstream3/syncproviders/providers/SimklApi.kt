@@ -41,7 +41,6 @@ import kotlinx.serialization.Serializable
 import java.math.BigInteger
 import java.security.SecureRandom
 import java.text.SimpleDateFormat
-import java.time.Instant
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -187,7 +186,9 @@ class SimklApi : SyncAPI() {
                     this.timeZone = TimeZone.getTimeZone("UTC")
                 }.parse(
                     string ?: return null
-                )?.toInstant()?.epochSecond
+                    // Fork fix: Date.toInstant() needs API 26 on Android;
+                    // Date.time is the same value on every API level.
+                )?.let { it.time / 1000 }
             } catch (e: Exception) {
                 logError(e)
                 return null
@@ -200,11 +201,9 @@ class SimklApi : SyncAPI() {
                 SimpleDateFormat(SIMKL_DATE_FORMAT, Locale.getDefault()).apply {
                     this.timeZone = TimeZone.getTimeZone("UTC")
                 }.format(
-                    Date.from(
-                        Instant.ofEpochSecond(
-                            unixTime ?: return null
-                        )
-                    )
+                    // Fork fix: Date.from(Instant) needs API 26 on Android;
+                    // the millis constructor is identical and always safe.
+                    Date((unixTime ?: return null) * 1000)
                 )
             } catch (_: Exception) {
                 null
