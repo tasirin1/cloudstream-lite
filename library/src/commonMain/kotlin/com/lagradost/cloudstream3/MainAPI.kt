@@ -2585,8 +2585,22 @@ fun Episode.addDate(date: String?, format: String = "yyyy-MM-dd") {
                 // May lose time, but better than failing.
                 val components = runCatching {
                     DateTimeComponents.parse(date, fmt)
-                }.recoverCatching {
-                    DateTimeComponents.parse(date.trimStart().take(format.length), fmt)
+                }.recoverCatching { original ->
+                    // Fork fix (audit #34): the old fallback cut the
+                    // string to the PATTERN's length, but a pattern
+                    // like "d MMM yyyy" renders longer than it is
+                    // written ("17 May 2026"), silently chopping real
+                    // dates into unparseable ones. Trim one character
+                    // at a time until the remainder parses instead.
+                    var candidate = date.trim()
+                    var parsed: DateTimeComponents? = null
+                    while (candidate.isNotEmpty() && parsed == null) {
+                        parsed = runCatching {
+                            DateTimeComponents.parse(candidate, fmt)
+                        }.getOrNull()
+                        if (parsed == null) candidate = candidate.dropLast(1).trimEnd()
+                    }
+                    parsed ?: throw original
                 }.getOrThrow()
 
                 /**
