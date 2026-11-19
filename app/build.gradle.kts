@@ -104,6 +104,9 @@ android {
 
     defaultConfig {
         applicationId = "com.lagradost.cloudstream3"
+        // Lite-only fork: the app ships dozens of locales upstream;
+        // keep only English and Indonesian strings.
+        resConfigs("en", "in")
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = libs.versions.versionCode.get().toInt()
@@ -170,18 +173,20 @@ android {
         abi {
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a")
+            // Lite-only fork: the target STB is 32-bit only.
+            include("armeabi-v7a")
             isUniversalApk = false
         }
     }
 
     flavorDimensions.add("state")
-    // Fork addition: "edition" dimension. "full" is the upstream-like
-    // build; "lite" is the slim build for low-end 32-bit TV boxes
-    // (B860H class): fewer resources, no torrent/FFmpeg/Zipline code
-    // or native libraries. See the lite source sets and the
-    // androidComponents block below.
-    flavorDimensions.add("edition")
+    // Fork state (owner decision 2026-11-19): LITE-ONLY. The former
+    // "edition" dimension (full/lite) is gone; the single build is
+    // what lite was: the slim build for low-end 32-bit TV boxes
+    // (B860H class) — English + Indonesian resources only (see
+    // defaultConfig), no torrent/FFmpeg/Zipline code or native
+    // libraries. FFmpeg (nextlib) is re-added only if a playback
+    // error is ever proven to be codec-caused.
     productFlavors {
         create("stable") {
             dimension = "state"
@@ -196,15 +201,6 @@ android {
             }
             versionNameSuffix = "-PRE"
             versionCode = (System.currentTimeMillis() / 60000).toInt()
-        }
-        create("full") {
-            dimension = "edition"
-        }
-        create("lite") {
-            dimension = "edition"
-            // The app ships dozens of locales; lite keeps only
-            // English and Indonesian strings.
-            resConfigs("en", "in")
         }
     }
 
@@ -250,18 +246,17 @@ configurations.configureEach {
     exclude(group = "org.jetbrains.compose.ui", module = "ui-tooling")
 }
 
-// Fork addition: native libraries the lite edition must not carry.
-// libgojni.so is the torrent engine (Go runtime, ~4.8 MB compressed),
-// only loaded when a torrent stream is opened. libconscrypt_jni.so
-// belongs to the bundled Conscrypt provider, which lite's target
-// devices (Android < 24) never install (see RequestsHelper), and on
-// newer devices its absence degrades silently via safe{}.
+// Fork addition: native libraries the (lite-only) build must not
+// carry. libgojni.so is the torrent engine (Go runtime, ~4.8 MB
+// compressed), only loaded when a torrent stream is opened.
+// libconscrypt_jni.so belongs to the bundled Conscrypt provider,
+// which the target devices (Android < 24) never install (see
+// RequestsHelper), and on newer devices its absence degrades
+// silently via safe{}.
 androidComponents {
     onVariants { variant ->
-        if (variant.productFlavors.any { it.first == "edition" && it.second == "lite" }) {
-            variant.packaging.jniLibs.excludes.add("**/libgojni.so")
-            variant.packaging.jniLibs.excludes.add("**/libconscrypt_jni.so")
-        }
+        variant.packaging.jniLibs.excludes.add("**/libgojni.so")
+        variant.packaging.jniLibs.excludes.add("**/libconscrypt_jni.so")
     }
 }
 
@@ -299,10 +294,11 @@ dependencies {
     implementation(libs.bundles.media3)
     implementation(libs.video)
 
-    // FFmpeg Decoding (full edition only; lite uses hardware decoding
-    // and its own DefaultRenderersFactory-based factories, see
-    // src/lite/.../FixedNextRenderersFactory.kt)
-    "fullImplementation"(libs.bundles.nextlib)
+    // FFmpeg Decoding (nextlib) is NOT included in the lite-only
+    // build: playback uses hardware decoding via the
+    // DefaultRenderersFactory-based FixedNextRenderersFactory in
+    // src/main. Re-add nextlib only if a playback error is proven
+    // codec-caused (owner decision 2026-11-19).
 
     // Anime-db for filler
     implementation(libs.anime.db)
@@ -329,9 +325,8 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio) // NIO Flavor Needed for NewPipeExtractor
     implementation(libs.conscrypt.android) // To Fix SSL Fu*kery on Android 9
     implementation(libs.jackson.module.kotlin) // JSON Parser
-    // Zipline has zero references in app code; keep it for the full
-    // edition (possible extension runtime use), drop it from lite.
-    "fullImplementation"(libs.zipline)
+    // Zipline is not included in the lite-only build (it has zero
+    // references in app code).
 
     // Temp/deprecated; will be removed once extensions have time to migrate from using it
     implementation("com.google.code.gson:gson:2.11.0")

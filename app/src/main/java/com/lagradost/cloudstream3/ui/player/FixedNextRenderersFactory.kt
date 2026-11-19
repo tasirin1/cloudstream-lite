@@ -13,14 +13,13 @@ import androidx.media3.exoplayer.text.TextOutput
 import androidx.media3.exoplayer.text.TextRenderer
 
 /**
- * Lite edition replacements for the nextlib-based factories in
- * src/full. The lite edition does not ship nextlib/FFmpeg at all:
+ * The lite-only build does not ship nextlib/FFmpeg at all (this used
+ * to be the lite flavor's replacement for the nextlib-based factory):
  * software decoding stays off (the TV default upstream as well) and
  * playback uses the platform hardware decoders via
- * [DefaultRenderersFactory]. The text renderer and the dynamic range
- * compressor audio sink behave exactly like the full edition; only
- * the FFmpeg extension renderers are absent, so the software
- * decoding setting simply has no extra effect in this edition.
+ * [DefaultRenderersFactory]. Only the FFmpeg extension renderers are
+ * absent, so the software decoding setting simply has no extra
+ * effect.
  */
 @UnstableApi
 class FixedNextRenderersFactory(

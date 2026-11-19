@@ -4,9 +4,11 @@ name: Fork Build
 # Workflow upstream (Pre-release, Archive build, Dokka) dinonaktifkan
 # di fork ini karena bergantung pada secrets organisasi recloudstream
 # (GH_APP_ID/GH_APP_KEY + repo privat recloudstream/secrets) yang tidak
-# ada di fork. Workflow ini TIDAK memakai secret apa pun: APK
-# prerelease debug ditandatangani debug key bawaan Android dan bisa
-# langsung dipasang untuk uji.
+# ada di fork. Workflow ini TIDAK memakai secret apa pun.
+#
+# Fork ini LITE-ONLY (keputusan owner 2026-11-19): hanya ada satu
+# varian — prerelease release untuk STB 32-bit (B860H) — yang
+# ditandatangani kunci sekali-pakai buatan CI.
 
 on:
   push:
@@ -45,52 +47,41 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5
 
-    - name: Run Gradle
-      run: ./gradlew assemblePrereleaseFullDebug
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: cloudstream-prerelease-debug
-        path: "app/build/outputs/apk/prereleaseFull/debug/*.apk"
-
-    # Fork addition: STB lite build for 32-bit TV boxes (B860H class).
-    # The "lite" product flavor (release variant: dex without debug
-    # info, English + Indonesian resources, no torrent/FFmpeg/Zipline).
     # The release output is unsigned (no upstream signing secrets in
     # this fork), so it is signed with a throwaway keystore generated
-    # in this step. NOTE: its signature differs from the debug APKs,
-    # so the lite APK cannot update them in place; uninstall first.
-    - name: Build STB lite release
-      run: ./gradlew assemblePrereleaseLiteRelease
+    # in the sign step below. NOTE: its signature differs from one
+    # release to the next (throwaway CI key), so a new lite APK cannot
+    # update an installed one in place; uninstall first.
+    - name: Build lite release
+      run: ./gradlew assemblePrereleaseRelease
 
-    - name: Sign STB lite APK with a throwaway key
+    - name: Sign lite APK with a throwaway key
       run: |
         BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-        IN=$(ls app/build/outputs/apk/prereleaseLite/release/*armeabi-v7a*release-unsigned.apk)
+        IN=$(ls app/build/outputs/apk/prerelease/release/*armeabi-v7a*release-unsigned.apk)
         echo "Signing $IN with build-tools $BT"
         keytool -genkeypair -keystore stb-lite.keystore \
           -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
           -storepass android -keypass android \
           -dname "CN=Android Debug,O=Android,C=US"
-        "$BT/zipalign" -f 4 "$IN" app/build/outputs/apk/prereleaseLite/release/stb-lite-aligned.apk
+        "$BT/zipalign" -f 4 "$IN" app/build/outputs/apk/prerelease/release/stb-lite-aligned.apk
         "$BT/apksigner" sign \
           --ks stb-lite.keystore \
           --ks-pass pass:android --key-pass pass:android \
           --ks-key-alias androiddebugkey \
-          --out app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk \
-          app/build/outputs/apk/prereleaseLite/release/stb-lite-aligned.apk
-        "$BT/apksigner" verify --print-certs app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk | head -3
-        ls -la app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk
+          --out app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk \
+          app/build/outputs/apk/prerelease/release/stb-lite-aligned.apk
+        "$BT/apksigner" verify --print-certs app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk | head -3
+        ls -la app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk
 
-    - name: Upload STB lite Artifact
+    - name: Upload lite Artifact
       uses: actions/upload-artifact@v7
       with:
         name: cloudstream-stb-lite
-        path: "app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk"
+        path: "app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk"
 
     # Fork addition: automatic GitHub release. Pushing a version tag
-    # (v4.9.x) publishes a full release with all three APKs from this
+    # (v4.9.x) publishes a full release with the lite APK from this
     # same build; branch pushes only produce artifacts for testing.
     - name: Publish GitHub release (tag builds only)
       if: startsWith(github.ref, 'refs/tags/v')
@@ -101,13 +92,9 @@ jobs:
         Rilis otomatis Tasirin CloudStream dari tag versi (workflow Fork Build).
 
         Berkas:
-        - `cloudstream-stb-lite.apk` — STB 32-bit (B860H), edisi lite. Tanda tangannya beda dari varian debug dan dari rilis lite sebelumnya (kunci sekali-pakai CI): hapus pemasangan lama dulu, baru pasang.
-        - `app-prerelease-full-armeabi-v7a-debug.apk` — STB, edisi full.
-        - `app-prerelease-full-arm64-v8a-debug.apk` — HP 64-bit, edisi full.
+        - `cloudstream-stb-lite.apk` — satu-satunya varian (fork lite-only): STB 32-bit (B860H), armeabi-v7a. Tanda tangannya beda dari rilis sebelumnya (kunci sekali-pakai CI): hapus pemasangan lama dulu, baru pasang.
         NOTES
         gh release create "${{ github.ref_name }}" \
           --title "${{ github.ref_name }}" \
           --notes-file release-notes.md \
-          app/build/outputs/apk/prereleaseLite/release/cloudstream-stb-lite.apk \
-          app/build/outputs/apk/prereleaseFull/debug/app-prerelease-full-armeabi-v7a-debug.apk \
-          app/build/outputs/apk/prereleaseFull/debug/app-prerelease-full-arm64-v8a-debug.apk
+          app/build/outputs/apk/prerelease/release/cloudstream-stb-lite.apk

@@ -124,6 +124,8 @@ WAJIB dicatat di tabel ini pada commit yang sama.
 | 2026-11-19 | Nama aplikasi diganti mengikuti pola repo aplikasi owner lainnya (Tasirin Music, Tasirin Cast): `app_name` = **"Tasirin CloudStream"**; override prerelease "CloudStream Beta" dihapus agar mewarisi nama yang sama. Nama folder unduhan (`app_name_download_path` = "Cloudstream") SENGAJA tidak diubah agar unduhan lama tidak yatim. Perintah owner juga: rilis GitHub diterbitkan sebagai rilis penuh, tanpa label pre-release | `app/src/main/res/values/strings.xml`, `app/src/prerelease/res/values/strings.xml` (dihapus) |
 | 2026-11-19 | **Maraton audit gelombang 2-4 (sesi #14)**: CancellationException tak lagi ditelan (`safe*`, ParCollections); peta plugin dibaca lewat kunci yang sama dengan tulisannya; update manual plugin tak lagi menghapus berkas lama sebelum pengganti terunduh; hash plugin terverifikasi unduhan dicek ulang saat load (file tertukar ditolak); token OAuth dienkripsi AES-GCM via Android KeyStore (+ migrasi plaintext); refresh token diserialkan per repo; cache akun dimuat ulang saat ganti profil; IV HLS & tanggal & UnshortenUrl diperbaiki; unduhan HLS hanya sukses bila semua segmen tertulis; receiver PiP & looper torrent diatomikkan; 8 berkas mati + blok terkomentar besar dihapus; cek `BuildConfig.FLAVOR` memakai awalan sejak dimensi `edition`. Keputusan tercatat: #12 (timeout/cache klien bawaan diterima — bawaan OkHttp waras) & #48 (gson/fuzzywuzzy dipertahankan demi ekstensi lama) tanpa perubahan kode | banyak berkas di `app/`, `library/`, `shared/` (lihat riwayat git sesi #14) |
 | 2026-11-19 | **Maraton audit menyeluruh (temuan sesi #13)**: #1 player menyimpan & memulihkan default TLS proses di `releasePlayer()` (tak lagi buta TLS seumur aplikasi); #3 WebViewResolver hanya menoleransi sertifikat kedaluwarsa/tak-terpercaya di host target, host lain dibatalkan; #5 unduhan berkas + segmen/playlist/kunci HLS diverifikasi TLS-nya; #25 IV HLS di-decode sebagai hex + IV bawaan = nomor urut media (RFC 8216); #42/#44 receiver PiP: action bernama-ruang, `RECEIVER_NOT_EXPORTED`, extra dibatasi rentang enum, instance lama dilepas sebelum diganti. Keputusan tercatat (bukan perubahan kode): #2 `insecureApp` dipertahankan demi ABI ekstensi (kode ekstensi memang sudah tepercaya penuh; tak ada pemakaian internal sensitif); #4 `usesCleartextTraffic` dipertahankan (ekosistem sumber ekstensi banyak yang HTTP murni; mematikannya memutus fungsi inti) | `app/.../ui/player/CS3IPlayer.kt`, `library/.../network/WebViewResolver.android.kt`, `app/.../utils/downloader/DownloadManager.kt`, `library/.../utils/M3u8Helper.kt`, `app/.../ui/player/{PlayerView,IPlayer}.kt` |
+| 2026-11-19 | **Maraton audit ke-2 (temuan sesi #15, 21 temuan Kritikal+Tinggi)**: bom waktu `FillerEpisodeCheck.calc()` dibuang (aplikasi membeku 6–10 mnt sesudah dibuka); cek segmen HLS dipindah ke `downloadHLS` yang benar (unduhan file tunggal tak lagi selalu gagal); timeout `withTimeout` di dalam `safeApiCall` jadi kegagalan, bukan exception lolos; relaksasi TLS player dijaga refcount bersama; cek SSL WebView membaca seluruh set error; `loadLinksPrev` benar-benar mundur; jangkar hash plugin disimpan juga oleh jalur unduh UI baru + dikunci + tak lagi fail-open senyap; registrasi plugin di-rollback bila `load()` gagal; job `MultiActiveQuery` di-parent ke job pemanggil; Cancel update-semua benar-benar membatalkan unduhan; WebView resolver selalu menghancurkan WebView di `finally` | banyak berkas di `app/`, `library/`, `shared/` (lihat riwayat git sesi #16) |
+| 2026-11-19 | **LITE-ONLY (keputusan owner)**: dimensi flavor `edition` dihapus — varian full + arm64 hilang, tinggal satu build = bekas lite: ABI hanya `armeabi-v7a`, `resConfigs("en","in")` di `defaultConfig`, pengecualian `libgojni.so`/`libconscrypt_jni.so` berlaku semua varian, nextlib (FFmpeg) + Zipline dibuang (FFmpeg dipasang lagi HANYA bila error putar terbukti akibat codec), `FixedNextRenderersFactory` versi lite + 10 font rintisan pindah ke `src/main`, `src/full` & `src/lite` dihapus. Fork Build kini membangun `assemblePrereleaseRelease` saja dan rilis berisi 1 APK (`cloudstream-stb-lite.apk`) | `app/build.gradle.kts`, `app/src/main/...`, `.github/workflows/build-fork.yml` |
 
 ## Cara kerja (aturan owner, berlaku di semua repo Tasirin)
 
@@ -156,12 +158,11 @@ WAJIB dicatat di tabel ini pada commit yang sama.
 - **Build resmi fork = workflow `Fork Build`**
   (`.github/workflows/build-fork.yml`, kustomisasi fork 2026-11-19):
   jalan pada push ke `master` (selain `*.md`/`*.json`) dan
-  `workflow_dispatch`, TANPA secret apa pun, menjalankan
-  `./gradlew assemblePrereleaseFullDebug` (artifact
-  `cloudstream-prerelease-debug`: APK full v7a + arm64, tertanda
-  debug key) dan `./gradlew assemblePrereleaseLiteRelease` +
-  tanda tangan kunci sekali-pakai CI (artifact
-  `cloudstream-stb-lite`).
+  `workflow_dispatch`, TANPA secret apa pun. Sejak keputusan
+  LITE-ONLY (2026-11-19) hanya menjalankan
+  `./gradlew assemblePrereleaseRelease` + tanda tangan kunci
+  sekali-pakai CI (artifact `cloudstream-stb-lite`: satu APK
+  armeabi-v7a).
 - **Aturan rilis (perintah owner 2026-11-19)**: rilis GitHub
   diterbitkan sebagai **rilis penuh** (BUKAN pre-release), dan
   nomornya berjalan menaik dari basis upstream: `v4.9.1`, `v4.9.2`,
@@ -171,9 +172,10 @@ WAJIB dicatat di tabel ini pada commit yang sama.
   `v4.9.6`.
 - **Rilis OTOMATIS (perintah owner 2026-11-19)**: cukup push tag
   `v4.9.*` — workflow Fork Build membangun lalu menerbitkan rilis
-  penuh berisi 3 APK dari build yang sama (langkah "Publish GitHub
-  release", hanya jalan di build tag). JANGAN lagi unduh artifact
-  dan unggah manual. Push branch biasa tetap hanya artifact uji.
+  penuh berisi 1 APK lite dari build yang sama (langkah "Publish
+  GitHub release", hanya jalan di build tag; sebelum LITE-ONLY
+  isinya 3 APK). JANGAN lagi unduh artifact dan unggah manual.
+  Push branch biasa tetap hanya artifact uji.
 - Tiga workflow upstream **DINONAKTIFKAN manual** di fork ini
   (GitHub Actions settings, berkasnya tidak diubah): `Pre-release`,
   `Archive build`, `Dokka`. Ketiganya bergantung pada secrets
