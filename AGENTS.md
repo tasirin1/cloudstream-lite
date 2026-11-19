@@ -118,6 +118,7 @@ WAJIB dicatat di tabel ini pada commit yang sama.
 | 2026-11-19 | Gambar latar pratinjau subtitle dikompres ulang 1920×1080 → 1280×720 q72: 1,66 MB → 0,11 MB (audit ringan sesi #11) | `app/src/main/res/drawable/subtitles_preview_background.jpg` |
 | 2026-11-19 | Properti `-PforkLite` DIGANTI flavor produk `lite` (dimensi `edition`: `full`/`lite`): `resConfigs("en","in")` di flavor lite; buang `.so` per-varian via `androidComponents.onVariants` (libgojni + libconscrypt_jni); Fork Build memakai `assemblePrereleaseFullDebug` + `assemblePrereleaseLiteRelease` | `app/build.gradle.kts`, `.github/workflows/build-fork.yml` |
 | 2026-11-19 | Dependensi khusus edisi full: nextlib (FFmpeg) + Zipline jadi `fullImplementation`; `FixedNextRenderersFactory` pindah ke `src/full`, edisi lite memakai factory berbasis `DefaultRenderersFactory` dengan nama kelas sama (tanpa FFmpeg — decode lunak nonaktif di lite) | `app/build.gradle.kts`, `app/src/full/.../FixedNextRenderersFactory.kt`, `app/src/lite/.../FixedNextRenderersFactory.kt` |
+| 2026-11-19 | Font subtitle edisi lite dipangkas: 10 font pilihan (Lucida, STIX, Ubuntu, Poppins, Verdana, Futura, Consola, Open Sans, Times, Comic Sans) dioverride di `src/lite/res/font` dengan berkas font terkecil (Gotham, 56 KB) — nama tetap valid, hemat ±1,6 MB; yang asli penuh tetap: Trebuchet, Netflix Sans, Google Sans (Product Sans, juga font UI) | `app/src/lite/res/font/*.ttf` |
 
 ## Cara kerja (aturan owner, berlaku di semua repo Tasirin)
 
