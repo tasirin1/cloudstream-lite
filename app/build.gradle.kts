@@ -61,6 +61,13 @@ val generateGitHash = tasks.register<GenerateGitHashTask>("generateGitHash") {
     outputDir.set(layout.buildDirectory.dir("generated/git"))
 }
 
+// Fork addition: STB lite mode, enabled with -PforkLite=true.
+// Builds a single armeabi-v7a APK for low-end 32-bit TV boxes:
+// English + Indonesian resources only and no torrent native library.
+val forkLite = providers.gradleProperty("forkLite")
+    .map { it.equals("true", ignoreCase = true) }
+    .getOrElse(false)
+
 android {
     @Suppress("UnstableApiUsage")
     testOptions {
@@ -103,6 +110,12 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
+        if (forkLite) {
+            // The app ships dozens of locales; the STB lite build keeps
+            // only English and Indonesian strings.
+            resConfigs("en", "in")
+        }
+
         applicationId = "com.lagradost.cloudstream3"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
@@ -170,7 +183,11 @@ android {
         abi {
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a")
+            if (forkLite) {
+                include("armeabi-v7a")
+            } else {
+                include("armeabi-v7a", "arm64-v8a")
+            }
             isUniversalApk = false
         }
     }
@@ -221,6 +238,13 @@ android {
             // Enables legacy JNI packaging to reduce APK size (similar to builds before minSdk 23).
             // Note: This may increase app startup time slightly.
             useLegacyPackaging = true
+            if (forkLite) {
+                // The torrent engine (Go runtime) is the single biggest
+                // native library (~4.8 MB compressed) and is only loaded
+                // when a torrent stream is opened. The STB lite build
+                // drops it; regular streaming is unaffected.
+                excludes.add("**/libgojni.so")
+            }
         }
     }
 
