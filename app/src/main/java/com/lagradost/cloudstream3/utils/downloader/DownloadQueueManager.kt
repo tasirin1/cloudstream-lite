@@ -226,10 +226,11 @@ object DownloadQueueManager {
         val context = CloudStreamApp.context ?: return@safe
         val fileInfo = getDownloadFileInfo(context, downloadQueueWrapper.id)
         val isComplete = fileInfo != null &&
-                // Assure no division by 0
                 fileInfo.totalBytes > 0 &&
-                // If more than 98% downloaded then do not add to queue
-                (fileInfo.fileLength.toFloat() / fileInfo.totalBytes.toFloat()) > 0.98f
+                // Fork fix (audit #17): 98% is not complete. A download
+                // that died at 98.5% used to be treated as finished and
+                // could never be resumed; only a full byte count is done.
+                fileInfo.fileLength >= fileInfo.totalBytes
         // Do not queue completed files!
         if (isComplete) return@safe
 
