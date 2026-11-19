@@ -877,8 +877,11 @@ object PluginManager {
                 unloadPlugin(pluginData.savedData.filePath)
             } else {
                 val existingFile = File(pluginData.savedData.filePath)
-                if (existingFile.exists()) existingFile.delete()
-
+                // Fork fix (audit #8): do NOT delete the current plugin
+                // first. downloadPluginToFile downloads to a temp file,
+                // verifies the hash and only then atomically replaces
+                // the target; deleting up front lost a working plugin
+                // whenever the update download failed.
                 if (downloadPlugin(
                         activity,
                         pluginData.onlineData.plugin.url,
