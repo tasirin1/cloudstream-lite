@@ -167,7 +167,14 @@ object APIHolder {
     fun getApiFromUrlNull(url: String?): MainAPI? {
         if (url == null) return null
         return allProviders.withLock {
-            allProviders.firstOrNull { url.startsWith(it.mainUrl) }
+            allProviders.firstOrNull { api ->
+                // Require a boundary after the base url so a lookalike
+                // host (streamtape.com.evil.example) does not match
+                // (audit sesi 15 #8).
+                url.startsWith(api.mainUrl) &&
+                    (url.length == api.mainUrl.length || api.mainUrl.endsWith("/") ||
+                        url[api.mainUrl.length] in "/?#:")
+            }
         }
     }
 

@@ -947,7 +947,13 @@ suspend fun loadExtractor(
     // Iterate in reverse order so the new registered ExtractorApi takes priority
     for (index in apisSnapshot.lastIndex downTo 0) {
         val extractor = apisSnapshot[index]
-        if (compareUrl.startsWith(extractor.mainUrl.replace(schemaStripRegex, ""))) {
+        val extractorBase = extractor.mainUrl.replace(schemaStripRegex, "")
+        // Require a boundary after the base url so a lookalike host
+        // (streamtape.com.evil.example) does not match (audit sesi 15 #8).
+        if (compareUrl.startsWith(extractorBase) &&
+            (compareUrl.length == extractorBase.length || extractorBase.endsWith("/") ||
+                compareUrl[extractorBase.length] in "/?#:")
+        ) {
             try {
                 extractor.getUrl(currentUrl, referer, subtitleCallback, callback)
             } catch (e: Exception) {
