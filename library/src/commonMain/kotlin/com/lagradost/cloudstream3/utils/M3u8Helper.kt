@@ -99,6 +99,32 @@ object M3u8Helper2 {
         return toBytes16Big(index + 1)
     }
 
+    /**
+     * Fork fix (audit #25): an HLS IV attribute is a hexadecimal
+     * string (RFC 8216), not text. Decode it into bytes and
+     * normalize to the 16-byte AES block size (left-pad short
+     * values, keep the low 16 bytes of long ones). Returns an
+     * empty array when there is no usable IV, so callers fall
+     * back to the media-sequence IV.
+     */
+    private fun parseEncryptionIv(raw: String?): ByteArray {
+        if (raw.isNullOrBlank()) return byteArrayOf()
+        val hex = raw.trim().removePrefix("0x").removePrefix("0X")
+            .takeWhile { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }
+        if (hex.isEmpty()) return byteArrayOf()
+        val padded = if (hex.length % 2 == 1) "0$hex" else hex
+        val decoded = ByteArray(padded.length / 2) {
+            padded.substring(it * 2, it * 2 + 2).toInt(16).toByte()
+        }
+        return when {
+            decoded.size == 16 -> decoded
+            decoded.size < 16 -> ByteArray(16 - decoded.size) + decoded
+            else -> decoded.copyOfRange(decoded.size - 16, decoded.size)
+        }
+    }
+
+    private val MEDIA_SEQUENCE_REGEX = Regex("#EXT-X-MEDIA-SEQUENCE:(\\d+)")
+
     @OptIn(DelicateCryptographyApi::class)
     fun getDecrypted(
         secretKey: ByteArray,
@@ -190,6 +216,9 @@ object M3u8Helper2 {
 
         val size get() = allTsLinks.size
 
+        /** Fork fix (audit #25): base for the default per-segment IV. */
+        var mediaSequence: Int = 0
+
         suspend fun resolveLinkWhileSafe(
             index: Int,
             tries: Int = 3,
@@ -248,7 +277,15 @@ object M3u8Helper2 {
             if (tsData.size < 128 && tsData.all { it >= 0 }) throw ErrorLoadingException("ASCII found instead of data")
 
             return if (isEncrypted) {
-                getDecrypted(encryptionData, tsData, encryptionIv, index)
+                // Fork fix (audit #25): with no explicit IV attribute,
+                // the IV is the segment's media sequence number
+                // (RFC 8216 section 5.2), not index + 1.
+                val iv = if (encryptionIv.isEmpty()) {
+                    toBytes16Big(mediaSequence + index)
+                } else {
+                    encryptionIv
+                }
+                getDecrypted(encryptionData, tsData, iv, index)
             } else {
                 tsData
             }
@@ -331,7 +368,7 @@ object M3u8Helper2 {
             encryptionState = true
             val encryptionUrl = resolveUrl(playlistStream.streamUrl, match[2])
 
-            encryptionIv = match[3].encodeToByteArray()
+            encryptionIv = parseEncryptionIv(match[3])
             val encryptionKeyResponse =
                 app.get(encryptionUrl, headers = playlistStream.headers, verify = false)
             val body = encryptionKeyResponse.body
@@ -350,6 +387,9 @@ object M3u8Helper2 {
 
         if (allTsList.isEmpty()) throw IllegalStateException("M3u8 must contains TS files")
 
+        val mediaSequence = MEDIA_SEQUENCE_REGEX.find(playlistResponse)
+            ?.groupValues?.get(1)?.toIntOrNull() ?: 0
+
         return LazyHlsDownloadData(
             encryptionData = encryptionData,
             encryptionIv = encryptionIv,
@@ -357,6 +397,8 @@ object M3u8Helper2 {
             allTsLinks = allTsList,
             relativeUrl = relativeUrl,
             headers = playlistStream.headers
-        )
+        ).apply {
+            this.mediaSequence = mediaSequence
+        }
     }
 }
