@@ -162,6 +162,19 @@ android {
         }
     }
 
+    // Fork addition: split the APK per ABI and drop the x86 ABIs.
+    // The universal APK was ~92 MB because it carried the native
+    // libraries (FFmpeg, torrent, QuickJS, Conscrypt) for 4 ABIs.
+    // The fork targets TV boxes (armeabi-v7a) and phones (arm64-v8a).
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
     flavorDimensions.add("state")
     productFlavors {
         create("stable") {
