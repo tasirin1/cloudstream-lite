@@ -162,6 +162,14 @@ class CS3IPlayer : IPlayer {
         } ?: false
 
     private var ignoreSSL: Boolean = true
+
+    // Fork fix (audit #1): the ignoreSSL block below replaces the
+    // PROCESS-WIDE HttpsURLConnection defaults. The previous defaults
+    // are captured here on first use and restored in releasePlayer(),
+    // so the rest of the app does not stay TLS-blind after playback.
+    private var previousHostnameVerifier: javax.net.ssl.HostnameVerifier? = null
+    private var previousSslSocketFactory: javax.net.ssl.SSLSocketFactory? = null
+
     private var playBackSpeed: Float = 1.0f
 
     /**
@@ -601,6 +609,16 @@ class CS3IPlayer : IPlayer {
 
     private fun releasePlayer(saveTime: Boolean = true) {
         Log.i(TAG, "releasePlayer")
+        // Fork fix (audit #1): undo the process-wide TLS relaxation
+        // that playback applied, if it did.
+        previousHostnameVerifier?.let {
+            HttpsURLConnection.setDefaultHostnameVerifier(it)
+            previousHostnameVerifier = null
+        }
+        previousSslSocketFactory?.let {
+            HttpsURLConnection.setDefaultSSLSocketFactory(it)
+            previousSslSocketFactory = null
+        }
         eventLooperIndex += 1
         if (saveTime)
             updatedTime()
@@ -1954,7 +1972,13 @@ class CS3IPlayer : IPlayer {
             currentLink = link
 
             if (ignoreSSL) {
-                // Disables ssl check
+                // Disables ssl check for playback only. The defaults are
+                // process-wide, so capture the originals first and let
+                // releasePlayer() restore them (fork fix, audit #1).
+                if (previousHostnameVerifier == null) {
+                    previousHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
+                    previousSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory()
+                }
                 val sslContext: SSLContext = SSLContext.getInstance("TLS")
                 sslContext.init(null, arrayOf(SSLTrustManager()), SecureRandom())
                 sslContext.createSSLEngine()
