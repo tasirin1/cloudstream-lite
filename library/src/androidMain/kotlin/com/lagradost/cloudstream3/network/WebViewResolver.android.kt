@@ -149,7 +149,11 @@ actual class WebViewResolver actual constructor(
                         val webViewUrl = request.url.toString()
                         Log.i(TAG, "Loading WebView URL: $webViewUrl")
 
-                        if (script != null) {
+                        // Fork fix (audit #10): the resolver script only
+                        // makes sense for the page itself; evaluating it
+                        // for every sub-resource (images, XHR, fonts)
+                        // multiplied main-thread work and callbacks.
+                        if (script != null && request.isForMainFrame) {
                             runOnMainThread {
                                 view.evaluateJavascript(script)
                                 { scriptCallback?.invoke(it) }
