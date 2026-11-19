@@ -1,8 +1,5 @@
 package com.lagradost.cloudstream3
 
-import android.text.format.Formatter.formatFileSize
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,23 +19,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lagradost.cloudstream3.mvvm.getStackTracePretty
-import com.lagradost.cloudstream3.plugins.PluginManager
-import com.lagradost.cloudstream3.ui.settings.ApkUpdater
-import com.lagradost.cloudstream3.ui.settings.GithubReleases
-import com.lagradost.cloudstream3.ui.settings.GithubReleases.APK_CONTENT_TYPE
-import com.lagradost.cloudstream3.ui.settings.GithubReleases.APK_PRERELEASE
-import com.lagradost.cloudstream3.ui.settings.GithubReleases.APK_REPOSITORY
-import com.lagradost.cloudstream3.ui.settings.GithubReleases.APK_USERNAME
-import com.lagradost.cloudstream3.utils.GitInfo.currentCommitHash
 import com.lagradost.cloudstream3.utils.parseMarkdown
 import com.lagradost.cloudstream4.compose.BlackButton
 import com.lagradost.cloudstream4.compose.Screen
 import com.lagradost.cloudstream4.compose.WhiteButton
-import com.lagradost.cloudstream4.rememberAppSettings
 import com.lagradost.cloudstream4.viewmodels.GithubAction
-import com.lagradost.cloudstream4.viewmodels.GithubAction.AutoSearchForUpdate
 import com.lagradost.cloudstream4.viewmodels.GithubAction.Dismiss
 import com.lagradost.cloudstream4.viewmodels.GithubAction.SearchForUpdate
 import com.lagradost.cloudstream4.viewmodels.GithubAction.SkipUpdate
@@ -49,34 +35,18 @@ import com.lagradost.cloudstream4.viewmodels.GithubViewModel
 import com.mihon.material.padding
 
 object MainActivityScreen : Screen {
-    private var hasSearchedForUpdate: Boolean = false
 
     @Composable
     fun githubViewModel(): GithubViewModel? {
-        // By having the ComponentActivity as the owner we can have a singleton viewmodel
-        val activity = LocalActivity.current as? ComponentActivity ?: return null
-        val settings = rememberAppSettings()
-        return viewModel(viewModelStoreOwner = activity) {
-            GithubViewModel(
-                remoteUserName = APK_USERNAME,
-                remoteRepository = APK_REPOSITORY,
-                remotePrereleaseTag = APK_PRERELEASE,
-                remoteContentType = APK_CONTENT_TYPE,
-                versionName = BuildConfig.VERSION_NAME,
-                isPrerelease = BuildConfig.FLAVOR.startsWith("prerelease"), // Fork fix (audit #49): FLAVOR is now "prereleaseFull"/"stableLite" since the edition dimension was added
-                isDebug = BuildConfig.DEBUG,
-                buildSha = activity.currentCommitHash(),
-                settings = settings,
-                updater = ApkUpdater,
-                repository = GithubReleases,
-            ).apply {
-                /** Only search once per session when not in safe mode */
-                if (!hasSearchedForUpdate && !PluginManager.isSafeMode()) {
-                    hasSearchedForUpdate = true
-                    onAction(AutoSearchForUpdate)
-                }
-            }
-        }
+        // Fork change: app self-update is removed in this fork (see
+        // InAppUpdater). Upstream's Compose updater compared this
+        // build's commit against the recloudstream/cloudstream
+        // pre-release tag and offered the upstream APK, which would
+        // silently replace the fork and all of its fixes. Returning
+        // null disables the auto-search, the update dialog and the
+        // manual check in the updates settings screen; every call
+        // site already null-guards the result.
+        return null
     }
 
     @Composable
