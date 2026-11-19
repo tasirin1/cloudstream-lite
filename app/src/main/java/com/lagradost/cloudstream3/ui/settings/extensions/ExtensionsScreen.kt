@@ -1213,8 +1213,8 @@ object ExtensionsScreen : Screen {
             modifier = modifier
         ) {
             val cs3Plugin = plugin.downloadLocation?.let { location ->
-                (plugin.source?.pluginUrl?.let(PluginManager.urlPlugins::get)
-                    ?: (PluginManager.plugins[location])) as? com.lagradost.cloudstream3.plugins.Plugin
+                (plugin.source?.pluginUrl?.let { PluginManager.getPluginByUrl(it) }
+                    ?: PluginManager.getPluginByPath(location)) as? com.lagradost.cloudstream3.plugins.Plugin
             }
             val settings = cs3Plugin?.openSettings
 

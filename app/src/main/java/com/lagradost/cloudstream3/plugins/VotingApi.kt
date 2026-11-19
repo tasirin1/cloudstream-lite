@@ -56,7 +56,7 @@ object VotingApi {
         getKey<Boolean>("cs3-votes/${transformUrl(pluginUrl)}") ?: false
 
     fun canVote(pluginUrl: String): Boolean =
-        PluginManager.urlPlugins.contains(pluginUrl)
+        PluginManager.hasPluginUrl(pluginUrl)
 
     private val voteLock = Mutex()
 

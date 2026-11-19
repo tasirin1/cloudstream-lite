@@ -119,8 +119,8 @@ class PluginAdapter(
         if (item.isDownloaded) {
             // On local plugins page the filepath is provided instead of url.
             val plugin =
-                (PluginManager.urlPlugins[metadata.url]
-                    ?: (PluginManager.plugins[metadata.url])) as? com.lagradost.cloudstream3.plugins.Plugin
+                (PluginManager.getPluginByUrl(metadata.url)
+                    ?: PluginManager.getPluginByPath(metadata.url)) as? com.lagradost.cloudstream3.plugins.Plugin
 
             if (plugin?.openSettings != null) {
                 binding.actionSettings.isVisible = true

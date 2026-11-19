@@ -198,6 +198,19 @@ object PluginManager {
     val urlPlugins: MutableMap<String, BasePlugin> =
         LinkedHashMap<String, BasePlugin>()
 
+    // Fork fix (audit #6): the maps are plain LinkedHashMaps whose
+    // writes are guarded by synchronized(map) blocks. Route ALL reads
+    // through the same lock; iterating or reading the raw maps from
+    // other threads while a load writes can corrupt them.
+    fun getPluginByPath(filePath: String): BasePlugin? =
+        synchronized(plugins) { plugins[filePath] }
+
+    fun getPluginByUrl(url: String): BasePlugin? =
+        synchronized(urlPlugins) { urlPlugins[url] }
+
+    fun hasPluginUrl(url: String): Boolean =
+        synchronized(urlPlugins) { urlPlugins.containsKey(url) }
+
     private val classLoaders: MutableMap<PathClassLoader, BasePlugin> =
         HashMap<PathClassLoader, BasePlugin>()
 
@@ -688,7 +701,7 @@ object PluginManager {
 
     fun unloadPlugin(absolutePath: String) {
         Log.i(TAG, "Unloading plugin: $absolutePath")
-        val plugin = plugins[absolutePath]
+        val plugin = synchronized(plugins) { plugins[absolutePath] }
         if (plugin == null) {
             Log.w(TAG, "Couldn't find plugin $absolutePath")
             return

@@ -448,7 +448,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
                             pinnedphashset.contains(providerApi.name)
                         pinIcon.visibility = if (isPinned) View.VISIBLE else View.GONE
 
-                        val pluginInstance = providerApi.sourcePlugin?.let { PluginManager.plugins[it] } as? Plugin
+                        val pluginInstance = providerApi.sourcePlugin?.let { PluginManager.getPluginByPath(it) } as? Plugin
                         val isDownloadedPluginWithSettings = pluginInstance?.openSettings != null && !isLayout(TV)
 
                         settingsIcon.visibility = if (isDownloadedPluginWithSettings) View.VISIBLE else View.GONE
@@ -718,7 +718,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
             homePreviewSettingsButton.setOnClickListener { view ->
                 val apiName = homeViewModel.apiName.value
                 val plugin = APIHolder.getApiFromNameNull(apiName)
-                    ?.sourcePlugin?.let { PluginManager.plugins[it] } as? Plugin
+                    ?.sourcePlugin?.let { PluginManager.getPluginByPath(it) } as? Plugin
                 val openSettings = plugin?.openSettings
                 if (openSettings != null) {
                     try {
@@ -835,7 +835,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
             binding.apply {
                 if (isLayout(TV or EMULATOR)) {
                     val plugin = APIHolder.getApiFromNameNull(homeViewModel.apiName.value)
-                        ?.sourcePlugin?.let { PluginManager.plugins[it] } as? Plugin
+                        ?.sourcePlugin?.let { PluginManager.getPluginByPath(it) } as? Plugin
                     homePreviewSettingsButton.isGone = plugin?.openSettings == null
                 }
                 
