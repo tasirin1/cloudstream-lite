@@ -122,10 +122,12 @@ open class TraktProvider : MainAPI() {
         val logoUrl = fixPath(mediaDetails?.images?.logo?.firstOrNull())
 
         val resActor = getApi("$traktApiUrl/$moviesOrShows/${mediaDetails?.ids?.trakt}/people?extended=full,images")
-        val actors = parseJson<People>(resActor).cast?.map {
+        // Fork fix (audit #33): one cast entry without a person/name
+        // used to crash the whole load via !!; skip such entries.
+        val actors = parseJson<People>(resActor).cast?.mapNotNull {
             ActorData(
                 Actor(
-                    name = it.person?.name!!,
+                    name = it.person?.name ?: return@mapNotNull null,
                     image = fixPath(it.person.images?.headshot?.firstOrNull())
                 ),
                 roleString = it.character
@@ -165,7 +167,7 @@ open class TraktProvider : MainAPI() {
             ).toJson()
 
             return newMovieLoadResponse(
-                name = mediaDetails?.title!!,
+                name = mediaDetails?.title ?: mediaDetails?.ids?.slug ?: "", // Fork fix (audit #33): no !! on API data
                 url = data.toJson(),
                 dataUrl = linkData.toJson(),
                 type = if (isAnime) TvType.AnimeMovie else TvType.Movie,
@@ -249,7 +251,7 @@ open class TraktProvider : MainAPI() {
             }
 
             return newTvSeriesLoadResponse(
-                name = mediaDetails?.title!!,
+                name = mediaDetails?.title ?: mediaDetails?.ids?.slug ?: "", // Fork fix (audit #33): no !! on API data
                 url = data.toJson(),
                 type = if (isAnime) TvType.Anime else TvType.TvSeries,
                 episodes = episodes
