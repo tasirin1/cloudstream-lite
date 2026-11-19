@@ -72,21 +72,10 @@ object M3u8Helper2 {
             }
     }
 
-    private val ENCRYPTION_DETECTION_REGEX = Regex("#EXT-X-KEY:METHOD=([^,]+),")
     private val ENCRYPTION_URL_IV_REGEX =
         Regex("#EXT-X-KEY:METHOD=([^,]+),URI=\"([^\"]+)\"(?:,IV=(.*))?")
-    private val QUALITY_REGEX =
-        Regex("""#EXT-X-STREAM-INF:(?:(?:.*?(?:RESOLUTION=\d+x(\d+)).*?\s+(.*))|(?:.*?\s+(.*)))""")
     private val TS_EXTENSION_REGEX =
         Regex("""#EXTINF:(([0-9]*[.])?[0-9]+|).*\n(.+?\n)""") // fuck it we ball, who cares about the type anyways
-
-    private fun absoluteExtensionDetermination(url: String): String? {
-        val split = url.split("/")
-        val gg: String = split[split.size - 1].split("?")[0]
-        return if (gg.contains(".")) {
-            gg.split(".").ifEmpty { null }?.last()
-        } else null
-    }
 
     private fun toBytes16Big(n: Int): ByteArray {
         return ByteArray(16) {
