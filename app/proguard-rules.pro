@@ -33,3 +33,9 @@
 # kotlinx.serialization generated serializers outside com.lagradost.
 -keep class **$$serializer { *; }
 -keep class **$*$$serializer { *; }
+
+# Rhino (org.mozilla.javascript) optionally uses the desktop-only
+# java.beans introspection API, which does not exist on Android; the
+# references are guarded at runtime. Without this, R8 aborts with
+# "Missing class java.beans.*" errors.
+-dontwarn java.beans.**
