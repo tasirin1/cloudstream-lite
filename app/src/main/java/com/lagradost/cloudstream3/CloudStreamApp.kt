@@ -41,10 +41,12 @@ import kotlin.system.exitProcess
 
 class ExceptionHandler(
     val errorFile: File,
-    val onError: (() -> Unit),
     // Fork addition: a copy of the crash log in the public Downloads
     // folder, so the log can be read without root/adb (e.g. on TV boxes).
-    val downloadsErrorFile: File? = null
+    // Declared before onError so the trailing lambda at the call site
+    // still binds to onError.
+    val downloadsErrorFile: File? = null,
+    val onError: (() -> Unit)
 ) : Thread.UncaughtExceptionHandler {
 
     override fun uncaughtException(thread: Thread, error: Throwable) {
