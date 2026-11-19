@@ -669,6 +669,7 @@ object PluginManager {
             Log.w(TAG, "Loading online plugin $fileName without a stored integrity anchor")
         }
 
+        var loadedInstance: BasePlugin? = null
         return try {
             // In case of Android 14+ then
             try {
@@ -708,6 +709,7 @@ object PluginManager {
                 loader.loadClass(manifest.pluginClassName) as Class<out BasePlugin?>
             val pluginInstance: BasePlugin =
                 pluginClass.getDeclaredConstructor().newInstance() as BasePlugin
+            loadedInstance = pluginInstance
 
             // Sets with the proper version
             setPluginData(data.copy(version = version))
@@ -752,6 +754,21 @@ object PluginManager {
             currentlyLoading = null
             true
         } catch (e: Throwable) {
+            // Audit sesi 15 #12: roll back the registration. The
+            // instance enters all three maps before load() runs, so a
+            // plugin whose load() threw used to stay registered, look
+            // loaded, and block every retry via the duplicate check.
+            loadedInstance?.let { instance ->
+                synchronized(plugins) {
+                    if (plugins[filePath] === instance) plugins.remove(filePath)
+                }
+                synchronized(classLoaders) {
+                    classLoaders.entries.removeAll { it.value === instance }
+                }
+                synchronized(urlPlugins) {
+                    urlPlugins.entries.removeAll { it.value === instance }
+                }
+            }
             Log.e(TAG, "Failed to load $file: ${Log.getStackTraceString(e)}")
             showToast(
                 // context.getActivity(), // we are not always on the main thread
