@@ -81,8 +81,9 @@ data class Editor(
     }
 
     fun apply() {
+        // Fork fix (audit #41): no forced System.gc() on every write;
+        // it stalled the calling thread for no benefit.
         editor.apply()
-        System.gc()
     }
 }
 
