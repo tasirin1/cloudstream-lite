@@ -291,8 +291,10 @@ dependencies {
     implementation(libs.bundles.media3)
     implementation(libs.video)
 
-    // FFmpeg Decoding
-    implementation(libs.bundles.nextlib)
+    // FFmpeg Decoding (full edition only; lite uses hardware decoding
+    // and its own DefaultRenderersFactory-based factories, see
+    // src/lite/.../FixedNextRenderersFactory.kt)
+    fullImplementation(libs.bundles.nextlib)
 
     // Anime-db for filler
     implementation(libs.anime.db)
@@ -319,7 +321,9 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio) // NIO Flavor Needed for NewPipeExtractor
     implementation(libs.conscrypt.android) // To Fix SSL Fu*kery on Android 9
     implementation(libs.jackson.module.kotlin) // JSON Parser
-    implementation(libs.zipline)
+    // Zipline has zero references in app code; keep it for the full
+    // edition (possible extension runtime use), drop it from lite.
+    fullImplementation(libs.zipline)
 
     // Temp/deprecated; will be removed once extensions have time to migrate from using it
     implementation("com.google.code.gson:gson:2.11.0")
