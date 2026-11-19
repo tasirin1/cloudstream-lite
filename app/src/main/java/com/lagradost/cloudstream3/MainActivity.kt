@@ -89,7 +89,6 @@ import com.lagradost.cloudstream3.network.initClient
 import com.lagradost.cloudstream3.plugins.PluginManager
 import com.lagradost.cloudstream3.plugins.PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_loadAllOnlinePlugins
 import com.lagradost.cloudstream3.plugins.PluginManager.loadSinglePlugin
-import com.lagradost.cloudstream3.receivers.VideoDownloadRestartReceiver
 import com.lagradost.cloudstream3.services.SubscriptionWorkManager
 import com.lagradost.cloudstream3.syncproviders.AccountManager
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.APP_STRING
@@ -730,10 +729,9 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
                 }
             }
         }
-        val broadcastIntent = Intent()
-        broadcastIntent.action = "restart_service"
-        broadcastIntent.setClass(this, VideoDownloadRestartReceiver::class.java)
-        this.sendBroadcast(broadcastIntent)
+        // Fork fix (audit #47): the restart_service broadcast went to
+        // VideoDownloadRestartReceiver, whose body was fully commented
+        // out and which was disabled in the manifest; both are removed.
         // Fork fix (audit #46): the static launcher's callback captures
         // an Activity; drop the reference on destroy so a destroyed
         // activity is not retained until the next registration.

@@ -245,14 +245,6 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".receivers.VideoDownloadRestartReceiver"
-            android:enabled="false"
-            android:exported="false">
-            <intent-filter android:exported="false">
-                <action android:name="restart_service" />
-            </intent-filter>
-        </receiver>
 
         <receiver
             android:name=".receivers.PackageInstallerStatusReceiver"
