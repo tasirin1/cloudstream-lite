@@ -12,11 +12,9 @@ import com.lagradost.cloudstream3.CommonActivity
 import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.MainActivity
 import com.lagradost.cloudstream3.R
-import com.lagradost.cloudstream3.actions.temp.BiglyBTPackage
 import com.lagradost.cloudstream3.actions.temp.CopyClipboardAction
 import com.lagradost.cloudstream3.actions.temp.JustPlayerPackage
 import com.lagradost.cloudstream3.actions.temp.KodiPackage
-import com.lagradost.cloudstream3.actions.temp.LibreTorrentPackage
 import com.lagradost.cloudstream3.actions.temp.MpvExPackage
 import com.lagradost.cloudstream3.actions.temp.MpvKtPackage
 import com.lagradost.cloudstream3.actions.temp.MpvKtPreviewPackage
@@ -91,18 +89,6 @@ object VideoClickActionHolder {
          * Date: Nov 16, 2020
          */
         JustPlayerPackage(),
-        /**
-         * Source: https://github.com/proninyaroslav/libretorrent/
-         * Stars: 4.1k
-         * Date: Feb 5, 2021
-         */
-        LibreTorrentPackage(),
-        /**
-         * Source: https://github.com/BiglySoftware/BiglyBT-Android/
-         * Stars: 500
-         * Date: Nov 15, 2017
-         */
-        BiglyBTPackage(),
         // forks/backup apps
         /**
          * See VLC

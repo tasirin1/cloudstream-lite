@@ -742,6 +742,7 @@
     <string name="subs_edge_size">Edge Size</string>
     <string name="torrent_preferred_media">Enable torrent in Settings/Providers/Preferred media</string>
     <string name="torrent_not_accepted">Restart app and accept Stream Torrent pop-up to proceed.</string>
+    <string name="torrent_not_supported">Torrent playback is not supported in Tasirin CloudStream.</string>
     <string name="software_decoding">Software decoding</string>
     <string name="software_decoding_desc">Software decoding enables the player to play video files not supported by your device, but may cause laggy or unstable playback on high resolution.</string>
     <string name="volume_exceeded_100">Volume has exceeded 100%</string>
