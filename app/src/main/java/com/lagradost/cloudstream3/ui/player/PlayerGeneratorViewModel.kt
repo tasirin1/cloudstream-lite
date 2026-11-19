@@ -257,7 +257,9 @@ class PlayerGeneratorViewModel : ViewModel() {
     fun loadLinksPrev() {
         Log.i(TAG, "loadLinksPrev")
         if (generator?.hasPrev(episodeIndex) == true) {
-            episodeIndex += 1
+            // Was += 1, a copy of loadLinksNext: "previous episode"
+            // loaded the NEXT episode (audit sesi 15 #18).
+            episodeIndex -= 1
             loadLinks()
         }
     }
