@@ -44,6 +44,11 @@ abstract class AccountManager {
 
         fun accounts(prefix: String): Array<AuthData> {
             require(prefix != "NONE")
+            // Fork fix (audit #40): serve from the in-memory cache
+            // instead of re-parsing the stored JSON on every call.
+            // The cache is kept in sync by updateAccounts and is
+            // refreshed wholesale on profile switches.
+            synchronized(cachedAccounts) { cachedAccounts[prefix] }?.let { return it }
             return loadAccountsFromDisk(prefix)
         }
 
