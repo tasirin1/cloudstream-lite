@@ -1094,12 +1094,6 @@ class CS3IPlayer : IPlayer {
     // race, so two loopers could share an index (zombie looper) or the
     // new one died instantly. AtomicInteger makes each claim unique.
     private val eventLooperIndex = java.util.concurrent.atomic.AtomicInteger(0)
-            } catch (t: Throwable) {
-                logError(t)
-            }
-            delay(1000)
-        }
-    }
 
     private fun buildExoPlayer(
         context: Context,
