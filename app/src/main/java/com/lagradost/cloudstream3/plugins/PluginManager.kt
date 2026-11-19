@@ -185,11 +185,18 @@ object PluginManager {
         runCatching { getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY) }
             .getOrNull()?.get(filePath)
 
+    // Serializes the read-modify-write in storePluginHash: parallel
+    // downloads (amap) used to race and silently drop anchors
+    // (audit sesi 15 #10).
+    private val pluginHashLock = Any()
+
     fun storePluginHash(filePath: String, hash: String) {
-        val current = runCatching {
-            getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
-        }.getOrNull() ?: emptyMap()
-        setKey(PLUGIN_FILE_HASHES_KEY, current + (filePath to hash))
+        synchronized(pluginHashLock) {
+            val current = runCatching {
+                getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
+            }.getOrNull() ?: emptyMap()
+            setKey(PLUGIN_FILE_HASHES_KEY, current + (filePath to hash))
+        }
     }
 
     fun getPluginsOnline(): Array<PluginData> {
