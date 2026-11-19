@@ -489,6 +489,10 @@ class ExtensionsViewModel2(
     )
     private val repositoryDispatcher = MultiActiveQuery<Uuid>(dispatcher = Dispatchers.IO)
     private val downloadDispatcher = MultiActiveQuery<Uuid>(dispatcher = Dispatchers.IO)
+
+    // Plugins launched by the current update-all run, so that
+    // CancelPluginsUpdate can stop exactly those (audit sesi 15 #14).
+    private val updateAllPluginIds = mutableSetOf<Uuid>()
     private val addRepositoryDispatcher = SingleActiveQuery(dispatcher = Dispatchers.IO)
     private val updatePluginsDispatcher = SingleActiveQuery(dispatcher = Dispatchers.IO)
 
@@ -520,6 +524,16 @@ class ExtensionsViewModel2(
 
             ExtensionsAction.CancelPluginsUpdate -> {
                 viewModelScope.launch {
+                    // Audit sesi 15 #14: actually stop the update-all
+                    // downloads, not just hide the dialog — every
+                    // finished download used to rewrite the dialog
+                    // state and make it reappear.
+                    val ids = synchronized(updateAllPluginIds) {
+                        updateAllPluginIds.toList()
+                    }
+                    for (id in ids) {
+                        downloadDispatcher.cancelOne(id)
+                    }
                     updatePluginsDispatcher.launch {
                         updateState {
                             copy(updateAllPluginsDialog = null)
@@ -875,6 +889,10 @@ class ExtensionsViewModel2(
 
     private suspend fun updateAllPlugins() = updatePluginsDispatcher.launch {
         val plugins = state.value.plugins.data.values.filter { it.downloadLocation != null }
+        synchronized(updateAllPluginIds) {
+            updateAllPluginIds.clear()
+            updateAllPluginIds.addAll(plugins.map { it.uuid })
+        }
         val updateMutex = Mutex()
         var failed = 0
         var downloaded = 0
