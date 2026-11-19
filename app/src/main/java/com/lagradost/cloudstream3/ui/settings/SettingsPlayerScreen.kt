@@ -18,7 +18,6 @@ import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.actions.VideoClickActionHolder
 import com.lagradost.cloudstream3.ui.player.source_priority.QualityProfileDialog
 import com.lagradost.cloudstream3.ui.settings.SettingsFragment.Companion.getFolderSize
-import com.lagradost.cloudstream3.ui.subtitles.ChromecastSubtitlesFragment
 import com.lagradost.cloudstream3.ui.subtitles.SubtitlesFragment
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
 import com.lagradost.cloudstream4.compose.EMULATOR
@@ -70,13 +69,6 @@ object SettingsPlayerScreen : SearchableSettings {
                         icon = painterResource(R.drawable.subtitles_gear_24px),
                         onClick = {
                             SubtitlesFragment.push(activity, false)
-                        }),
-                    Preference.PreferenceItem.TextPreference(
-                        title = stringResource(R.string.chromecast_subtitles_settings),
-                        subtitle = stringResource(R.string.chromecast_subtitles_settings_des),
-                        icon = painterResource(R.drawable.cast),
-                        onClick = {
-                            ChromecastSubtitlesFragment.push(activity, false)
                         }),
                 ),
             ),

@@ -75,7 +75,7 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setColor(context.colorFromAttribute(R.attr.colorPrimary))
             .setContentTitle(context.getString(R.string.subscription_in_progress_notification))
-            .setSmallIcon(com.google.android.gms.cast.framework.R.drawable.quantum_ic_refresh_white_24)
+            .setSmallIcon(R.drawable.baseline_sync_24)
             .setProgress(0, 0, true)
 
     private val updateNotificationBuilder =

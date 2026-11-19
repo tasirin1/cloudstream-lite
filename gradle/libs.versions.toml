@@ -118,7 +118,6 @@ ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
 lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycleKtx" }
 lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleKtx" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
-media3-cast = { module = "androidx.media3:media3-cast", version.ref = "media3" }
 media3-common = { module = "androidx.media3:media3-common", version.ref = "media3" }
 media3-container  = { module = "androidx.media3:media3-container", version.ref = "media3" }
 media3-datasource-cronet = { group = "androidx.media3", name = "media3-datasource-cronet", version.ref = "media3" }
@@ -175,7 +174,7 @@ compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMu
 coil = ["coil", "coil-network-okhttp"]
 cryptography = ["cryptography-core", "cryptography-provider-optimal"]
 lifecycle = ["lifecycle-livedata-ktx", "lifecycle-viewmodel-ktx"]
-media3 = ["media3-cast", "media3-common", "media3-container", "media3-datasource-cronet", "media3-datasource-okhttp", "media3-exoplayer", "media3-exoplayer-dash", "media3-exoplayer-hls", "media3-session", "media3-ui"]
+media3 = ["media3-common", "media3-container", "media3-datasource-cronet", "media3-datasource-okhttp", "media3-exoplayer", "media3-exoplayer-dash", "media3-exoplayer-hls", "media3-session", "media3-ui"]
 navigation = ["navigation-fragment-ktx", "navigation-ui-ktx"]
 nextlib = ["nextlib-media3ext", "nextlib-mediainfo"]
 compose = ["compose-foundation", "compose-material3", "compose-resources", "compose-runtime", "compose-ui", "compose-ui-tooling", "compose-ui-tooling-preview", "lifecycle-viewmodel-compose", "coil-compose"]

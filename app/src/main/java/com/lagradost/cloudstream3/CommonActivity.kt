@@ -29,7 +29,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.children
 import androidx.core.view.isNotEmpty
 import androidx.preference.PreferenceManager
-import com.google.android.gms.cast.framework.CastSession
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.navigationrail.NavigationRailView
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
@@ -84,11 +83,6 @@ object CommonActivity {
     @MainThread
     fun setActivityInstance(newActivity: Activity?) {
         activity = newActivity
-    }
-
-    @MainThread
-    fun Activity?.getCastSession(): CastSession? {
-        return (this as MainActivity?)?.mSessionManager?.currentCastSession
     }
 
     val displayMetrics: DisplayMetrics = Resources.getSystem().displayMetrics

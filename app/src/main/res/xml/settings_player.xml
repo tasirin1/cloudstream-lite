@@ -48,15 +48,7 @@
             android:key="@string/subtitle_settings_key"
             android:title="@string/player_subtitles_settings"
             app:summary="@string/player_subtitles_settings_des" />
-        <Preference
-            android:icon="@drawable/ic_outline_subtitles_24"
-            android:key="@string/subtitle_settings_chromecast_key"
-            android:title="@string/chromecast_subtitles_settings"
-            app:summary="@string/chromecast_subtitles_settings_des" />
-    </PreferenceCategory>
-
-
-    <PreferenceCategory android:title="@string/pref_category_player_features">
+<PreferenceCategory android:title="@string/pref_category_player_features">
         <Preference
             android:icon="@drawable/ic_baseline_people_24"
             android:summary="@string/source_priority_help"

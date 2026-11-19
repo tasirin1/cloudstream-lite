@@ -47,8 +47,6 @@ import androidx.tvprovider.media.tv.TvContractCompat
 import androidx.tvprovider.media.tv.WatchNextProgram
 import androidx.tvprovider.media.tv.WatchNextProgram.fromCursor
 import androidx.viewpager2.widget.ViewPager2
-import com.google.android.gms.cast.framework.CastContext
-import com.google.android.gms.cast.framework.CastState
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.wrappers.Wrappers
@@ -806,35 +804,13 @@ object AppContextUtils {
         return currentAudioFocusChangeListener
     }
 
-    fun Context.isCastApiAvailable(): Boolean {
-        val isCastApiAvailable =
-            GoogleApiAvailability.getInstance()
-                .isGooglePlayServicesAvailable(applicationContext) == ConnectionResult.SUCCESS
+    // Fork change: Google Cast was removed from this fork, so the
+    // Cast API is never available and nothing is ever connected to
+    // a Chromecast. Call sites keep their upstream shape and simply
+    // always take the local-playback path.
+    fun Context.isCastApiAvailable(): Boolean = false
 
-        try {
-            applicationContext?.let {
-                val task = CastContext.getSharedInstance(it) { it.run() }
-                task.result
-            }
-        } catch (e: Exception) {
-            println(e)
-            // Track non-fatal
-            return false
-        }
-
-        return isCastApiAvailable
-    }
-
-    fun Context.isConnectedToChromecast(): Boolean {
-        if (isCastApiAvailable()) {
-            val executor: Executor = Executors.newSingleThreadExecutor()
-            val castContext = CastContext.getSharedInstance(this, executor)
-            if (castContext.result.castState == CastState.CONNECTED) {
-                return true
-            }
-        }
-        return false
-    }
+    fun Context.isConnectedToChromecast(): Boolean = false
 
     /**
      * Sets the focus to the negative button when in TV and Emulator layout.
