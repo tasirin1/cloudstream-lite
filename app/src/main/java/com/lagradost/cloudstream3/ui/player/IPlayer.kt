@@ -202,7 +202,9 @@ data class CurrentTracks(
 )
 
 //http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4
-const val ACTION_MEDIA_CONTROL = "media_control"
+// Fork fix (audit #42): namespaced action so other apps cannot
+// collide with (or spoof) the PiP media-control broadcasts.
+const val ACTION_MEDIA_CONTROL = "com.lagradost.cloudstream3.action.MEDIA_CONTROL"
 const val EXTRA_CONTROL_TYPE = "control_type"
 
 /** Abstract Exoplayer logic, can be expanded to other players */

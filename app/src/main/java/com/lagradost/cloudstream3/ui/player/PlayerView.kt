@@ -504,15 +504,23 @@ class PlayerView @JvmOverloads constructor(
                 pipReceiver = object : BroadcastReceiver() {
                     override fun onReceive(context: Context, intent: Intent) {
                         if (ACTION_MEDIA_CONTROL != intent.action) return
+                        // Fork fix (audit #42): an out-of-range extra must
+                        // never crash the player; ignore unknown controls.
+                        val event = CSPlayerEvent.entries.getOrNull(
+                            intent.getIntExtra(EXTRA_CONTROL_TYPE, 0)
+                        ) ?: return
                         player.handleEvent(
-                            CSPlayerEvent.entries[intent.getIntExtra(EXTRA_CONTROL_TYPE, 0)],
+                            event,
                             source = PlayerEventSource.UI
                         )
                     }
                 }
                 val filter = IntentFilter().apply { addAction(ACTION_MEDIA_CONTROL) }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    activity?.registerReceiver(pipReceiver, filter, Context.RECEIVER_EXPORTED)
+                    // Fork fix (audit #42): the only sender is our own PiP
+                    // RemoteAction PendingIntent, so the receiver does not
+                    // need to be exported to other apps.
+                    activity?.registerReceiver(pipReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
                 } else {
                     @SuppressLint("UnspecifiedRegisterReceiverFlag")
                     activity?.registerReceiver(pipReceiver, filter)
