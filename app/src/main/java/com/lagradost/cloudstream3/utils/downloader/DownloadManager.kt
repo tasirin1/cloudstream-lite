@@ -1242,15 +1242,6 @@ object VideoDownloadManager {
                 return@withContext DOWNLOAD_INVALID_INPUT
             }
 
-            // Fork fix (audit #13): never declare an HLS download done
-            // while segments are missing. A segment dropped on a
-            // cancellation race used to leave a hole in the file yet
-            // report success, and the file was never resumed.
-            if (metadata.hlsWrittenProgress < items.size) {
-                metadata.type = DownloadType.IsFailed
-                return@withContext metadata.failedStatus()
-            }
-
             metadata.type = DownloadType.IsDone
             return@withContext DOWNLOAD_SUCCESS
         } catch (e: IOException) {
@@ -1466,6 +1457,16 @@ object VideoDownloadManager {
                 metadata.onDelete()
                 stream.delete()
                 return@withContext DOWNLOAD_STOPPED
+            }
+
+            // Fork fix (audit #13, moved to the right function in
+            // audit sesi 15 #2): never declare an HLS download done
+            // while segments are missing. A segment dropped on a
+            // cancellation race used to leave a hole in the file yet
+            // report success, and the file was never resumed.
+            if (metadata.hlsWrittenProgress < items.size) {
+                metadata.type = DownloadType.IsFailed
+                return@withContext metadata.failedStatus()
             }
 
             metadata.type = DownloadType.IsDone
