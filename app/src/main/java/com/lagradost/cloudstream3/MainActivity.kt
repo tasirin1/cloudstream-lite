@@ -1642,15 +1642,6 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
             }
         }
 
-//        ioSafe {
-//            val plugins =
-//                RepositoryParser.getRepoPlugins("https://raw.githubusercontent.com/recloudstream/TestPlugin/master/repo.json")
-//                    ?: emptyList()
-//            plugins.map {
-//                println("Load plugin: ${it.name} ${it.url}")
-//                RepositoryParser.loadSiteTemp(applicationContext, it.url, it.name)
-//            }
-//        }
 
         // init accounts
         ioSafe {
@@ -1975,34 +1966,6 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
         }*/
 
 
-        /*
-        val castContext = CastContext.getSharedInstance(applicationContext)
-         fun buildMediaQueueItem(video: String): MediaQueueItem {
-           // val movieMetadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_PHOTO)
-            //movieMetadata.putString(MediaMetadata.KEY_TITLE, "CloudStream")
-            val mediaInfo = MediaInfo.Builder(video.toUri().toString())
-                .setStreamType(MediaInfo.STREAM_TYPE_NONE)
-                .setContentType(MimeTypes.IMAGE_JPEG)
-               // .setMetadata(movieMetadata).build()
-                .build()
-            return MediaQueueItem.Builder(mediaInfo).build()
-        }*/
-        /*
-        castContext.addCastStateListener { state ->
-            if (state == CastState.CONNECTED) {
-                println("TESTING")
-                val isCasting = castContext?.sessionManager?.currentCastSession?.remoteMediaClient?.currentItem != null
-                if(!isCasting) {
-                    val castPlayer = CastPlayer(castContext)
-                    println("LOAD ITEM")
-
-                    castPlayer.loadItem(buildMediaQueueItem("https://cdn.discordapp.com/attachments/551382684560261121/730169809408622702/ChromecastLogo6.png"),0)
-                }
-            }
-        }*/
-        /*thread {
-            createISO()
-        }*/
 
         if (BuildConfig.DEBUG) {
             var providersAndroidManifestString = "Current androidmanifest should be:\n"
