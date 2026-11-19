@@ -501,6 +501,13 @@ class PlayerView @JvmOverloads constructor(
             if (isInPictureInPictureMode) {
                 // Hide the full-screen UI (controls, etc.) while in picture-in-picture mode.
                 piphide?.isVisible = false
+                // Fork fix (audit #44): never overwrite a live receiver;
+                // unregister the previous instance first so it cannot
+                // leak and keep firing into a stale player.
+                pipReceiver?.let {
+                    safe { activity?.unregisterReceiver(it) }
+                    pipReceiver = null
+                }
                 pipReceiver = object : BroadcastReceiver() {
                     override fun onReceive(context: Context, intent: Intent) {
                         if (ACTION_MEDIA_CONTROL != intent.action) return
@@ -535,6 +542,7 @@ class PlayerView @JvmOverloads constructor(
                 pipReceiver?.let {
                     // Prevents java.lang.IllegalArgumentException: Receiver not registered
                     safe { activity?.unregisterReceiver(it) }
+                    pipReceiver = null
                 }
                 activity?.hideSystemUI()
                 hideKeyboard(this)
