@@ -286,11 +286,15 @@ object AccountHelper {
             // So that if they don't know the PIN for the current account,
             // they don't get completely locked out
             builder.setNeutralButton(R.string.use_default_account) { _, _ ->
-                val activity = context.getActivity()
-                if (activity is AccountSelectActivity) {
-                    isPinValid = true
-                    activity.accountViewModel.handleAccountSelect(getDefaultAccount(context), activity)
-                }
+                // Fork fix (audit #43): this used to require the host
+                // activity to be AccountSelectActivity, which is not
+                // registered in the manifest anymore (dead class,
+                // removed), so the rescue button silently did nothing
+                // and a user who forgot their PIN stayed locked out.
+                // Switch to the default account directly instead.
+                isPinValid = true
+                DataStoreHelper.setAccount(getDefaultAccount(context))
+                MainActivity.reloadAccountEvent(true)
             }
         }
 
