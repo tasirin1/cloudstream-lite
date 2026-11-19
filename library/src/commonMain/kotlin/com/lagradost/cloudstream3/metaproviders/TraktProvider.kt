@@ -145,6 +145,14 @@ open class TraktProvider : MainAPI() {
         val isBollywood = mediaDetails?.country == "in"
         val uniqueUrl = data.mediaDetails?.ids?.trakt?.toJson() ?: data.toJson()
 
+        // Fork fix (audit #33, revised): both response branches below
+        // dereference mediaDetails directly. That used to compile only
+        // because the !! on the title argument silently smart-cast it;
+        // assert non-null explicitly here instead. A missing title no
+        // longer crashes either: the name arguments fall back to the
+        // slug below.
+        requireNotNull(mediaDetails) { "Trakt: missing media details" }
+
         if (data.type == TvType.Movie) {
             val linkData = LinkData(
                 id = mediaDetails?.ids?.tmdb,
@@ -167,7 +175,7 @@ open class TraktProvider : MainAPI() {
             ).toJson()
 
             return newMovieLoadResponse(
-                name = mediaDetails?.title ?: mediaDetails?.ids?.slug ?: "", // Fork fix (audit #33): no !! on API data
+                name = mediaDetails.title ?: mediaDetails.ids?.slug ?: "", // Fork fix (audit #33): no !! on API data
                 url = data.toJson(),
                 dataUrl = linkData.toJson(),
                 type = if (isAnime) TvType.AnimeMovie else TvType.Movie,
@@ -251,7 +259,7 @@ open class TraktProvider : MainAPI() {
             }
 
             return newTvSeriesLoadResponse(
-                name = mediaDetails?.title ?: mediaDetails?.ids?.slug ?: "", // Fork fix (audit #33): no !! on API data
+                name = mediaDetails.title ?: mediaDetails.ids?.slug ?: "", // Fork fix (audit #33): no !! on API data
                 url = data.toJson(),
                 type = if (isAnime) TvType.Anime else TvType.TvSeries,
                 episodes = episodes
