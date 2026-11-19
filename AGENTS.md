@@ -107,6 +107,10 @@ WAJIB dicatat di tabel ini pada commit yang sama.
 |---|---|---|
 | 2026-11-19 | `AGENTS.md` ini (panduan pengelolaan fork) | `AGENTS.md` |
 | 2026-11-19 | Workflow build fork tanpa secret (APK prerelease debug sebagai artifact) + 3 workflow upstream dinonaktifkan manual (lihat "CI fork") | `.github/workflows/build-fork.yml` |
+| 2026-11-19 | Log crash disalin ke `Download/cloudstream_last_error.txt` + penahan boot-loop 30 dtk di ExceptionHandler (audit STB sesi #4) | `app/.../CloudStreamApp.kt` |
+| 2026-11-19 | Cast NavHostFragment aman: error inflate layout tidak lagi tertutup crash cast (temuan 1) | `app/.../MainActivity.kt` |
+| 2026-11-19 | Deteksi TV cadangan via fitur leanback + tanpa layar sentuh (temuan 3); navigasi first-run menangkap Throwable (temuan 5) | `shared/.../compose/Layout.kt`, `app/.../MainActivity.kt` |
+| 2026-11-19 | Hindari `Date.from`/`toInstant` (API 26) di provider sinkronisasi (temuan 6) | `app/.../syncproviders/providers/{Simkl,MAL,Kitsu}Api.kt` |
 
 ## Cara kerja (aturan owner, berlaku di semua repo Tasirin)
 
