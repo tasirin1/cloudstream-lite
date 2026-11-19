@@ -203,7 +203,10 @@ object VideoDownloadManager {
     const val KEY_RESUME_IN_QUEUE = "download_resume_queue_key"
 //    private const val KEY_RESUME_QUEUE_PACKAGES = "download_q_resume"
 
-    val downloadStatus = HashMap<Int, DownloadType>()
+    // Fork fix (audit #14): mutated from download coroutines, the
+    // service and the UI at once; a plain HashMap can corrupt under
+    // concurrent writes (the notify() comment even asked "TODO MUTEX?").
+    val downloadStatus = java.util.concurrent.ConcurrentHashMap<Int, DownloadType>()
     val downloadStatusEvent = Event<Pair<Int, DownloadType>>()
     val downloadDeleteEvent = Event<Int>()
     val downloadEvent = Event<Pair<Int, DownloadActionType>>()
