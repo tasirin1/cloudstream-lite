@@ -69,6 +69,7 @@ import java.io.InputStreamReader
 // Different keys for local and not since local can be removed at any time without app knowing, hence the local are getting rebuilt on every app start
 const val PLUGINS_KEY = "PLUGINS_KEY"
 const val PLUGINS_KEY_LOCAL = "PLUGINS_KEY_LOCAL"
+const val PLUGIN_FILE_HASHES_KEY = "PLUGIN_FILE_HASHES_KEY"
 
 const val EXTENSIONS_CHANNEL_ID = "cloudstream3.extensions"
 const val EXTENSIONS_CHANNEL_NAME = "Extensions"
@@ -174,6 +175,22 @@ object PluginManager {
         }
     }
 
+
+    // Fork fix (audit #9): load-time integrity anchor. Downloads are
+    // hash-verified; remember the verified hash per file path and
+    // re-check it on every load, so a plugin file swapped on disk
+    // afterwards is refused instead of silently executed. Local
+    // sideloaded plugins have no anchor by design.
+    private fun getStoredPluginHash(filePath: String): String? =
+        runCatching { getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY) }
+            .getOrNull()?.get(filePath)
+
+    private fun storePluginHash(filePath: String, hash: String) {
+        val current = runCatching {
+            getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
+        }.getOrNull() ?: emptyMap()
+        setKey(PLUGIN_FILE_HASHES_KEY, current + (filePath to hash))
+    }
 
     fun getPluginsOnline(): Array<PluginData> {
         return getKey<Array<PluginData>>(PLUGINS_KEY) ?: emptyArray()
@@ -609,6 +626,23 @@ object PluginManager {
         currentlyLoading = fileName
         Log.i(TAG, "Loading plugin: $data")
 
+        // Fork fix (audit #9): refuse a file whose bytes no longer
+        // match the hash verified when it was downloaded.
+        val storedHash = getStoredPluginHash(filePath)
+        if (storedHash != null) {
+            val actualHash = runCatching { sha256(file) }.getOrNull()
+            if (actualHash != storedHash) {
+                Log.e(
+                    TAG,
+                    "Refusing to load plugin $fileName: file hash mismatch"
+                )
+                currentlyLoading = null
+                return false
+            }
+        } else if (!data.isOnline) {
+            Log.w(TAG, "Loading local plugin $fileName without integrity verification")
+        }
+
         return try {
             // In case of Android 14+ then
             try {
@@ -795,6 +829,9 @@ object PluginManager {
             Log.d(TAG, "Downloading plugin: $pluginUrl to ${file.absolutePath}")
             // The plugin file needs to be salted with the repository url hash as to allow multiple repositories with the same internal plugin names
             val newFile = downloadPluginToFile(activity, pluginUrl, file, pluginHash) ?: return false
+
+            // Fork fix (audit #9): anchor for the load-time check.
+            if (pluginHash != null) storePluginHash(newFile.absolutePath, pluginHash)
 
             val data = PluginData(
                 internalName,
