@@ -218,6 +218,11 @@ suspend fun <T> safeApiCall(
     return apiCall.ioWork { work ->
         try {
             Resource.Success(work.invoke())
+        } catch (throwable: TimeoutCancellationException) {
+            // A withTimeout inside the call expiring is a failed call,
+            // not a cancellation of the caller (audit sesi 15 #3).
+            logError(throwable)
+            throwAbleToResource(throwable)
         } catch (throwable: CancellationException) {
             throw throwable
         } catch (throwable: Throwable) {

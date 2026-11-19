@@ -95,6 +95,11 @@ fun <R> argamap(
         async {
             try {
                 it.invoke()
+            } catch (e: TimeoutCancellationException) {
+                // An inner timeout fails this item, not the batch
+                // (audit sesi 15 #3).
+                logError(e)
+                null
             } catch (e: CancellationException) {
                 // Fork fix (audit #31): cancellation is not an error.
                 throw e
@@ -119,6 +124,9 @@ suspend fun <R> runAllAsync(
         async {
             try {
                 fn.invoke()
+            } catch (e: TimeoutCancellationException) {
+                logError(e)
+                null
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
