@@ -75,8 +75,9 @@ kanoniknya ada di `SOUL.md` repo memori.
 ├── docs/         # Modul dokumentasi (Dokka)
 ├── gradle/libs.versions.toml  # Katalog versi (termasuk versi app & SDK)
 └── .github/workflows/
+    ├── build-fork.yml      # MILIK FORK: build APK prerelease debug tanpa secret (lihat "CI fork")
     ├── pull_request.yml    # Build PR: checkKotlinAbi + assemblePrereleaseDebug + lint + check
-    ├── prerelease.yml      # Push ke master → build prerelease + GitHub pre-release
+    ├── prerelease.yml      # Upstream: push ke master → prerelease (DINONAKTIFKAN di fork)
     ├── build_to_archive.yml, instrumented-tests.yml,
     │   generate_dokka.yml, update_locales.yml
 ```
@@ -105,6 +106,7 @@ WAJIB dicatat di tabel ini pada commit yang sama.
 | Tanggal | Kustomisasi | Berkas |
 |---|---|---|
 | 2026-11-19 | `AGENTS.md` ini (panduan pengelolaan fork) | `AGENTS.md` |
+| 2026-11-19 | Workflow build fork tanpa secret (APK prerelease debug sebagai artifact) + 3 workflow upstream dinonaktifkan manual (lihat "CI fork") | `.github/workflows/build-fork.yml` |
 
 ## Cara kerja (aturan owner, berlaku di semua repo Tasirin)
 
@@ -132,18 +134,29 @@ WAJIB dicatat di tabel ini pada commit yang sama.
   Perubahan hanya dokumen `.md` tambahkan `[skip ci]` bila perlu
   menghindari build yang tidak relevan.
 
-## Peringatan CI fork
+## CI fork
 
-- Workflow `prerelease.yml` (push ke `master`) mengambil keystore
-  dari repo privat `recloudstream/secrets` memakai secrets
-  `GH_APP_ID`/`GH_APP_KEY` milik upstream — secrets itu TIDAK ada di
-  fork ini, jadi workflow itu diperkirakan GAGAL di langkah token/
-  keystore pada push berkas kode ke `master`. Itu kegagalan
-  infrastruktur fork, BUKAN bukti kode rusak; vonis kualitas kode
-  bersandar pada `pull_request.yml` (atau perbaiki workflow-nya atas
-  perintah owner).
+- **Build resmi fork = workflow `Fork Build`**
+  (`.github/workflows/build-fork.yml`, kustomisasi fork 2026-11-19):
+  jalan pada push ke `master` (selain `*.md`/`*.json`) dan
+  `workflow_dispatch`, TANPA secret apa pun, menjalankan
+  `./gradlew assemblePrereleaseDebug` dan mengunggah APK prerelease
+  debug (tertanda debug key, bisa langsung dipasang untuk uji)
+  sebagai artifact `cloudstream-prerelease-debug`.
+- Tiga workflow upstream **DINONAKTIFKAN manual** di fork ini
+  (GitHub Actions settings, berkasnya tidak diubah): `Pre-release`,
+  `Archive build`, `Dokka`. Ketiganya bergantung pada secrets
+  organisasi upstream (`GH_APP_ID`/`GH_APP_KEY` + repo privat
+  `recloudstream/secrets` / `recloudstream/dokka` /
+  `recloudstream/cloudstream-archive`) yang TIDAK ada di fork, jadi
+  pasti gagal di langkah token/keystore. Jangan aktifkan lagi tanpa
+  menyediakan pengganti secrets-nya; kegagalan ketiganya adalah
+  infrastruktur, BUKAN bukti kode rusak.
+- Vonis kualitas kode bersandar pada `Fork Build` dan
+  `pull_request.yml` (Artifact Build: `checkKotlinAbi` + assemble +
+  lint + check).
 - Workflow mengabaikan perubahan `*.md` (`paths-ignore`), jadi
-  commit dokumen saja tidak memicu build prerelease.
+  commit dokumen saja tidak memicu build.
 
 ## Verifikasi sebelum push
 
