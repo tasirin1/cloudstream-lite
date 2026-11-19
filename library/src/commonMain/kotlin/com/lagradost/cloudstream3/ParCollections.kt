@@ -95,6 +95,9 @@ fun <R> argamap(
         async {
             try {
                 it.invoke()
+            } catch (e: CancellationException) {
+                // Fork fix (audit #31): cancellation is not an error.
+                throw e
             } catch (e: Exception) {
                 logError(e)
                 null
@@ -116,6 +119,8 @@ suspend fun <R> runAllAsync(
         async {
             try {
                 fn.invoke()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logError(e)
                 null
