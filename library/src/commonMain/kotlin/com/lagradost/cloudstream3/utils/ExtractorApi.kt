@@ -957,9 +957,22 @@ suspend fun loadExtractor(
     }
 
     // this is to match mirror domains - like example.com, example.net
+    // Fork fix (audit #32): partialRatio alone also fires when an
+    // unrelated or lookalike URL merely contains a similar string.
+    // Require the site-name label of both hosts to be identical
+    // (streamtape.com vs streamtape.net) in addition to the ratio.
+    fun siteNameLabel(url: String): String {
+        val host = url.substringAfter("://", url)
+            .substringBefore('/').substringBefore(':').lowercase()
+        val labels = host.split('.')
+        return if (labels.size >= 2) labels[labels.size - 2] else labels.first()
+    }
+
+    val currentSite = siteNameLabel(currentUrl)
     for (index in extractorApis.lastIndex downTo 0) {
         val extractor = extractorApis[index]
-        if (Levenshtein.partialRatio(
+        if (siteNameLabel(extractor.mainUrl) == currentSite &&
+            Levenshtein.partialRatio(
                 extractor.mainUrl,
                 currentUrl
             ) > 80
