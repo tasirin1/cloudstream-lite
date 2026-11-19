@@ -266,12 +266,20 @@ actual class WebViewResolver actual constructor(
                         val errorHost = error?.url?.let {
                             runCatching { java.net.URI(it).host }.getOrNull()
                         }
+                        // Audit sesi 15 #5: SslError is a SET of errors;
+                        // primaryError is only the highest-ranked one, so
+                        // a wrong-host self-signed cert (UNTRUSTED +
+                        // IDMISMATCH) used to slip through. Every present
+                        // error must be tolerable, and a host mismatch or
+                        // an invalid cert always aborts.
                         val tolerable = error != null && errorHost != null &&
                             errorHost == targetHost &&
-                            (error.primaryError == SslError.SSL_EXPIRED ||
-                                error.primaryError == SslError.SSL_NOTYETVALID ||
-                                error.primaryError == SslError.SSL_DATE_INVALID ||
-                                error.primaryError == SslError.SSL_UNTRUSTED)
+                            (error.hasError(SslError.SSL_EXPIRED) ||
+                                error.hasError(SslError.SSL_NOTYETVALID) ||
+                                error.hasError(SslError.SSL_DATE_INVALID) ||
+                                error.hasError(SslError.SSL_UNTRUSTED)) &&
+                            !error.hasError(SslError.SSL_IDMISMATCH) &&
+                            !error.hasError(SslError.SSL_INVALID)
                         if (tolerable) handler?.proceed() else handler?.cancel()
                     }
                 }
