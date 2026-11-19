@@ -1,6 +1,7 @@
 package com.lagradost.cloudstream3.network
 
 import android.content.Context
+import android.os.Build
 import androidx.preference.PreferenceManager
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.USER_AGENT
@@ -14,6 +15,23 @@ import okhttp3.OkHttpClient
 import org.conscrypt.Conscrypt
 import java.io.File
 import java.security.Security
+
+/**
+ * Fork fix: do not install the bundled Conscrypt provider on
+ * Android < 7 (API 24). On the ZTE B860H (Android 6.0.1) the
+ * BoringSSL inside Conscrypt aborts the whole process with SIGABRT
+ * the first time its SecureRandom seeds itself (CRYPTO_once ->
+ * RAND_bytes -> abort), as proven by 10/10 tombstones taken from
+ * the device. A native abort cannot be caught by safe{} or by any
+ * Java exception handler, and it killed the app right after the
+ * splash logo on every launch. Older devices fall back to the
+ * platform TLS provider, which still offers TLS 1.2 + SNI.
+ */
+private fun installConscryptProvider() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        safe { Security.insertProviderAt(Conscrypt.newProvider(), 1) }
+    }
+}
 
 // Backwards compatible constructor, mark as deprecated later
 fun Requests.initClient(context: Context) {
@@ -33,7 +51,7 @@ fun buildDefaultClient(context: Context): OkHttpClient {
 
 /** Only use ignoreSSL if you know what you are doing*/
 fun buildDefaultClient(context: Context, ignoreSSL: Boolean = false): OkHttpClient {
-    safe { Security.insertProviderAt(Conscrypt.newProvider(), 1) }
+    installConscryptProvider()
     
     val settingsManager = PreferenceManager.getDefaultSharedPreferences(context)
     val dns = settingsManager.getInt(context.getString(R.string.dns_key), 0)
