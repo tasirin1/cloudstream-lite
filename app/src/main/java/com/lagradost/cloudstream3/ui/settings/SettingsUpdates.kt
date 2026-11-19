@@ -244,7 +244,7 @@ class SettingsUpdates : BasePreferenceFragmentCompat() {
         }
 
         getPref(R.string.install_prerelease_key)?.let { pref ->
-            pref.isVisible = BuildConfig.FLAVOR == "stable"
+            pref.isVisible = BuildConfig.FLAVOR.startsWith("stable") // Fork fix (audit #49)
             pref.setOnPreferenceClickListener {
                 activity?.installPreReleaseIfNeeded()
                 return@setOnPreferenceClickListener true

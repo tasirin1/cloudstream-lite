@@ -63,7 +63,7 @@ object MainActivityScreen : Screen {
                 remotePrereleaseTag = APK_PRERELEASE,
                 remoteContentType = APK_CONTENT_TYPE,
                 versionName = BuildConfig.VERSION_NAME,
-                isPrerelease = BuildConfig.FLAVOR == "prerelease",
+                isPrerelease = BuildConfig.FLAVOR.startsWith("prerelease"), // Fork fix (audit #49): FLAVOR is now "prereleaseFull"/"stableLite" since the edition dimension was added
                 isDebug = BuildConfig.DEBUG,
                 buildSha = activity.currentCommitHash(),
                 settings = settings,
