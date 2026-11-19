@@ -20,7 +20,6 @@ import com.lagradost.cloudstream3.utils.downloader.DownloadFileManagement.getFol
 import com.lagradost.cloudstream3.utils.txt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
-import java.util.concurrent.ConcurrentHashMap
 
 /** Separate object with helper functions for the downloader */
 object DownloadUtils {
