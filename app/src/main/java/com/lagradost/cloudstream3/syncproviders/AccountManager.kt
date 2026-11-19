@@ -12,6 +12,11 @@ import com.lagradost.cloudstream3.syncproviders.providers.OpenSubtitlesApi
 import com.lagradost.cloudstream3.syncproviders.providers.SimklApi
 import com.lagradost.cloudstream3.syncproviders.providers.SubDlApi
 import com.lagradost.cloudstream3.syncproviders.providers.SubSourceApi
+import androidx.core.content.edit
+import com.lagradost.cloudstream3.CloudStreamApp
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.toJsonLiteral
+import com.lagradost.cloudstream3.utils.DataStore.getSharedPrefs
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import com.lagradost.cloudstream3.utils.videoskip.AnimeSkipAuth
 import java.util.concurrent.TimeUnit
@@ -41,6 +46,8 @@ abstract class AccountManager {
 
         const val ACCOUNT_TOKEN = "auth_tokens"
         const val ACCOUNT_IDS = "auth_ids"
+        private const val ENCRYPTED_PREFIX = "enc:v1:"
+        private const val TOKEN_KEY_ALIAS = "cs3_auth_token_key"
 
         fun accounts(prefix: String): Array<AuthData> {
             require(prefix != "NONE")
@@ -53,10 +60,85 @@ abstract class AccountManager {
         }
 
         private fun loadAccountsFromDisk(prefix: String): Array<AuthData> {
-            return getKey<Array<AuthData>>(
-                ACCOUNT_TOKEN,
-                "${prefix}/${DataStoreHelper.currentAccount}"
-            ) ?: arrayOf()
+            val context = CloudStreamApp.context ?: return arrayOf()
+            val raw = context.getSharedPrefs()
+                .getString(tokenPrefsKey(prefix), null) ?: return arrayOf()
+            val json = decryptTokenJson(raw) ?: return arrayOf()
+            val parsed = runCatching { parseJson<Array<AuthData>>(json) }
+                .getOrNull() ?: return arrayOf()
+            if (!raw.startsWith(ENCRYPTED_PREFIX)) {
+                // Migrate legacy plaintext tokens to encrypted storage.
+                writeAccountsToDisk(prefix, parsed)
+            }
+            return parsed
+        }
+
+        private fun writeAccountsToDisk(prefix: String, array: Array<AuthData>) {
+            val context = CloudStreamApp.context ?: return
+            val json = array.toJsonLiteral()
+            context.getSharedPrefs().edit {
+                putString(tokenPrefsKey(prefix), encryptTokenJson(json))
+            }
+        }
+
+        private fun tokenPrefsKey(prefix: String): String =
+            "${ACCOUNT_TOKEN}/${prefix}/${DataStoreHelper.currentAccount}"
+
+        // Fork fix (audit #36): OAuth tokens used to sit in shared
+        // preferences as plaintext JSON; on a rooted device (this
+        // fork's STB target) any root-capable app could read every
+        // account token. Values are now AES-GCM encrypted with a key
+        // held in the Android KeyStore. If the keystore is somehow
+        // unavailable, storage falls back to plaintext instead of
+        // breaking logins entirely.
+        private fun tokenKey(): javax.crypto.SecretKey? = runCatching {
+            val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore")
+                .apply { load(null) }
+            (keyStore.getEntry(TOKEN_KEY_ALIAS, null) as?
+                java.security.KeyStore.SecretKeyEntry)?.secretKey ?: run {
+                val generator = javax.crypto.KeyGenerator
+                    .getInstance(android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+                generator.init(
+                    android.security.keystore.KeyGenParameterSpec.Builder(
+                        TOKEN_KEY_ALIAS,
+                        android.security.keystore.KeyProperties.PURPOSE_ENCRYPT or
+                            android.security.keystore.KeyProperties.PURPOSE_DECRYPT
+                    ).setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+                        .setEncryptionPaddings(
+                            android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE
+                        )
+                        .build()
+                )
+                generator.generateKey()
+            }
+        }.getOrNull()
+
+        private fun encryptTokenJson(json: String): String {
+            val key = tokenKey() ?: return json
+            return runCatching {
+                val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key)
+                val body = cipher.doFinal(json.toByteArray(Charsets.UTF_8))
+                ENCRYPTED_PREFIX + android.util.Base64.encodeToString(
+                    cipher.iv + body, android.util.Base64.NO_WRAP
+                )
+            }.getOrElse { json }
+        }
+
+        private fun decryptTokenJson(stored: String): String? {
+            if (!stored.startsWith(ENCRYPTED_PREFIX)) return stored
+            val key = tokenKey() ?: return null
+            return runCatching {
+                val raw = android.util.Base64.decode(
+                    stored.removePrefix(ENCRYPTED_PREFIX), android.util.Base64.NO_WRAP
+                )
+                val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(
+                    javax.crypto.Cipher.DECRYPT_MODE, key,
+                    javax.crypto.spec.GCMParameterSpec(128, raw.copyOfRange(0, 12))
+                )
+                String(cipher.doFinal(raw.copyOfRange(12, raw.size)), Charsets.UTF_8)
+            }.getOrNull()
         }
 
         // Fork fix (audit #38): a profile switch used to refresh only
@@ -76,7 +158,7 @@ abstract class AccountManager {
 
         fun updateAccounts(prefix: String, array: Array<AuthData>) {
             require(prefix != "NONE")
-            setKey(ACCOUNT_TOKEN, "${prefix}/${DataStoreHelper.currentAccount}", array)
+            writeAccountsToDisk(prefix, array)
             synchronized(cachedAccounts) {
                 cachedAccounts[prefix] = array
             }
