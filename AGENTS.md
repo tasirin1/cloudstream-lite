@@ -114,6 +114,7 @@ WAJIB dicatat di tabel ini pada commit yang sama.
 | 2026-11-19 | ABI splits: APK per-ABI hanya `armeabi-v7a` + `arm64-v8a`, tanpa universal — APK universal 92 MB karena native lib 4 ABI | `app/build.gradle.kts` |
 | 2026-11-19 | Penangkap crash dipasang di `attachBaseContext` (sebelum provider/onCreate); log juga ke folder eksternal aplikasi `Android/data/<pkg>/files/cloudstream_last_error.txt` (tanpa izin) karena salinan Download gagal terbit di STB walau izin diberikan | `app/.../CloudStreamApp.kt` |
 | 2026-11-19 | Mode STB lite `-PforkLite=true`: splits hanya armeabi-v7a, `resConfigs("en","in")`, buang `libgojni.so` (torrent); Fork Build membangun varian release-nya dan menandatanganinya dengan keystore sekali-pakai buatan CI → APK lite 36 MB, tanda tangan beda dari varian debug (tak bisa menimpa) | `app/build.gradle.kts`, `.github/workflows/build-fork.yml` |
+| 2026-11-19 | **Jangan pasang provider Conscrypt bawaan di Android < 24**: BoringSSL-nya SIGABRT (`CRYPTO_once -> RAND_bytes -> abort`) di Android 6 STB B860H — terbukti 10/10 tombstone perangkat; perangkat < 24 pakai provider TLS sistem | `app/.../network/RequestsHelper.kt` (`installConscryptProvider`) |
 
 ## Cara kerja (aturan owner, berlaku di semua repo Tasirin)
 
