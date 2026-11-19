@@ -181,9 +181,18 @@ object PluginManager {
     // re-check it on every load, so a plugin file swapped on disk
     // afterwards is refused instead of silently executed. Local
     // sideloaded plugins have no anchor by design.
-    private fun getStoredPluginHash(filePath: String): String? =
-        runCatching { getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY) }
-            .getOrNull()?.get(filePath)
+    private fun getStoredPluginHash(filePath: String): String? {
+        // Audit sesi 15 #11: a parse failure used to be swallowed and
+        // treated as "no anchor", silently disabling the integrity
+        // check for every online plugin. At least leave evidence.
+        val hashes = try {
+            getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
+        } catch (e: Exception) {
+            logError(e)
+            null
+        }
+        return hashes?.get(filePath)
+    }
 
     // Serializes the read-modify-write in storePluginHash: parallel
     // downloads (amap) used to race and silently drop anchors
@@ -192,9 +201,14 @@ object PluginManager {
 
     fun storePluginHash(filePath: String, hash: String) {
         synchronized(pluginHashLock) {
-            val current = runCatching {
+            // Audit sesi 15 #11: never clobber the whole anchor map
+            // because one read failed; abort this store instead.
+            val current = try {
                 getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
-            }.getOrNull() ?: emptyMap()
+            } catch (e: Exception) {
+                logError(e)
+                return
+            } ?: emptyMap()
             setKey(PLUGIN_FILE_HASHES_KEY, current + (filePath to hash))
         }
     }
@@ -648,6 +662,11 @@ object PluginManager {
             }
         } else if (!data.isOnline) {
             Log.w(TAG, "Loading local plugin $fileName without integrity verification")
+        } else {
+            // Audit sesi 15 #11: verified download paths always store
+            // an anchor, so an online plugin without one is worth a
+            // visible warning instead of silent trust.
+            Log.w(TAG, "Loading online plugin $fileName without a stored integrity anchor")
         }
 
         return try {
