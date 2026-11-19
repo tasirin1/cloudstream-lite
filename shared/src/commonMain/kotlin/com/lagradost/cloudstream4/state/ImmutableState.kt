@@ -17,6 +17,8 @@ package com.lagradost.cloudstream4.state
 import androidx.annotation.CheckResult
 import androidx.compose.runtime.Immutable
 import com.lagradost.cloudstream3.utils.Levenshtein
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.PersistentSet
@@ -89,15 +91,20 @@ data class SortByMatching<Value>(
     // many times over. Memoize per distinct transformed string for
     // the lifetime of this comparator (one sort).
     private val scoreCache = HashMap<String, Int>()
+    private val scoreCacheLock = SynchronizedObject()
 
     fun score(p0: Value) : Int {
         val transformed = transform(p0)
         val matchAgainst = if (ignoreCase) transformed.lowercase() else transformed
-        return scoreCache.getOrPut(matchAgainst) {
-            Levenshtein.partialRatio(
-                query,
-                matchAgainst
-            )
+        // Audit sesi 15 #16: guard the plain HashMap against
+        // concurrent mutation from sorting threads.
+        return synchronized(scoreCacheLock) {
+            scoreCache.getOrPut(matchAgainst) {
+                Levenshtein.partialRatio(
+                    query,
+                    matchAgainst
+                )
+            }
         }
     }
 }

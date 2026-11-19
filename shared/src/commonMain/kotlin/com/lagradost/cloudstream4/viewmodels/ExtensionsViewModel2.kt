@@ -22,6 +22,8 @@ import com.lagradost.cloudstream4.state.StateContainer
 import com.lagradost.cloudstream4.state.UniqueItem
 import com.lagradost.cloudstream4.state.sortByInt
 import com.lagradost.cloudstream4.viewmodels.ExtensionsEffect.RepositoryAdded
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.PersistentSet
@@ -127,25 +129,30 @@ data class PluginSortBy(
     // Fork fix (audit #29): memoize per plugin for the lifetime of
     // this comparator; compare() used to recompute up to two full
     // Levenshtein DPs for the same plugin on every comparison.
+    // Audit sesi 15 #16: compare() runs on whichever thread sorts, so
+    // the plain HashMap was mutated concurrently; guard it.
     private val scoreCache = HashMap<String, Int>()
+    private val scoreCacheLock = SynchronizedObject()
 
     fun score(plugin: Plugin): Int {
-        return scoreCache.getOrPut(plugin.uuid.toString()) {
-            val score1 = Levenshtein.partialRatio(
-                plugin.info.name.lowercase(),
-                query
-            )
-            if (score1 > 80) {
-                score1
-            } else {
-                val score2 = plugin.info.description?.take(64)?.lowercase()
-                    ?.let { description ->
-                        Levenshtein.partialRatio(
-                            description,
-                            query
-                        )
-                    } ?: 0
-                maxOf(score1, score2)
+        return synchronized(scoreCacheLock) {
+            scoreCache.getOrPut(plugin.uuid.toString()) {
+                val score1 = Levenshtein.partialRatio(
+                    plugin.info.name.lowercase(),
+                    query
+                )
+                if (score1 > 80) {
+                    score1
+                } else {
+                    val score2 = plugin.info.description?.take(64)?.lowercase()
+                        ?.let { description ->
+                            Levenshtein.partialRatio(
+                                description,
+                                query
+                            )
+                        } ?: 0
+                    maxOf(score1, score2)
+                }
             }
         }
     }
