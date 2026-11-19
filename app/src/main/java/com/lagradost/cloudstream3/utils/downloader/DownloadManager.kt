@@ -568,8 +568,11 @@ object VideoDownloadManager {
             DOWNLOAD_FAILED
 
         val approxTotalBytes: Long
+            // Fork fix (audit #18): hlsProgress is 0 before the first
+            // segment; dividing by it produced NaN/Infinity estimates.
             get() = totalBytes ?: hlsTotal?.let { total ->
-                (bytesDownloaded * (total / hlsProgress.toFloat())).toLong()
+                if (hlsProgress <= 0) bytesDownloaded
+                else (bytesDownloaded * (total / hlsProgress.toFloat())).toLong()
             } ?: bytesDownloaded
 
         private var stopListener: (() -> Unit)? = null
