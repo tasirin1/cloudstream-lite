@@ -185,7 +185,11 @@ object DataStore {
         return try {
             val json: String = getSharedPrefs().getString(path, null) ?: return null
             parseJson(json, valueType.kotlin)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // Fork fix (audit #39): a parse failure used to look exactly
+            // like "no data stored", silently discarding user data
+            // after any format change. At least leave a trace.
+            logError(e)
             null
         }
     }
