@@ -242,6 +242,14 @@ android {
     namespace = "com.lagradost.cloudstream3"
 }
 
+// Fork addition: Jetpack Compose ui-tooling is a development-only
+// artifact (IDE preview rendering) and must not ship inside APKs.
+// ui-tooling-preview stays: it only carries the @Preview annotations
+// that app code references.
+configurations.configureEach {
+    exclude(group = "org.jetbrains.compose.ui", module = "ui-tooling")
+}
+
 // Fork addition: native libraries the lite edition must not carry.
 // libgojni.so is the torrent engine (Go runtime, ~4.8 MB compressed),
 // only loaded when a torrent stream is opened. libconscrypt_jni.so
