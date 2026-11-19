@@ -485,8 +485,10 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
         updateLocale() // android fucks me by chaining lang when rotating the phone
         updateTheme(this) // Update if system theme
 
+        // Fork fix: safe cast, same masking problem as in onCreate.
         val navHostFragment =
-            supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+            supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+                ?: return
         navHostFragment.navController.currentDestination?.let { updateNavBar(it) }
     }
 
@@ -1233,6 +1235,9 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
         }
 
         // just in case, MAIN SHOULD *NEVER* BOOT LOOP CRASH
+        // Fork fix: keep the inflate failure so a later startup failure can
+        // report the real cause instead of a bare cast/null crash.
+        var bindingInflateError: Throwable? = null
         binding = try {
             if (isLayout(TV or EMULATOR)) {
                 val newLocalBinding = ActivityMainTvBinding.inflate(layoutInflater, null, false)
@@ -1281,6 +1286,7 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
                 newLocalBinding
             }
         } catch (t: Throwable) {
+            bindingInflateError = t
             showToast(txt(R.string.unable_to_inflate, t.message ?: ""), Toast.LENGTH_LONG)
             null
         }
@@ -1674,8 +1680,25 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
         setUpBackup()
 
         CommonActivity.init(this)
+        // Fork fix: this used to be a hard cast. When the layout inflate
+        // above failed (binding == null), the NavHostFragment does not
+        // exist and the cast crashed with an NPE/ClassCast that hid the
+        // real inflate error (force close on open, e.g. on API 23 TV
+        // boxes). Log the original error and close cleanly instead.
         val navHostFragment =
-            supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+            supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as? NavHostFragment
+        if (navHostFragment == null) {
+            logError(
+                bindingInflateError
+                    ?: RuntimeException("NavHostFragment missing in MainActivity.onCreate")
+            )
+            showToast(
+                txt(R.string.unable_to_inflate, bindingInflateError?.message ?: ""),
+                Toast.LENGTH_LONG
+            )
+            finish()
+            return
+        }
         val navController = navHostFragment.navController
 
         navController.addOnDestinationChangedListener { _: NavController, navDestination: NavDestination, bundle: Bundle? ->
