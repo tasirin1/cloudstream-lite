@@ -626,6 +626,9 @@ object PluginManager {
             loader.getResourceAsStream("manifest.json").use { stream ->
                 if (stream == null) {
                     Log.e(TAG, "Failed to load plugin  $fileName: No manifest found")
+                    // Fork fix (audit #11): this early return bypassed the
+                    // currentlyLoading reset, leaving a stale loading state.
+                    currentlyLoading = null
                     return false
                 }
                 InputStreamReader(stream).use { reader ->
@@ -651,6 +654,7 @@ object PluginManager {
 
             if (plugins.containsKey(filePath)) {
                 Log.i(TAG, "Plugin with name $name already exists")
+                currentlyLoading = null
                 return true
             }
 
