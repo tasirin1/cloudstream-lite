@@ -939,9 +939,14 @@ suspend fun loadExtractor(
     val currentUrl = unshortenLinkSafe(url)
     val compareUrl = currentUrl.lowercase().replace(schemaStripRegex, "")
 
+    // Snapshot under the lock (audit sesi 15 #7): iterating the live
+    // list by index races plugin unload, which shrinks the list
+    // mid-loop and throws IndexOutOfBounds outside the try below.
+    val apisSnapshot = extractorApis.withLock { extractorApis.toList() }
+
     // Iterate in reverse order so the new registered ExtractorApi takes priority
-    for (index in extractorApis.lastIndex downTo 0) {
-        val extractor = extractorApis[index]
+    for (index in apisSnapshot.lastIndex downTo 0) {
+        val extractor = apisSnapshot[index]
         if (compareUrl.startsWith(extractor.mainUrl.replace(schemaStripRegex, ""))) {
             try {
                 extractor.getUrl(currentUrl, referer, subtitleCallback, callback)
@@ -969,8 +974,8 @@ suspend fun loadExtractor(
     }
 
     val currentSite = siteNameLabel(currentUrl)
-    for (index in extractorApis.lastIndex downTo 0) {
-        val extractor = extractorApis[index]
+    for (index in apisSnapshot.lastIndex downTo 0) {
+        val extractor = apisSnapshot[index]
         if (siteNameLabel(extractor.mainUrl) == currentSite &&
             Levenshtein.partialRatio(
                 extractor.mainUrl,
