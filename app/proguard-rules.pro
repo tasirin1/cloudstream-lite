@@ -58,8 +58,12 @@
 -keep class **$$serializer { *; }
 -keep class **$*$$serializer { *; }
 
-# Rhino (org.mozilla.javascript) optionally uses the desktop-only
-# java.beans introspection API, which does not exist on Android; the
-# references are guarded at runtime. Without this, R8 aborts with
-# "Missing class java.beans.*" errors.
+# Rhino (org.mozilla.javascript) optionally uses desktop-only APIs
+# that do not exist on Android (java.beans introspection, the
+# javax.script JSR-223 engine bridge, jdk.dynalink); the references
+# are guarded at runtime. Keeping the whole Rhino package for
+# plugins (above) makes R8 check all of them, so without these it
+# aborts with "Missing class ..." errors.
 -dontwarn java.beans.**
+-dontwarn javax.script.**
+-dontwarn jdk.dynalink.**
