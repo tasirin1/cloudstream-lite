@@ -167,6 +167,11 @@ WAJIB dicatat di tabel ini pada commit yang sama.
   (di 999 naikkan minor: `4.9.999` → `4.10.0`). Skema lama
   `v4.9.1-fork.N` berhenti di fork.5; rilis pertama skema baru =
   `v4.9.6`.
+- **Rilis OTOMATIS (perintah owner 2026-11-19)**: cukup push tag
+  `v4.9.*` — workflow Fork Build membangun lalu menerbitkan rilis
+  penuh berisi 3 APK dari build yang sama (langkah "Publish GitHub
+  release", hanya jalan di build tag). JANGAN lagi unduh artifact
+  dan unggah manual. Push branch biasa tetap hanya artifact uji.
 - Tiga workflow upstream **DINONAKTIFKAN manual** di fork ini
   (GitHub Actions settings, berkasnya tidak diubah): `Pre-release`,
   `Archive build`, `Dokka`. Ketiganya bergantung pada secrets
