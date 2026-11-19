@@ -155,9 +155,18 @@ WAJIB dicatat di tabel ini pada commit yang sama.
   (`.github/workflows/build-fork.yml`, kustomisasi fork 2026-11-19):
   jalan pada push ke `master` (selain `*.md`/`*.json`) dan
   `workflow_dispatch`, TANPA secret apa pun, menjalankan
-  `./gradlew assemblePrereleaseDebug` dan mengunggah APK prerelease
-  debug (tertanda debug key, bisa langsung dipasang untuk uji)
-  sebagai artifact `cloudstream-prerelease-debug`.
+  `./gradlew assemblePrereleaseFullDebug` (artifact
+  `cloudstream-prerelease-debug`: APK full v7a + arm64, tertanda
+  debug key) dan `./gradlew assemblePrereleaseLiteRelease` +
+  tanda tangan kunci sekali-pakai CI (artifact
+  `cloudstream-stb-lite`).
+- **Aturan rilis (perintah owner 2026-11-19)**: rilis GitHub
+  diterbitkan sebagai **rilis penuh** (BUKAN pre-release), dan
+  nomornya berjalan menaik dari basis upstream: `v4.9.1`, `v4.9.2`,
+  … `v4.9.100`, dst. — komponen versi TIDAK BOLEH menyentuh 1000
+  (di 999 naikkan minor: `4.9.999` → `4.10.0`). Skema lama
+  `v4.9.1-fork.N` berhenti di fork.5; rilis pertama skema baru =
+  `v4.9.6`.
 - Tiga workflow upstream **DINONAKTIFKAN manual** di fork ini
   (GitHub Actions settings, berkasnya tidak diubah): `Pre-release`,
   `Archive build`, `Dokka`. Ketiganya bergantung pada secrets
