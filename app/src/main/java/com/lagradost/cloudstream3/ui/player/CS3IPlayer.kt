@@ -163,12 +163,13 @@ class CS3IPlayer : IPlayer {
 
     private var ignoreSSL: Boolean = true
 
-    // Fork fix (audit #1): the ignoreSSL block below replaces the
-    // PROCESS-WIDE HttpsURLConnection defaults. The previous defaults
-    // are captured here on first use and restored in releasePlayer(),
-    // so the rest of the app does not stay TLS-blind after playback.
-    private var previousHostnameVerifier: javax.net.ssl.HostnameVerifier? = null
-    private var previousSslSocketFactory: javax.net.ssl.SSLSocketFactory? = null
+    // Fork fix (audit #1; audit sesi 15 #4): the ignoreSSL block below
+    // replaces the PROCESS-WIDE HttpsURLConnection defaults. The
+    // originals are captured once in the companion (see sslDefaultsLock)
+    // and restored when the last relaxing player is released, so
+    // overlapping players cannot capture the relaxed values as the
+    // "originals" and leave the app TLS-blind after playback.
+    private var sslRelaxed: Boolean = false
 
     private var playBackSpeed: Float = 1.0f
 
@@ -609,15 +610,23 @@ class CS3IPlayer : IPlayer {
 
     private fun releasePlayer(saveTime: Boolean = true) {
         Log.i(TAG, "releasePlayer")
-        // Fork fix (audit #1): undo the process-wide TLS relaxation
-        // that playback applied, if it did.
-        previousHostnameVerifier?.let {
-            HttpsURLConnection.setDefaultHostnameVerifier(it)
-            previousHostnameVerifier = null
-        }
-        previousSslSocketFactory?.let {
-            HttpsURLConnection.setDefaultSSLSocketFactory(it)
-            previousSslSocketFactory = null
+        // Fork fix (audit #1; audit sesi 15 #4): undo the process-wide
+        // TLS relaxation once the last relaxing player is released.
+        if (sslRelaxed) {
+            synchronized(sslDefaultsLock) {
+                sslRelaxed = false
+                if (relaxedSslUsers > 0) relaxedSslUsers--
+                if (relaxedSslUsers == 0) {
+                    originalHostnameVerifier?.let {
+                        HttpsURLConnection.setDefaultHostnameVerifier(it)
+                    }
+                    originalSslSocketFactory?.let {
+                        HttpsURLConnection.setDefaultSSLSocketFactory(it)
+                    }
+                    originalHostnameVerifier = null
+                    originalSslSocketFactory = null
+                }
+            }
         }
         eventLooperIndex.incrementAndGet()
         if (saveTime)
@@ -688,6 +697,14 @@ class CS3IPlayer : IPlayer {
 
     companion object {
         private const val CRONET_TIMEOUT_MS = 15_000
+
+        // Guard for the process-wide TLS relaxation in loadOnlinePlayer:
+        // originals are captured by the first relaxing player and
+        // restored when the count returns to zero (audit sesi 15 #4).
+        private val sslDefaultsLock = Any()
+        private var relaxedSslUsers = 0
+        private var originalHostnameVerifier: javax.net.ssl.HostnameVerifier? = null
+        private var originalSslSocketFactory: javax.net.ssl.SSLSocketFactory? = null
 
         /**
          * Single shared engine, to minimize the overhead of maintaining many as:
@@ -1980,21 +1997,28 @@ class CS3IPlayer : IPlayer {
 
             currentLink = link
 
-            if (ignoreSSL) {
+            if (ignoreSSL && !sslRelaxed) {
                 // Disables ssl check for playback only. The defaults are
-                // process-wide, so capture the originals first and let
-                // releasePlayer() restore them (fork fix, audit #1).
-                if (previousHostnameVerifier == null) {
-                    previousHostnameVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
-                    previousSslSocketFactory = HttpsURLConnection.getDefaultSSLSocketFactory()
+                // process-wide, so the originals are captured once under
+                // a lock and restored by releasePlayer() when the last
+                // relaxing player goes away (fork fix, audit #1;
+                // audit sesi 15 #4).
+                synchronized(sslDefaultsLock) {
+                    if (relaxedSslUsers == 0) {
+                        originalHostnameVerifier =
+                            HttpsURLConnection.getDefaultHostnameVerifier()
+                        originalSslSocketFactory =
+                            HttpsURLConnection.getDefaultSSLSocketFactory()
+                    }
+                    relaxedSslUsers++
+                    sslRelaxed = true
+                    val sslContext: SSLContext = SSLContext.getInstance("TLS")
+                    sslContext.init(null, arrayOf(SSLTrustManager()), SecureRandom())
+                    HttpsURLConnection.setDefaultHostnameVerifier { _: String, _: SSLSession ->
+                        true
+                    }
+                    HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.socketFactory)
                 }
-                val sslContext: SSLContext = SSLContext.getInstance("TLS")
-                sslContext.init(null, arrayOf(SSLTrustManager()), SecureRandom())
-                sslContext.createSSLEngine()
-                HttpsURLConnection.setDefaultHostnameVerifier { _: String, _: SSLSession ->
-                    true
-                }
-                HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.socketFactory)
             }
 
 
