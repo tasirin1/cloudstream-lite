@@ -48,6 +48,8 @@
             android:key="@string/subtitle_settings_key"
             android:title="@string/player_subtitles_settings"
             app:summary="@string/player_subtitles_settings_des" />
+    </PreferenceCategory>
+
 <PreferenceCategory android:title="@string/pref_category_player_features">
         <Preference
             android:icon="@drawable/ic_baseline_people_24"
