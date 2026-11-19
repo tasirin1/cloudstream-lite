@@ -73,7 +73,11 @@ class PluginDetailsFragment(val data: PluginViewData) : BaseBottomSheetDialogFra
                     ", "
                 )
             pluginStatus.text =
-                resources.getStringArray(R.array.extension_statuses)[metadata.status]
+                // metadata.status is raw third-party repository JSON;
+                // an out-of-range value used to crash with
+                // ArrayIndexOutOfBoundsException (audit sesi 15 #15).
+                resources.getStringArray(R.array.extension_statuses)
+                    .getOrNull(metadata.status) ?: getString(R.string.no_data)
             pluginTypes.text =
                 if (metadata.tvTypes.isNullOrEmpty()) getString(R.string.no_data) else metadata.tvTypes.joinToString(
                     ", "
