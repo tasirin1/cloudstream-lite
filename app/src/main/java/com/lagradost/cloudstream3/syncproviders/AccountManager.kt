@@ -44,10 +44,29 @@ abstract class AccountManager {
 
         fun accounts(prefix: String): Array<AuthData> {
             require(prefix != "NONE")
+            return loadAccountsFromDisk(prefix)
+        }
+
+        private fun loadAccountsFromDisk(prefix: String): Array<AuthData> {
             return getKey<Array<AuthData>>(
                 ACCOUNT_TOKEN,
                 "${prefix}/${DataStoreHelper.currentAccount}"
             ) ?: arrayOf()
+        }
+
+        // Fork fix (audit #38): a profile switch used to refresh only
+        // the cached ids, leaving the previous profile's tokens in
+        // cachedAccounts until a restart (sync looked logged out, or
+        // worse, used the wrong profile's token). Reload both.
+        fun updateCachedAccounts() {
+            val data = mutableMapOf<String, Array<AuthData>>()
+            for (api in allApis) {
+                data[api.idPrefix] = loadAccountsFromDisk(api.idPrefix)
+            }
+            synchronized(cachedAccounts) {
+                cachedAccounts.clear()
+                cachedAccounts.putAll(data)
+            }
         }
 
         fun updateAccounts(prefix: String, array: Array<AuthData>) {

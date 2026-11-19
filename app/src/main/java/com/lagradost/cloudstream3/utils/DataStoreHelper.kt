@@ -207,6 +207,7 @@ object DataStoreHelper {
         val homepage = currentHomePage
         selectedKeyIndex = account.keyIndex
         AccountManager.updateAccountIds()
+        AccountManager.updateCachedAccounts() // Fork fix (audit #38)
         if(showToast) {
             showToast(context?.getString(R.string.logged_account, account.name) ?: account.name)
         }
