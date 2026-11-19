@@ -903,6 +903,9 @@ suspend fun unshortenLinkSafe(url: String): String {
         if (ShortLink.isShortLink(url))
             ShortLink.unshorten(url)
         else url
+    } catch (e: CancellationException) {
+        // Cancellation is not a failure (audit sesi 15 #17).
+        throw e
     } catch (e: Exception) {
         logError(e)
         url
@@ -1472,6 +1475,9 @@ abstract class ExtractorApi {
     ) {
         try {
             getUrl(url, referer, subtitleCallback, callback)
+        } catch (e: CancellationException) {
+            // Cancellation is not a failure (audit sesi 15 #17).
+            throw e
         } catch (e: Exception) {
             logError(e)
         }

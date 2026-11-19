@@ -30,6 +30,7 @@ import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.datetime.LocalDate
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -285,8 +286,12 @@ object APIHolder {
                 res.coverImage?.extraLarge ?: res.coverImage?.large,
                 res.bannerImage
             )
-        } catch (t: Throwable) {
-            logError(t)
+        } catch (e: CancellationException) {
+            // Cancellation is not a lookup failure (audit sesi 15 #17);
+            // the old catch (Throwable) also silently swallowed Errors.
+            throw e
+        } catch (e: Exception) {
+            logError(e)
             null
         }
     }
