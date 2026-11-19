@@ -185,7 +185,7 @@ object PluginManager {
         runCatching { getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY) }
             .getOrNull()?.get(filePath)
 
-    private fun storePluginHash(filePath: String, hash: String) {
+    fun storePluginHash(filePath: String, hash: String) {
         val current = runCatching {
             getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
         }.getOrNull() ?: emptyMap()

@@ -174,6 +174,14 @@ object AndroidRepositoryManager : RepositoryManager {
             repositoryUrl = source.repositoryUrl
         )
 
+        // Fork fix (audit sesi 15 #9): anchor the verified digest for
+        // the load-time integrity check, like the legacy download path
+        // already does. Kept in the "sha256-<hex>" format that
+        // RepositoryManager.sha256 produces and loadPlugin compares.
+        val anchorHash = source.digest
+            ?.takeIf { it.algorithm.equals("sha256", ignoreCase = true) }
+            ?.let { pair -> "sha256-" + pair.digest.joinToString("") { "%02x".format(it) } }
+
         /**
          * Before we do anything that needs a network connection,
          * we actually check if we need to update it
@@ -181,6 +189,9 @@ object AndroidRepositoryManager : RepositoryManager {
          * Because if the file digest is correct, then why do we need to do a network connection?
          * */
         if (isFileDigest(file, source.digest)) {
+            if (anchorHash != null) {
+                PluginManager.storePluginHash(file.absolutePath, anchorHash)
+            }
             return@withContext file.absolutePath
         }
 
@@ -233,6 +244,10 @@ object AndroidRepositoryManager : RepositoryManager {
         )
         if (!result) {
             throw ErrorLoadingException("Unable to load plugin ${source.internalName}")
+        }
+
+        if (anchorHash != null) {
+            PluginManager.storePluginHash(file.absolutePath, anchorHash)
         }
 
         return@withContext file.absolutePath
