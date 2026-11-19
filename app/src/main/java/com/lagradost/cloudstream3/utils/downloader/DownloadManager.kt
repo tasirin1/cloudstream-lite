@@ -1058,8 +1058,13 @@ object VideoDownloadManager {
             }
 
             // if we have an output stream that cant be resumed then we delete the entire file
-            // and set up the stream again
-            if (!items.isResumed && stream.startAt > 0) {
+            // and set up the stream again; the same applies when the
+            // partial file is longer than the remote file is now —
+            // the remote content changed since the partial download
+            // and appending to it would produce a corrupt hybrid
+            if (stream.startAt > 0 && (!items.isResumed ||
+                        (items.totalLength != null && stream.startAt > items.totalLength))
+            ) {
                 fileStream.closeQuietly()
                 stream.delete()
                 metadata.setResumeLength(0)
