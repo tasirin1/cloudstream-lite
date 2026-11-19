@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.mvvm.safe
 import com.lagradost.cloudstream3.syncproviders.AccountManager.Companion.NONE_ID
 import com.lagradost.cloudstream3.utils.txt
+import kotlinx.coroutines.sync.withLock
 
 /** General-purpose repo */
 class PlainAuthRepo(api: AuthAPI) : AuthRepo(api)
@@ -30,17 +31,24 @@ abstract class AuthRepo(open val api: AuthAPI) {
         private val oauthPayload: MutableMap<String, String?> = mutableMapOf()
     }
 
+    // Fork fix (audit #37): check-refresh-store was unsynchronized;
+    // two concurrent calls could both refresh, and providers that
+    // rotate refresh tokens then invalidate the first result,
+    // silently logging the user out. Serialize per repo instance.
+    private val refreshMutex = kotlinx.coroutines.sync.Mutex()
+
     @Throws
-    protected suspend fun freshAuth(): AuthData? {
-        val data = authData() ?: return null
-        if (data.token.isAccessTokenExpired()) {
-            val newToken = api.refreshToken(data.token) ?: return null
-            val newAuth = AuthData(user = data.user, token = newToken)
-            refreshUser(newAuth)
-            return newAuth
+    protected suspend fun freshAuth(): AuthData? =
+        refreshMutex.withLock {
+            val data = authData() ?: return@withLock null
+            if (data.token.isAccessTokenExpired()) {
+                val newToken = api.refreshToken(data.token) ?: return@withLock null
+                val newAuth = AuthData(user = data.user, token = newToken)
+                refreshUser(newAuth)
+                return@withLock newAuth
+            }
+            return@withLock data
         }
-        return data
-    }
 
     @Throws
     fun openOAuth2Page(): Boolean {

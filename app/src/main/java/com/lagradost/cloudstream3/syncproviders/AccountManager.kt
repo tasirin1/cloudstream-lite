@@ -31,8 +31,13 @@ abstract class AccountManager {
         val subSourceApi = SubSourceApi()
         val animeSkipApi = AnimeSkipAuth()
 
-        var cachedAccounts: MutableMap<String, Array<AuthData>>
-        var cachedAccountIds: MutableMap<String, Int>
+        // Fork fix (audit #37): these maps double as lock objects for
+        // synchronized() blocks here and in AuthRepo. They must never
+        // be reassigned (updateAccountIds used to swap the ids map
+        // inside its own synchronized block, defeating the lock), so
+        // they are vals that are only ever mutated in place.
+        val cachedAccounts: MutableMap<String, Array<AuthData>> = mutableMapOf()
+        val cachedAccountIds: MutableMap<String, Int> = mutableMapOf()
 
         const val ACCOUNT_TOKEN = "auth_tokens"
         const val ACCOUNT_IDS = "auth_ids"
@@ -87,7 +92,8 @@ abstract class AccountManager {
                 )
             }
             synchronized(cachedAccountIds) {
-                cachedAccountIds = ids
+                cachedAccountIds.clear()
+                cachedAccountIds.putAll(ids)
             }
         }
 
@@ -105,8 +111,8 @@ abstract class AccountManager {
                     ) ?: NONE_ID
                 )
             }
-            cachedAccounts = data
-            cachedAccountIds = ids
+            cachedAccounts.putAll(data)
+            cachedAccountIds.putAll(ids)
         }
 
         // I do not want to place this in the init block as JVM initialization order is weird, and it may cause exceptions
