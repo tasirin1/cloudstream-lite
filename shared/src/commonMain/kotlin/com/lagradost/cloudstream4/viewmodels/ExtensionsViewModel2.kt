@@ -130,7 +130,7 @@ data class PluginSortBy(
     private val scoreCache = HashMap<String, Int>()
 
     fun score(plugin: Plugin): Int {
-        return scoreCache.getOrPut(plugin.pluginUrl) {
+        return scoreCache.getOrPut(plugin.uuid.toString()) {
             val score1 = Levenshtein.partialRatio(
                 plugin.info.name.lowercase(),
                 query
