@@ -608,10 +608,9 @@ class CS3IPlayer : IPlayer {
         }
     }
 
-    private fun releasePlayer(saveTime: Boolean = true) {
-        Log.i(TAG, "releasePlayer")
-        // Fork fix (audit #1; audit sesi 15 #4): undo the process-wide
-        // TLS relaxation once the last relaxing player is released.
+    // Fork fix (audit #1; audit sesi 15 #4): undo the process-wide
+    // TLS relaxation once the last relaxing player stops using it.
+    private fun restoreSslDefaultsIfRelaxed() {
         if (sslRelaxed) {
             synchronized(sslDefaultsLock) {
                 sslRelaxed = false
@@ -628,6 +627,11 @@ class CS3IPlayer : IPlayer {
                 }
             }
         }
+    }
+
+    private fun releasePlayer(saveTime: Boolean = true) {
+        Log.i(TAG, "releasePlayer")
+        restoreSslDefaultsIfRelaxed()
         eventLooperIndex.incrementAndGet()
         if (saveTime)
             updatedTime()
@@ -2096,6 +2100,10 @@ class CS3IPlayer : IPlayer {
                 onlineSource = onlineSourceFactory
             )
         } catch (t: Throwable) {
+            // Audit sesi 15 #38: a failure after the TLS relaxation
+            // above must not leave the process-wide trust-all defaults
+            // installed for a player that never started.
+            restoreSslDefaultsIfRelaxed()
             Log.e(TAG, "loadOnlinePlayer error", t)
             event(ErrorEvent(t))
         }
