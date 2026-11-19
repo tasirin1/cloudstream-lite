@@ -148,8 +148,11 @@ android {
     buildTypes {
         release {
             isDebuggable = false
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Fork change: R8 shrinking on (rules in proguard-rules.pro
+            // keep the whole com.lagradost.** API surface extensions
+            // link against; libraries are shrunk in full).
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

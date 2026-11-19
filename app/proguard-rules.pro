@@ -1,21 +1,35 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.kts.
+# Fork R8 rules for the release build.
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Extensions are separate APKs compiled against this app's public API
+# and linked by name at runtime (PluginManager loads their classes,
+# they subclass MainAPI / call into com.lagradost.**). Obfuscating or
+# removing app classes would break every installed extension, so all
+# com.lagradost.** names and members are kept. Shrinking still
+# applies in full to third-party libraries (Compose, Media3, OkHttp,
+# Jackson, ...), which make up most of the dex size.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+-keep class com.lagradost.** { *; }
+-keep interface com.lagradost.** { *; }
+-keep enum com.lagradost.** { *; }
+-keep class com.lagradost.**$* { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# JNI: native method names must survive (QuickJS and friends).
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Media3 optional extractors the player factory probes reflectively.
+-keep class androidx.media3.decoder.midi.** { *; }
+-keep class androidx.media3.decoder.flac.** { *; }
+
+# Parcelable creators, in case any library model rides a Bundle.
+-keep class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
+}
+
+# Keep annotations and signatures for serialization frameworks.
+-keepattributes Signature, InnerClasses, EnclosingMethod, RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations, AnnotationDefault
+
+# kotlinx.serialization generated serializers outside com.lagradost.
+-keep class **$$serializer { *; }
+-keep class **$*$$serializer { *; }
