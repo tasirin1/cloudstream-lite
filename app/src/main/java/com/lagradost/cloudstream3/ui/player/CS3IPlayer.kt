@@ -635,6 +635,11 @@ class CS3IPlayer : IPlayer {
         currentTextRenderer = null
         currentSubtitleDecoder = null
 
+        // Audit sesi 15 #19: unregisterPlayer existed but was never
+        // called, so every registered player kept its LiveManager and
+        // listener in LiveHelper for the process lifetime.
+        LiveHelper.unregisterPlayer(exoPlayer)
+
         exoPlayer?.apply {
             playWhenReady = false
 
