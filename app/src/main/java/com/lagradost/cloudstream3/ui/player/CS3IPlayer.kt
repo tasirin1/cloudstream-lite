@@ -619,7 +619,7 @@ class CS3IPlayer : IPlayer {
             HttpsURLConnection.setDefaultSSLSocketFactory(it)
             previousSslSocketFactory = null
         }
-        eventLooperIndex += 1
+        eventLooperIndex.incrementAndGet()
         if (saveTime)
             updatedTime()
 
@@ -1065,24 +1065,33 @@ class CS3IPlayer : IPlayer {
     // we want to push metadata when loading torrents, so we just set up a looper that loops until
     // the index changes, this way only 1 looper is active at a time, and modifying eventLooperIndex
     // will kill any active loopers
-    private var eventLooperIndex = 0
+    // Fork fix (audit #24): the counter is bumped from IO coroutines and
+    // releasePlayer() at once; a plain Int made the read-modify-write
+    // race, so two loopers could share an index (zombie looper) or the
+    // new one died instantly. AtomicInteger makes each claim unique.
+    private val eventLooperIndex = java.util.concurrent.atomic.AtomicInteger(0)
     private fun torrentEventLooper(hash: String) = ioSafe {
-        eventLooperIndex += 2
-        // very shitty, but should work fine
         // release player is called once for the new link
-        val currentIndex = eventLooperIndex + 1
-        while (eventLooperIndex <= currentIndex && eventHandler != null) {
+        val currentIndex = eventLooperIndex.addAndGet(2) + 1
+        while (eventLooperIndex.get() <= currentIndex && eventHandler != null) {
             try {
                 val status = Torrent.get(hash)
-                event(
-                    DownloadEvent(
-                        connections = status.activePeers,
-                        downloadSpeed = status.downloadSpeed?.toLong()!!,
-                        totalBytes = status.torrentSize!!,
-                        downloadedBytes = status.bytesRead!!,
+                // Fork fix (audit #24): skip this tick when the torrent
+                // status is not populated yet instead of throwing NPE
+                // via !! and swallowing it silently every second.
+                val downloadSpeed = status.downloadSpeed?.toLong()
+                val totalBytes = status.torrentSize
+                val downloadedBytes = status.bytesRead
+                if (downloadSpeed != null && totalBytes != null && downloadedBytes != null) {
+                    event(
+                        DownloadEvent(
+                            connections = status.activePeers,
+                            downloadSpeed = downloadSpeed,
+                            totalBytes = totalBytes,
+                            downloadedBytes = downloadedBytes,
+                        )
                     )
-                )
-            } catch (_: NullPointerException) {
+                }
             } catch (t: Throwable) {
                 logError(t)
             }
