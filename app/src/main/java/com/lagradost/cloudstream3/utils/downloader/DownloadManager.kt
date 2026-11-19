@@ -1242,6 +1242,17 @@ object VideoDownloadManager {
                 return@withContext DOWNLOAD_INVALID_INPUT
             }
 
+            // a connection dying mid-stream is swallowed by resolve()
+            // as if it were EOF, so when the total size is known a
+            // short byte count means the file is truncated: fail it
+            // (the partial file is kept for resume, like other
+            // failures) instead of reporting success
+            val knownTotal = metadata.totalBytes
+            if (knownTotal != null && metadata.bytesDownloaded < knownTotal) {
+                metadata.type = DownloadType.IsFailed
+                return@withContext metadata.failedStatus()
+            }
+
             metadata.type = DownloadType.IsDone
             return@withContext DOWNLOAD_SUCCESS
         } catch (e: IOException) {
