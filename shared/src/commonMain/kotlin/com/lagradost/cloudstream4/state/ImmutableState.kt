@@ -83,13 +83,22 @@ data class SortByMatching<Value>(
         return score(p1).compareTo(score(p0))
     }
 
+    // Fork fix (audit #29): a sort compares each element O(log n)
+    // times; recomputing a full Levenshtein DP (plus a lowercase) on
+    // every compare made sorting large lists repeat the same work
+    // many times over. Memoize per distinct transformed string for
+    // the lifetime of this comparator (one sort).
+    private val scoreCache = HashMap<String, Int>()
+
     fun score(p0: Value) : Int {
         val transformed = transform(p0)
         val matchAgainst = if (ignoreCase) transformed.lowercase() else transformed
-        return Levenshtein.partialRatio(
-            query,
-            matchAgainst
-        )
+        return scoreCache.getOrPut(matchAgainst) {
+            Levenshtein.partialRatio(
+                query,
+                matchAgainst
+            )
+        }
     }
 }
 
