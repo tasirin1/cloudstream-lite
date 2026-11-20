@@ -1128,6 +1128,67 @@ private fun nonIntegralDoubleToJsString(v: Double): String {
     }
 }
 
+// Audit-19 #7 helpers: JS replacement-string expansion
+// ($$, $&, $`, $') for the string replace methods. No
+// capture groups exist for string patterns, so $n stays
+// literal, as in JS.
+private fun expandDollarReplacement(
+    replacement: String,
+    match: String,
+    prefix: String,
+    suffix: String,
+): String {
+    val sb = StringBuilder()
+    var i = 0
+    while (i < replacement.length) {
+        val c = replacement[i]
+        if (c == '$' && i + 1 < replacement.length) {
+            when (replacement[i + 1]) {
+                '$' -> { sb.append('$'); i += 2 }
+                '&' -> { sb.append(match); i += 2 }
+                '`' -> { sb.append(prefix); i += 2 }
+                '\'' -> { sb.append(suffix); i += 2 }
+                else -> { sb.append(c); i++ }
+            }
+        } else {
+            sb.append(c); i++
+        }
+    }
+    return sb.toString()
+}
+
+private fun jsReplaceFirst(source: String, pattern: String, replacement: String): String {
+    val idx = source.indexOf(pattern)
+    if (idx == -1) return source
+    val expanded = expandDollarReplacement(
+        replacement, pattern,
+        source.substring(0, idx), source.substring(idx + pattern.length)
+    )
+    return source.substring(0, idx) + expanded + source.substring(idx + pattern.length)
+}
+
+private fun jsReplaceAll(source: String, pattern: String, replacement: String): String {
+    if (pattern.isEmpty()) return source.replace(pattern, replacement)
+    val sb = StringBuilder()
+    var i = 0
+    while (true) {
+        val idx = source.indexOf(pattern, i)
+        if (idx == -1) {
+            sb.append(source.substring(i))
+            break
+        }
+        sb.append(source.substring(i, idx))
+        sb.append(
+            expandDollarReplacement(
+                replacement, pattern,
+                source.substring(0, idx), source.substring(idx + pattern.length)
+            )
+        )
+        i = idx + pattern.length
+    }
+    return sb.toString()
+}
+
 private fun strictEq(a: Any?, b: Any?): Boolean = when {
     a is Double && b is Double -> a == b
     a is String && b is String -> a == b
@@ -1620,10 +1681,29 @@ private class JsInterpreter(
             // Audit-16 #6: in JS two strings compare
             // lexicographically ("10" < "9" is true);
             // only mixed/non-string operands go numeric.
-            "<" -> if (l is String && r is String) l < r else toNumber(l) < toNumber(r)
-            "<=" -> if (l is String && r is String) l <= r else toNumber(l) <= toNumber(r)
-            ">" -> if (l is String && r is String) l > r else toNumber(l) > toNumber(r)
-            ">=" -> if (l is String && r is String) l >= r else toNumber(l) >= toNumber(r)
+            // Audit-19 #10: ToPrimitive first — two arrays
+            // become their joined strings and compare
+            // lexicographically too ([5] < [10] is false).
+            "<" -> {
+                val lp = if (l is JsList || l is JsObject || l is NativeFn || l is JsFunction) toJsString(l) else l
+                val rp = if (r is JsList || r is JsObject || r is NativeFn || r is JsFunction) toJsString(r) else r
+                if (lp is String && rp is String) lp < rp else toNumber(lp) < toNumber(rp)
+            }
+            "<=" -> {
+                val lp = if (l is JsList || l is JsObject || l is NativeFn || l is JsFunction) toJsString(l) else l
+                val rp = if (r is JsList || r is JsObject || r is NativeFn || r is JsFunction) toJsString(r) else r
+                if (lp is String && rp is String) lp <= rp else toNumber(lp) <= toNumber(rp)
+            }
+            ">" -> {
+                val lp = if (l is JsList || l is JsObject || l is NativeFn || l is JsFunction) toJsString(l) else l
+                val rp = if (r is JsList || r is JsObject || r is NativeFn || r is JsFunction) toJsString(r) else r
+                if (lp is String && rp is String) lp > rp else toNumber(lp) > toNumber(rp)
+            }
+            ">=" -> {
+                val lp = if (l is JsList || l is JsObject || l is NativeFn || l is JsFunction) toJsString(l) else l
+                val rp = if (r is JsList || r is JsObject || r is NativeFn || r is JsFunction) toJsString(r) else r
+                if (lp is String && rp is String) lp >= rp else toNumber(lp) >= toNumber(rp)
+            }
             "==" -> looseEq(l, r)
             "!=" -> !looseEq(l, r)
             "===" -> strictEq(l, r)
@@ -1838,24 +1918,27 @@ private class JsInterpreter(
             "length" -> obj.length.toDouble()
             "split" -> nativeFn("split") { args ->
                 val sep = args.getOrNull(0)
-                when {
-                    sep == null || sep is Unit -> JsList(mutableListOf(obj))
-                    sep is String && sep.isEmpty() -> JsList(obj.map { it.toString() as Any? }.toMutableList())
-                    sep is String -> JsList(obj.split(sep).map { it as Any? }.toMutableList())
-                    else -> JsList(obj.split(toJsString(sep)).map { it as Any? }.toMutableList())
+                // Audit-19 #9: the limit argument caps the
+                // result count (0 -> [], negative -> no cap).
+                val limit = args.getOrNull(1)?.let { toNumber(it).toInt() }
+                val parts = when {
+                    sep == null || sep is Unit -> listOf<Any?>(obj)
+                    sep is String && sep.isEmpty() -> obj.map { it.toString() as Any? }
+                    sep is String -> obj.split(sep).map { it as Any? }
+                    else -> obj.split(toJsString(sep)).map { it as Any? }
                 }
+                JsList((if (limit == null || limit < 0) parts else parts.take(limit)).toMutableList())
             }
             "join" -> nativeFn("join") { args -> obj } // strings don't have join but just in case
+            // Audit-19 #7: replace() substitutes only the
+            // FIRST occurrence whatever the pattern type
+            // (the non-String branch replaced all), and the
+            // replacement expands $$, $&, $` and $' as in JS.
             "replace" -> nativeFn("replace") { args ->
-                val from = args.getOrNull(0); val to = toJsString(args.getOrNull(1))
-                when (from) {
-                    is String -> obj.replaceFirst(from, to)
-                    else -> obj.replace(toJsString(from), to)
-                }
+                jsReplaceFirst(obj, toJsString(args.getOrNull(0)), toJsString(args.getOrNull(1)))
             }
             "replaceAll" -> nativeFn("replaceAll") { args ->
-                val from = args.getOrNull(0); val to = toJsString(args.getOrNull(1))
-                obj.replace(toJsString(from), to)
+                jsReplaceAll(obj, toJsString(args.getOrNull(0)), toJsString(args.getOrNull(1)))
             }
             "indexOf" -> nativeFn("indexOf") { args ->
                 // Audit-15 #27 (string sibling): the position
@@ -1864,10 +1947,26 @@ private class JsInterpreter(
                 val start = if (rawStart < 0) 0 else minOf(rawStart, obj.length)
                 obj.indexOf(toJsString(args.getOrNull(0)), start).toDouble()
             }
-            "lastIndexOf" -> nativeFn("lastIndexOf") { args -> obj.lastIndexOf(toJsString(args.getOrNull(0))).toDouble() }
-            "includes" -> nativeFn("includes") { args -> obj.contains(toJsString(args.getOrNull(0))) }
-            "startsWith" -> nativeFn("startsWith") { args -> obj.startsWith(toJsString(args.getOrNull(0))) }
-            "endsWith" -> nativeFn("endsWith") { args -> obj.endsWith(toJsString(args.getOrNull(0))) }
+            // Audit-19 #8: the position argument counts for
+            // these four too (indexOf learned it in
+            // Audit-15 #27). endsWith's second argument is
+            // the END position, as in JS.
+            "lastIndexOf" -> nativeFn("lastIndexOf") { args ->
+                val rawPos = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: obj.length
+                obj.lastIndexOf(toJsString(args.getOrNull(0)), rawPos.coerceIn(0, obj.length)).toDouble()
+            }
+            "includes" -> nativeFn("includes") { args ->
+                val rawPos = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
+                obj.indexOf(toJsString(args.getOrNull(0)), rawPos.coerceIn(0, obj.length)) >= 0
+            }
+            "startsWith" -> nativeFn("startsWith") { args ->
+                val rawPos = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
+                obj.startsWith(toJsString(args.getOrNull(0)), rawPos.coerceIn(0, obj.length))
+            }
+            "endsWith" -> nativeFn("endsWith") { args ->
+                val rawEnd = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: obj.length
+                obj.substring(0, rawEnd.coerceIn(0, obj.length)).endsWith(toJsString(args.getOrNull(0)))
+            }
             "slice" -> nativeFn("slice") { args ->
                 val start = args.getOrNull(0)?.let { toNumber(it).toInt() }?.let { if (it < 0) maxOf(0, obj.length + it) else minOf(it, obj.length) } ?: 0
                 val end = args.getOrNull(1)?.let { toNumber(it).toInt() }?.let { if (it < 0) maxOf(0, obj.length + it) else minOf(it, obj.length) } ?: obj.length
