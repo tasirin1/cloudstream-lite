@@ -1022,12 +1022,21 @@ object PluginManager {
     ): Boolean {
         try {
             Log.d(TAG, "Downloading plugin: $pluginUrl to ${file.absolutePath}")
+            // Audit-7 #25: normalize the manifest hash ONCE here
+            // — the legacy path used to pass the raw spelling to
+            // both the download check and the stored anchor, so
+            // an uppercase hex or a "SHA-256:<hex>" spelling
+            // (both fine on the Compose path since Audit-6 #7)
+            // mismatched the computed lowercase sha256 forever.
+            val normalizedHash = pluginHash?.trim()
+                ?.substringAfterLast(':')?.trim()?.lowercase()
+                ?.takeIf { it.isNotEmpty() }
             // The plugin file needs to be salted with the repository url hash as to allow multiple repositories with the same internal plugin names
-            val newFile = downloadPluginToFile(activity, pluginUrl, file, pluginHash) ?: return false
+            val newFile = downloadPluginToFile(activity, pluginUrl, file, normalizedHash) ?: return false
 
             // Fork fix (audit #9): anchor for the load-time check.
-            if (pluginHash != null) {
-                storePluginHash(newFile.absolutePath, pluginHash)
+            if (normalizedHash != null) {
+                storePluginHash(newFile.absolutePath, normalizedHash)
             } else {
                 // Audit-7 #6: this download was accepted WITHOUT
                 // a manifest hash, so any anchor stored for the
