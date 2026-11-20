@@ -140,7 +140,13 @@ object PluginManager {
         if (data == null) return
         lock.withLock {
             if (data.isOnline) {
-                val plugins = getPluginsOnline().filter { it.url != data.url }
+                // Audit-5 #32: this filtered by url, so deleting
+                // one plugin also unregistered its twin — the
+                // same plugin file published by another
+                // repository (same URL, different filePath).
+                // setPluginData and the local branch both key by
+                // filePath; do the same here.
+                val plugins = getPluginsOnline().filter { it.filePath != data.filePath }
                 setKey(PLUGINS_KEY, plugins)
             } else {
                 val plugins = getPluginsLocal().filter { it.filePath != data.filePath }
