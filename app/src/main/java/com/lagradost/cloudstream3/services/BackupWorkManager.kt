@@ -90,11 +90,13 @@ class BackupWorkManager(val context: Context, workerParams: WorkerParameters) :
             ) else  ForegroundInfo(BACKUP_NOTIFICATION_ID, backupNotificationBuilder.build())
         setForeground(foregroundInfo)
 
-        // Audit-3 #8: backup() returns a Job; without join() the
-        // worker reported success immediately and WorkManager was
-        // free to kill the process mid-write.
-        BackupUtils.backup(context).join()
+        // Audit-3 #8 made this wait for the backup job; Audit-4 #9:
+        // backup() swallows its own failures into a toast, so the
+        // joined Job said nothing about the outcome and failed
+        // backups were still recorded as successful. Await the
+        // real result instead.
+        val succeeded = BackupUtils.backupAndAwait(context)
 
-        return Result.success()
+        return if (succeeded) Result.success() else Result.failure()
     }
 }

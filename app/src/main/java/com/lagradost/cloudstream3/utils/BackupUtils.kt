@@ -45,6 +45,8 @@ import java.lang.System.currentTimeMillis
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object BackupUtils {
 
@@ -204,6 +206,23 @@ object BackupUtils {
 
     fun backup(context: Context?) = ioSafe {
         if (context == null) return@ioSafe
+        runBackup(context)
+    }
+
+    /**
+     * Audit-4 #9: runs a backup and reports whether it actually
+     * succeeded. backup() swallows every failure into a toast, so
+     * BackupWorkManager — which joined backup()'s Job (Audit-3 #8)
+     * and then unconditionally reported success — recorded failed
+     * backups (revoked SAF permission, full storage, deleted
+     * target folder) as successful indefinitely.
+     */
+    suspend fun backupAndAwait(context: Context?): Boolean {
+        if (context == null) return false
+        return withContext(Dispatchers.IO) { runBackup(context) }
+    }
+
+    private suspend fun runBackup(context: Context): Boolean {
         var fileStream: OutputStream? = null
         var printStream: PrintWriter? = null
 
@@ -211,7 +230,7 @@ object BackupUtils {
             if (!context.checkWrite()) {
                 showToast(R.string.backup_failed, Toast.LENGTH_LONG)
                 context.getActivity()?.requestRW()
-                return@ioSafe
+                return false
             }
 
             val date = SimpleDateFormat("yyyy_MM_dd_HH_mm", Locale.getDefault()).format(
@@ -232,6 +251,7 @@ object BackupUtils {
                 throw IOException("Backup write failed")
             }
             showToast(R.string.backup_success, Toast.LENGTH_LONG)
+            return true
         } catch (e: Exception) {
             logError(e)
             try {
@@ -242,6 +262,7 @@ object BackupUtils {
             } catch (e: Exception) {
                 logError(e)
             }
+            return false
         } finally {
             printStream?.closeQuietly()
             fileStream?.closeQuietly()
