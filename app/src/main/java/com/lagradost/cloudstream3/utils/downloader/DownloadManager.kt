@@ -2524,8 +2524,15 @@ object VideoDownloadManager {
             val downloadItem = downloadQueueWrapper.downloadItem ?: return
 
             val generator = RepoLinkGenerator(listOf(downloadItem.episode))
-            val currentLinks = mutableSetOf<ExtractorLink>()
-            val currentSubs = mutableSetOf<SubtitleData>()
+            // Audit-13 #16: synchronized sets — generateLinks
+            // fans its callbacks out in parallel, and a plain
+            // HashSet can silently lose entries when concurrent
+            // adds collide during a resize (a mirror or a
+            // subtitle vanishing, or a false "no links").
+            val currentLinks =
+                java.util.Collections.synchronizedSet(mutableSetOf<ExtractorLink>())
+            val currentSubs =
+                java.util.Collections.synchronizedSet(mutableSetOf<SubtitleData>())
             val meta =
                 getDownloadEpisodeMetadata(
                     downloadItem.episode,
