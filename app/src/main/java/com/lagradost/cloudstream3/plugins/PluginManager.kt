@@ -1243,17 +1243,26 @@ object PluginManager {
             (getPluginsLocal() + getPluginsOnline()).filter { it.filePath == file.absolutePath }
 
         return try {
-            if (File(file.absolutePath).delete()) {
-                unloadPlugin(file.absolutePath)
-                list.forEach { deletePluginData(it) }
-                // Audit-7 #6: drop the deleted plugin's anchor
-                // too — orphaned anchors accumulated forever and
-                // could later mismatch a different file installed
-                // at the same path.
-                removePluginHash(file.absolutePath)
-                return true
+            val pluginFile = File(file.absolutePath)
+            val deleted = pluginFile.delete()
+            // Audit-9 #14: also remove a .bak left behind by an
+            // interrupted update, and don't abandon the cleanup
+            // when the plugin file was already gone (e.g. only
+            // the .bak survived an interrupted update) — the old
+            // early false left the data record and the anchor
+            // registered forever.
+            File(pluginFile.parentFile, pluginFile.name + ".bak").delete()
+            if (!deleted && pluginFile.exists()) {
+                return false
             }
-            false
+            unloadPlugin(file.absolutePath)
+            list.forEach { deletePluginData(it) }
+            // Audit-7 #6: drop the deleted plugin's anchor
+            // too — orphaned anchors accumulated forever and
+            // could later mismatch a different file installed
+            // at the same path.
+            removePluginHash(file.absolutePath)
+            true
         } catch (e: Exception) {
             false
         }
