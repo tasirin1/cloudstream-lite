@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.utils.getQualityFromPLabel
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.loadExtractor
@@ -60,7 +61,7 @@ class HubCloud : ExtractorApi() {
             if (headerDetails.isNotEmpty()) append("[$headerDetails]")
             if (size.isNotEmpty()) append("[$size]")
         }
-        val quality = getIndexQuality(header)
+        val quality = getQualityFromPLabel(header, Qualities.P2160.value)
 
         document.select("div.card-body h2 a.btn").amap { element ->
             val link = element.attr("href")
@@ -152,11 +153,6 @@ class HubCloud : ExtractorApi() {
                 }
             }
         }
-    }
-
-    private fun getIndexQuality(str: String?): Int {
-        return Regex("(\\d{3,4})[pP]").find(str.orEmpty())?.groupValues?.getOrNull(1)?.toIntOrNull()
-            ?: Qualities.P2160.value
     }
 
     private fun getBaseUrl(url: String): String {

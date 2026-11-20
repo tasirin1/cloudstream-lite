@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
+import com.lagradost.cloudstream3.utils.getQualityFromPLabel
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
@@ -55,16 +56,11 @@ open class Gofile : ExtractorApi() {
                     file.link,
                     ExtractorLinkType.VIDEO,
                 ) {
-                    this.quality = getQuality(fileName)
+                    this.quality = getQualityFromPLabel(fileName)
                     this.headers = mapOf("Cookie" to "accountToken=$token")
                 }
             )
         }
-    }
-
-    private fun getQuality(str: String?): Int {
-        return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
-            ?: Qualities.Unknown.value
     }
 
     private fun roundTo2Decimals(value: Double): String {

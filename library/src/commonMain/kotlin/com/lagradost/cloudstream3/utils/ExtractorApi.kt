@@ -889,6 +889,19 @@ fun getQualityFromName(qualityName: String?): Int {
     }?.value ?: match.toIntOrNull() ?: Qualities.Unknown.value
 }
 
+private val pLabelRegex = Regex("(\\d{3,4})[pP]")
+
+/**
+ * Audit-3 #44: Gofile, Mediafire and HubCloud each carried a private
+ * copy of this "720p"-style label parser (HubCloud's silently used a
+ * different default). One shared implementation; the default stays a
+ * parameter so each caller keeps its own fallback.
+ */
+fun getQualityFromPLabel(str: String?, default: Int = Qualities.Unknown.value): Int {
+    return pLabelRegex.find(str.orEmpty())?.groupValues?.getOrNull(1)?.toIntOrNull()
+        ?: default
+}
+
 private val packedRegex = Regex("""eval\(function\(p,a,c,k,e,.*\)\)""")
 fun getPacked(string: String): String? {
     return packedRegex.find(string)?.value
