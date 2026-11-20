@@ -144,6 +144,18 @@ class CS3IPlayer : IPlayer {
     private var idleResumeListener: Player.Listener? = null
     private var isPlaying = false
     private var exoPlayer: ExoPlayer? = null
+
+    // Audit-7 #9: the DRM session manager built for the current
+    // DASH load. It holds native MediaDrm sessions (very scarce
+    // on API 23) and was previously dropped on the floor per
+    // load — never released — so repeated DRM playback could
+    // exhaust the session pool until an app restart.
+    private var drmSessionManager: DefaultDrmSessionManager? = null
+
+    private fun trackDrmSessionManager(manager: DefaultDrmSessionManager) {
+        drmSessionManager?.release()
+        drmSessionManager = manager
+    }
         set(value) {
             // If the old value is not null then the player has not been properly released.
             debugAssert(
@@ -666,6 +678,9 @@ class CS3IPlayer : IPlayer {
         //simpleCache?.release()
 
         exoPlayer = null
+        // Audit-7 #9: hand the native DRM sessions back.
+        drmSessionManager?.release()
+        drmSessionManager = null
         event(PlayerAttachedEvent(null))
         //simpleCache = null
     }
@@ -1536,6 +1551,7 @@ class CS3IPlayer : IPlayer {
                                 FrameworkMediaDrm.DEFAULT_PROVIDER
                             )
                             .build(drmCallback)
+                        trackDrmSessionManager(manager)
 
                         DashMediaSource.Factory(client)
                             .setDrmSessionManagerProvider { manager }
@@ -1557,6 +1573,7 @@ class CS3IPlayer : IPlayer {
                                 FrameworkMediaDrm.DEFAULT_PROVIDER
                             )
                             .build(drmCallback)
+                        trackDrmSessionManager(manager)
 
                         DashMediaSource.Factory(client)
                             .setDrmSessionManagerProvider { manager }
