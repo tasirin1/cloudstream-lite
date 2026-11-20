@@ -1979,11 +1979,25 @@ object VideoDownloadManager {
             ) {
                 return cached.result
             }
+            // Audit-8 #10: an expired entry used to stay in the
+            // map forever (only the app's own delete path ever
+            // removed one), so the cache grew by one entry per
+            // downloaded episode ever displayed, for the whole
+            // process lifetime. Evict on expiry; the re-fetch
+            // below re-inserts on success.
+            if (cached != null) fileInfoCache.remove(id)
         }
         try {
             val info =
-                context.getKey<DownloadedFileInfo>(KEY_DOWNLOAD_INFO, id.toString()) ?: return null
-            val file = info.toFile(context) ?: return null
+                context.getKey<DownloadedFileInfo>(KEY_DOWNLOAD_INFO, id.toString())
+                    ?: run {
+                        fileInfoCache.remove(id)
+                        return null
+                    }
+            val file = info.toFile(context) ?: run {
+                fileInfoCache.remove(id)
+                return null
+            }
 
             // Audit-3 #38: the old code paid a separate SAF exists()
             // provider query per episode on every stats refresh, on
