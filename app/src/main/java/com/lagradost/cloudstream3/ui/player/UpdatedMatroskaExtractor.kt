@@ -1136,6 +1136,22 @@ class UpdatedMatroskaExtractor private constructor(
                         }
                     }
 
+                    // Audit-15 #7: lace-declared sizes are
+                    // attacker-controlled bytes — when they
+                    // exceed the block payload, the computed
+                    // last/fixed sample size goes negative and
+                    // flowed unchecked into the sample writers
+                    // (raw runtime failure / corrupt sample).
+                    // Reject the block as malformed instead.
+                    for (i in 0 until blockSampleCount) {
+                        if (blockSampleSizes[i] < 0) {
+                            throw ParserException.createForMalformedContainer(
+                                "Negative laced sample size: ${blockSampleSizes[i]}",
+                                null
+                            )
+                        }
+                    }
+
                     val timecode =
                         (scratch.data[0].toInt() shl 8) or (scratch.data[1].toInt() and 0xFF)
                     blockTimeUs = clusterTimecodeUs + scaleTimecodeToUs(timecode.toLong())
