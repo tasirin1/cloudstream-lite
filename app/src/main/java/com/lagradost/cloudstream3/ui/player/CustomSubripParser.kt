@@ -270,23 +270,47 @@ class CustomSubripParser : SubtitleParser {
         private const val ALIGN_TOP_RIGHT = "{\\an9}"
 
         private fun parseTimecode(matcher: Matcher, groupOffset: Int): Long {
-            val hours = matcher.group(groupOffset + 1)
-            var timestampMs = if (hours != null) hours.toLong() * 60 * 60 * 1000 else 0
-            timestampMs += checkNotNull(matcher.group(groupOffset + 2))
-                .toLong() * 60 * 1000
-            timestampMs += checkNotNull(matcher.group(groupOffset + 3))
-                .toLong() * 1000
-            val millis = matcher.group(groupOffset + 4)
+            // Audit-13 #20: exact arithmetic — Audit-10 #18's
+            // NumberFormatException catch only covers digit runs
+            // too long for Long; a 10-digit hour still PARSED and
+            // then wrapped silently in the multiplications below
+            // (Long arithmetic wraps), producing a negative
+            // timestamp that reached the cue instead of the cue
+            // being skipped. Convert overflow into the same
+            // NumberFormatException the caller already handles.
+            try {
+                val hours = matcher.group(groupOffset + 1)
+                var timestampMs =
+                    if (hours != null) Math.multiplyExact(hours.toLong(), 3_600_000L) else 0
+                timestampMs = Math.addExact(
+                    timestampMs,
+                    Math.multiplyExact(
+                        checkNotNull(matcher.group(groupOffset + 2)).toLong(), 60_000L
+                    )
+                )
+                timestampMs = Math.addExact(
+                    timestampMs,
+                    Math.multiplyExact(
+                        checkNotNull(matcher.group(groupOffset + 3)).toLong(), 1_000L
+                    )
+                )
+                val millis = matcher.group(groupOffset + 4)
 
-            timestampMs += when (millis?.length) {
-                null -> 0L
-                1 -> millis.toLong() * 100L
-                2 -> millis.toLong() * 10L
-                3 -> millis.toLong() * 1L
-                else -> millis.substring(0, 3).toLong()
+                timestampMs = Math.addExact(
+                    timestampMs,
+                    when (millis?.length) {
+                        null -> 0L
+                        1 -> millis.toLong() * 100L
+                        2 -> millis.toLong() * 10L
+                        3 -> millis.toLong() * 1L
+                        else -> millis.substring(0, 3).toLong()
+                    }
+                )
+
+                return Math.multiplyExact(timestampMs, 1_000L)
+            } catch (e: ArithmeticException) {
+                throw NumberFormatException("Timecode overflow: ${e.message}")
             }
-
-            return timestampMs * 1000
         }
 
         // TODO(b/289983417): Make package-private again, once it is no longer needed in
