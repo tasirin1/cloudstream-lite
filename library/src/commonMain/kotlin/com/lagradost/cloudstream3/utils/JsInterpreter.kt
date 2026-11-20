@@ -853,6 +853,39 @@ private fun toUint32(v: Any?): Long {
     return (((n % 4294967296.0) + 4294967296.0) % 4294967296.0).toLong()
 }
 
+private fun parseFloatPrefix(s: String): Double {
+    var i = 0
+    while (i < s.length && s[i].isWhitespace()) i++
+    val start = i
+    if (i < s.length && (s[i] == '+' || s[i] == '-')) i++
+    if (s.startsWith("Infinity", i)) {
+        return if (s.getOrNull(start) == '-') Double.NEGATIVE_INFINITY
+        else Double.POSITIVE_INFINITY
+    }
+    var sawDigit = false
+    var sawDot = false
+    while (i < s.length) {
+        val c = s[i]
+        if (c.isDigit()) {
+            sawDigit = true; i++
+        } else if (c == '.' && !sawDot) {
+            sawDot = true; i++
+        } else break
+    }
+    if (!sawDigit) return Double.NaN
+    var end = i
+    if (i < s.length && (s[i] == 'e' || s[i] == 'E')) {
+        var j = i + 1
+        if (j < s.length && (s[j] == '+' || s[j] == '-')) j++
+        var expDigits = false
+        while (j < s.length && s[j].isDigit()) {
+            expDigits = true; j++
+        }
+        if (expDigits) end = j
+    }
+    return s.substring(start, end).toDoubleOrNull() ?: Double.NaN
+}
+
 private fun toNumber(v: Any?): Double = when (v) {
     null -> 0.0 // In JS Number(null) === 0
     is Unit -> Double.NaN // In JS Number(undefined) === NaN
@@ -1108,7 +1141,12 @@ private class JsInterpreter(
                 }
             }
         })
-        globalScope.define("parseFloat", nativeFn("parseFloat") { args -> toNumber(args.getOrNull(0)) })
+        // Audit-16 #7: JS parseFloat parses the longest
+        // numeric PREFIX ("12.5abc" -> 12.5, "0x10" -> 0);
+        // it used to convert the whole string, yielding NaN.
+        globalScope.define("parseFloat", nativeFn("parseFloat") { args ->
+            parseFloatPrefix(toJsString(args.getOrNull(0)))
+        })
         globalScope.define("isNaN", nativeFn("isNaN") { args -> toNumber(args.getOrNull(0)).isNaN() })
         globalScope.define("isFinite", nativeFn("isFinite") { args -> toNumber(args.getOrNull(0)).isFinite() })
         globalScope.define("decodeURIComponent", nativeFn("decodeURIComponent") { args -> toJsString(args.getOrNull(0)).decodeUrl() })
