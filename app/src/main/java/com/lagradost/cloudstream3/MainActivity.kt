@@ -350,7 +350,12 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
                     } else if (safeURI(str)?.scheme == APP_STRING_PLAYER) {
                         val uri = str.toUri()
                         val name = uri.getQueryParameter("name")
-                        val url = URLDecoder.decode(uri.authority, "UTF-8")
+                        // Audit-10 #19: an opaque
+                        // "cloudstreamplayer:foo" link (no //)
+                        // has a null authority — decoding it
+                        // threw an NPE and crashed the app.
+                        val authority = uri.authority ?: return false
+                        val url = URLDecoder.decode(authority, "UTF-8")
 
                         navigate(
                             R.id.global_to_navigation_player,
