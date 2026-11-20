@@ -26,9 +26,18 @@ object AesHelper {
         padding: Boolean = true,
     ): String? {
         val parse = AppUtils.tryParseJson<AesData>(data) ?: return null
+        // Audit-9 #7: the salt is remote-controlled too — its hex
+        // decode throws (check / NumberFormatException) outside
+        // any guard, escaping the null-on-failure convention the
+        // same way the ciphertext did before Audit-8 #19.
+        val salt = try {
+            parse.s.hexToByteArray()
+        } catch (e: Exception) {
+            return null
+        }
         val (key, iv) = generateKeyAndIv(
             password = pass,
-            salt = parse.s.hexToByteArray(),
+            salt = salt,
             ivLength = parse.iv.length / 2,
             saltLength = parse.s.length / 2,
         ) ?: return null
@@ -48,7 +57,14 @@ object AesHelper {
             } catch (e: IllegalArgumentException) {
                 return null
             }
-            val plainBytes = cipher.decryptWithIv(iv, ctBytes)
+            // Audit-9 #8: valid-base64 garbage still throws in
+            // the decrypt itself (block alignment / padding) —
+            // same convention, same guard.
+            val plainBytes = try {
+                cipher.decryptWithIv(iv, ctBytes)
+            } catch (e: Exception) {
+                return null
+            }
             plainBytes.decodeToString()
         } else {
             base64Encode(cipher.encryptWithIv(iv, parse.ct.encodeToByteArray()))
