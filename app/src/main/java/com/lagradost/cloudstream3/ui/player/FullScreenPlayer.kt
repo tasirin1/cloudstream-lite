@@ -84,7 +84,10 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
     protected var isLocked = false
     protected var timestampShowState = false
     private var metadataVisibilityToken = 0
-    protected var hasEpisodes = false
+    // Audit-14 #60: a hasEpisodes flag used to sit here — it
+    // was never set to true anywhere, so the episodes-button
+    // fade in toggleLock() was dead. isThereEpisodes() is
+    // the live predicate and is used there now.
         private set
 
     /**
@@ -1045,7 +1048,7 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
             updateUIVisibility()
             downloadBothHeader.startAnimation(fadeAnimation)
 
-            if (hasEpisodes)
+            if (isThereEpisodes())
                 playerEpisodesButton.startAnimation(fadeAnimation)
             // player_media_route_button?.startAnimation(fadeAnimation)
             // video_bar.startAnimation(fadeAnimation)
