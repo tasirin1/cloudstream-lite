@@ -1603,6 +1603,21 @@ object VideoDownloadManager {
 
             val items = M3u8Helper2.hslLazy(m3u8, selectBest = true, requireAudio = true)
 
+            // Audit-7 #20: a valid-but-EMPTY playlist (no
+            // segments at all) used to sail through: the segment
+            // loop ran zero times and the final completeness
+            // check compared 0 < 0, so a 0-byte file was marked
+            // done. An empty playlist is an invalid link — fail
+            // it so the next mirror is tried.
+            if (items.size == 0) {
+                fileStream?.closeQuietly()
+                if (stream.startAt <= 0) {
+                    metadata.onDelete()
+                    stream.delete()
+                }
+                return@withContext DOWNLOAD_INVALID_INPUT
+            }
+
             // Audit-5 #9: verify the playlist is still the one the
             // checkpoint was written for. The m3u8 URL is stable
             // and unsigned; if the provider swapped the encode or
