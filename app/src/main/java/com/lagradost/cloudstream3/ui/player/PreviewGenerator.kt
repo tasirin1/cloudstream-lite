@@ -326,6 +326,12 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
                 //        deleteOnExit()
                 //    }
                 val retriever = MediaMetadataRetriever()
+                // Audit-4 #13: a retriever holds native codec
+                // resources and this one was never released. The
+                // try/finally covers every exit below, including
+                // the return@withContext ones. (The body keeps its
+                // indentation to keep this change reviewable.)
+                try {
                 val hsl = M3u8Helper2.hslLazy(
                     M3u8Helper.M3u8Stream(
                         streamUrl = url,
@@ -401,6 +407,9 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
                     }
                 }
 
+                } finally {
+                    runCatching { retriever.release() }
+                }
             }
         }
     }
@@ -501,6 +510,11 @@ private class Mp4PreviewGenerator(override var params: ImageParams) : IPreviewGe
     override fun release() {
         currentJob?.cancel()
         clear(false)
+        // Audit-4 #13: the shared retriever was never released.
+        // release() is terminal for a generator (the outer
+        // PreviewGenerator discards it), so this cannot strand a
+        // later load.
+        runCatching { retriever.release() }
     }
 
     override var durationMs: Long = 0L
