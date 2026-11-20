@@ -18,7 +18,12 @@ open class Evoload : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
         val id = url.replace("https://evoload.io/e/", "")  // wanted media id
         val csrv_token = app.get("https://csrv.evosrv.com/captcha?m412548=").text  // whatever that is
-        val captchaPass = app.get("https://cd2.evosrv.com/html/jsx/e.jsx").text.take(300).split("captcha_pass = '")[1].split("\'")[0]  //extract the captcha pass from the js response (located in the 300 first chars)
+        // Audit-3 #21: the old split(...)[1] on the first 300 chars
+        // threw IndexOutOfBounds whenever the marker moved or the
+        // file changed slightly, killing the extractor outright.
+        val captchaPass = app.get("https://cd2.evosrv.com/html/jsx/e.jsx").text
+            .substringAfter("captcha_pass = '", "").substringBefore("'")
+        if (captchaPass.isEmpty()) return listOf()
         val payload = mapOf("code" to id, "csrv_token" to csrv_token, "pass" to captchaPass)
         val r = app.post("https://evoload.io/SecurePlayer", data=(payload)).text
         val link = Regex("src\":\"(.*?)\"").find(r)?.destructured?.component1() ?: return listOf()
