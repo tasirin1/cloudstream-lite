@@ -1521,7 +1521,15 @@ private class JsInterpreter(
         val value = if (node.op == "=") right else {
             val left = evalExpr(node.left, scope)
             when (node.op) {
-                "+=" -> if (left is String || right is String) toJsString(left) + toJsString(right) else toNumber(left) + toNumber(right)
+                // Audit-18 #6: same ToPrimitive rule as
+                // binary + — arrays/objects stringify first,
+                // so [1,2] += 3 is "1,23", not NaN.
+                "+=" -> {
+                    val lp = if (left is JsList || left is JsObject || left is NativeFn || left is JsFunction) toJsString(left) else left
+                    val rp = if (right is JsList || right is JsObject || right is NativeFn || right is JsFunction) toJsString(right) else right
+                    if (lp is String || rp is String) toJsString(lp) + toJsString(rp)
+                    else toNumber(lp) + toNumber(rp)
+                }
                 "-=" -> toNumber(left) - toNumber(right)
                 "*=" -> toNumber(left) * toNumber(right)
                 "/=" -> toNumber(left) / toNumber(right)
@@ -1590,6 +1598,10 @@ private class JsInterpreter(
                 JsList(obj.elements.subList(maxOf(0, s), maxOf(s, e)).toMutableList())
             }
             "splice" -> nativeFn("splice") { args ->
+                // Audit-18 #7: splice() with NO arguments is
+                // a no-op returning [] in JS — the defaults
+                // below turned it into "delete everything".
+                if (args.isEmpty()) return@nativeFn JsList(mutableListOf())
                 val start = args.getOrNull(0)?.let { toNumber(it).toInt() }?.let { if (it < 0) maxOf(0, obj.elements.size + it) else minOf(it, obj.elements.size) } ?: 0
                 val deleteCount = args.getOrNull(1)?.let { toNumber(it).toInt() }?.coerceIn(0, obj.elements.size - start) ?: (obj.elements.size - start)
                 val removed = JsList(obj.elements.subList(start, start + deleteCount).toMutableList())
