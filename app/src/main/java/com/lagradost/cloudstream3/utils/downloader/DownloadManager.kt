@@ -201,7 +201,6 @@ object VideoDownloadManager {
      * [KEY_RESUME_PACKAGES] can store keys which should not be automatically queued, unlike this key.
      */
     const val KEY_RESUME_IN_QUEUE = "download_resume_queue_key"
-//    private const val KEY_RESUME_QUEUE_PACKAGES = "download_q_resume"
 
     // Fork fix (audit #14): mutated from download coroutines, the
     // service and the UI at once; a plain HashMap can corrupt under
@@ -211,7 +210,6 @@ object VideoDownloadManager {
     val downloadDeleteEvent = Event<Int>()
     val downloadEvent = Event<Pair<Int, DownloadActionType>>()
     val downloadProgressEvent = Event<Triple<Int, Long, Long>>()
-//    val downloadQueue = LinkedList<DownloadResumePackage>()
 
     private var hasCreatedNotChannel = false
 
@@ -300,7 +298,7 @@ object VideoDownloadManager {
             } else if (ep.episode != null) {
                 "${context.getString(R.string.episode)} ${ep.episode}" + rowTwoExtra
             } else {
-                (ep.name ?: "") + ""
+                ep.name ?: ""
             }
             val downloadFormat = context.getString(R.string.download_format)
 
@@ -755,7 +753,6 @@ object VideoDownloadManager {
             if (id != null)
                 downloadDeleteEvent(id)
 
-            //internalType = DownloadType.IsStopped
             notify()
         }
 
