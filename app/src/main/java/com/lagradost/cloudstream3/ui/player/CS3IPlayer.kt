@@ -681,6 +681,8 @@ class CS3IPlayer : IPlayer {
         // Audit-7 #9: hand the native DRM sessions back.
         drmSessionManager?.release()
         drmSessionManager = null
+        // Audit-7 #28: no timestamp messages outlive the player.
+        cancelTimestampMessages()
         event(PlayerAttachedEvent(null))
         //simpleCache = null
     }
@@ -1978,8 +1980,24 @@ class CS3IPlayer : IPlayer {
 
     private var lastTimeStamps: List<VideoSkipStamp> = emptyList()
 
+    // Audit-7 #28: handles of the scheduled timestamp messages.
+    // They were created with setDeleteAfterDelivery(false) and
+    // the handles thrown away, so every addTimeStamps() call
+    // stacked another permanent set of messages on the player —
+    // old episodes' stamps kept firing updatedTime() forever.
+    private val timestampMessages =
+        mutableListOf<androidx.media3.exoplayer.PlayerMessage>()
+
+    private fun cancelTimestampMessages() {
+        synchronized(timestampMessages) {
+            timestampMessages.forEach { it.cancel() }
+            timestampMessages.clear()
+        }
+    }
+
     override fun addTimeStamps(timeStamps: List<VideoSkipStamp>) {
         lastTimeStamps = timeStamps
+        cancelTimestampMessages()
         timeStamps.forEach { timestamp ->
             exoPlayer?.createMessage { _, _ ->
                 updatedTime(source = PlayerEventSource.Player)
@@ -1991,6 +2009,11 @@ class CS3IPlayer : IPlayer {
                 //?.setPayload(timestamp)
                 ?.setDeleteAfterDelivery(false)
                 ?.send()
+                ?.let { message ->
+                    synchronized(timestampMessages) {
+                        timestampMessages.add(message)
+                    }
+                }
         }
         updatedTime(source = PlayerEventSource.Player)
     }
