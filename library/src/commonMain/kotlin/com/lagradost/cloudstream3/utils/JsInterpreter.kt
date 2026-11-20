@@ -1513,7 +1513,17 @@ private class JsInterpreter(
                 // interpreter parses let/const to the same
                 // node; they share the treatment.)
                 val target = scope.functionScope()
-                for ((name, init) in node.decls) target.define(name, init?.let { evalExpr(it, scope) })
+                for ((name, init) in node.decls) {
+                    // Audit-20 #2: a declaration WITHOUT an
+                    // initializer is a no-op over an existing
+                    // binding in JS — the Audit-19 #2 form
+                    // defined null and clobbered parameters
+                    // (`function f(a){ var a; }` lost the
+                    // argument). Only a fresh binding starts
+                    // out undefined.
+                    if (init != null) target.define(name, evalExpr(init, scope))
+                    else if (!target.vars.containsKey(name)) target.define(name, Unit)
+                }
                 Unit
             }
             is ExprStmt -> evalExpr(node.expr, scope)
@@ -1550,10 +1560,17 @@ private class JsInterpreter(
             is ForInStmt -> {
                 val obj = evalExpr(node.obj, scope)
                 val inner = Scope(scope)
+                // Audit-20 #2: the loop variable is a `var`
+                // declaration — define it in the function
+                // scope so it survives the loop, like the
+                // classic-for variable now does. The body
+                // still runs in the loop scope and resolves
+                // it through the parent chain.
+                val loopVarScope = scope.functionScope()
                 try {
                     when (obj) {
                         is JsObject -> for (key in obj.props.keys) {
-                            inner.define(node.decl, key)
+                            loopVarScope.define(node.decl, key)
                             try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
                         }
                         is JsList -> for (i in obj.elements.indices) {
@@ -1562,7 +1579,7 @@ private class JsInterpreter(
                             // (the object branch above already
                             // did); a Double key made
                             // k === "0" never true.
-                            inner.define(node.decl, i.toString())
+                            loopVarScope.define(node.decl, i.toString())
                             try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
                         }
                         else -> {}
