@@ -32,6 +32,7 @@ import com.lagradost.cloudstream3.utils.downloader.VideoDownloadManager.KEY_RESU
 import com.lagradost.cloudstream3.utils.downloader.VideoDownloadManager.downloadEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,6 +55,12 @@ class DownloadQueueService : Service() {
         const val DOWNLOAD_QUEUE_NOTIFICATION_ID = 917194232 // Random unique
         @Volatile
         var isRunning = false
+
+        // Audit-4 #2: the currently active queue collector, shared
+        // across service instances so a restarted instance can
+        // cancel the collector its predecessor left behind.
+        @Volatile
+        var activeQueueJob: Job? = null
 
         fun getIntent(
             context: Context,
@@ -141,6 +148,10 @@ class DownloadQueueService : Service() {
         }
     }
 
+    // Audit-4 #2: the queue collector job, kept in a field so
+    // onDestroy can cancel it (it used to be an onCreate local).
+    private var queueJob: Job? = null
+
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     override fun onCreate() {
         isRunning = true
@@ -164,7 +175,15 @@ class DownloadQueueService : Service() {
 
         downloadEvent += downloadEventListener
 
-        val queueJob = ioSafe {
+        // Audit-4 #2: cancel any collector a previous instance of
+        // this service left behind before starting a new one. The
+        // collector runs on a detached ioSafe scope and its only
+        // brake was takeWhile { isRunning } — a shared companion
+        // flag that a sticky restart flips back to true — so the
+        // old collector woke up next to its replacement and both
+        // raced to pop and start the same queued episodes.
+        activeQueueJob?.cancel()
+        val myJob = ioSafe {
             // Ensure this is up to date to prevent race conditions with MainActivity launches
             setLastError(context)
             // Early return, to prevent waiting for plugins in safe mode
@@ -250,8 +269,11 @@ class DownloadQueueService : Service() {
                 }
         }
 
+        queueJob = myJob
+        activeQueueJob = myJob
+
         // Stop self regardless of job outcome
-        queueJob.invokeOnCompletion { throwable ->
+        myJob.invokeOnCompletion { throwable ->
             if (throwable != null) {
                 logError(throwable)
             }
@@ -263,6 +285,13 @@ class DownloadQueueService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "Download queue service stopped.")
+        // Audit-4 #2: actually stop this instance's collector
+        // instead of relying on the shared isRunning flag.
+        queueJob?.cancel()
+        if (activeQueueJob === queueJob) {
+            activeQueueJob = null
+        }
+        queueJob = null
         downloadEvent -= downloadEventListener
         isRunning = false
         super.onDestroy()

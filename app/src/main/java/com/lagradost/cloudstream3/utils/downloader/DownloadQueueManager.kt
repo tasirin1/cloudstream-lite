@@ -157,9 +157,21 @@ object DownloadQueueManager {
 
     /** Start a real download from the first item in the queue */
     fun popQueue(context: Context): VideoDownloadManager.EpisodeDownloadInstance? {
-        val first = queue.value.firstOrNull() ?: return null
+        // Audit-4 #2: claim the first item atomically. The old
+        // read-then-remove let two queue collectors both read the
+        // same first item before either removed it, starting the
+        // same episode twice. The lambda only records which item
+        // the winning update removed, so a CAS retry stays
+        // consistent (a failed attempt re-reads the same queue).
+        var claimed: DownloadQueueWrapper? = null
+        _queue.getAndUpdate { localQueue ->
+            val first = localQueue.firstOrNull() ?: return@getAndUpdate localQueue
+            claimed = first
+            localQueue.filter { it.id != first.id }.toTypedArray()
+        }
+        val first = claimed ?: return null
 
-        remove(first.id)
+        Log.d(TAG, "Download removed from the queue: ${first.id}")
 
         val downloadInstance = VideoDownloadManager.EpisodeDownloadInstance(context, first)
 
