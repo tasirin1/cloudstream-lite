@@ -17,7 +17,21 @@ open class InternetArchive : ExtractorApi() {
     override val name = "Internet Archive"
 
     companion object {
-        private var archivedItems: MutableMap<String, Document> = mutableMapOf()
+        // Audit-7 #19: bounded, synchronized, access-ordered.
+        // This was a plain companion map holding a whole parsed
+        // Document per URL, never evicted — on a long-running
+        // STB it grew for the process lifetime (one full HTML
+        // document per archive.org item opened), and parallel
+        // extractions wrote it without synchronization.
+        private const val MAX_ARCHIVED_ITEMS = 20
+        private val archivedItems: MutableMap<String, Document> =
+            java.util.Collections.synchronizedMap(
+                object : LinkedHashMap<String, Document>(16, 0.75f, true) {
+                    override fun removeEldestEntry(
+                        eldest: MutableMap.MutableEntry<String, Document>?
+                    ): Boolean = size > MAX_ARCHIVED_ITEMS
+                }
+            )
     }
 
     override fun getExtractorUrl(id: String): String {
