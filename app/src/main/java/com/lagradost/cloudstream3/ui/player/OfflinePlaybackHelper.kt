@@ -84,7 +84,13 @@ object OfflinePlaybackHelper {
                             name = name ?: getString(activity, R.string.downloaded_file),
                             // well not the same as a normal id, but we take it as users may want to
                             // play downloaded files and save the location
-                            id = uri.lastPathSegment?.toLongOrNull()?.hashCode() ?: uri.lastPathSegment?.hashCode()
+                            // Audit-13 #19: hash the FULL uri — the
+                            // file name alone made every same-named
+                            // file in different folders share one
+                            // resume-position slot (watch 40 min of
+                            // /Movies/movie.mp4 and /Download/movie.mp4
+                            // resumed at minute 40 too).
+                            id = uri.toString().hashCode()
                         )
                     )
                 ), 0
