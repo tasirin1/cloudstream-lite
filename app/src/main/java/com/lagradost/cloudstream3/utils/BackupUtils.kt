@@ -52,6 +52,10 @@ import kotlinx.coroutines.withContext
 
 object BackupUtils {
 
+    // Audit-6 #23: generous ceiling for a settings backup file;
+    // anything larger is not a backup this app wrote.
+    private const val MAX_RESTORE_FILE_BYTES = 50_000_000L
+
     /**
      * No sensitive or breaking data in the backup
      */
@@ -238,6 +242,9 @@ object BackupUtils {
     private suspend fun runBackupLocked(context: Context): Boolean {
         var fileStream: OutputStream? = null
         var printStream: PrintWriter? = null
+        // Audit-6 #25: tracked so a failed write can remove the
+        // partial file (see the catch block).
+        var streamData: DownloadObjects.StreamData? = null
 
         try {
             if (!context.checkWrite()) {
@@ -256,6 +263,7 @@ object BackupUtils {
             val displayName = "CS3_Backup_${date}"
             val backupFile = getBackup(context)
             val stream = setupBackupStream(context, displayName)
+            streamData = stream
 
             fileStream = stream.openNew()
             printStream = PrintWriter(fileStream)
@@ -270,6 +278,16 @@ object BackupUtils {
             showToast(R.string.backup_success, Toast.LENGTH_LONG)
             return true
         } catch (e: Exception) {
+            // Audit-6 #25: a write that failed midway left the
+            // partial file under the proper backup name, where it
+            // looked like a valid backup (and a later restore
+            // picking the newest file would fail parsing it while
+            // the user believed the backup existed). Remove it.
+            try {
+                streamData?.delete()
+            } catch (_: Exception) {
+                // Best effort; the failure toast below still runs.
+            }
             logError(e)
             try {
                 showToast(
@@ -315,7 +333,27 @@ object BackupUtils {
 
                             // Audit-3 #33: the stream was never
                             // closed; read it inside use {}.
-                            val text = input.bufferedReader().use { it.readText() }
+                            // Audit-6 #23: readText() had no size
+                            // bound — picking a huge file (e.g. a
+                            // video) as the "backup" OOM-crashed
+                            // the STB instead of failing cleanly.
+                            val text = input.use { stream ->
+                                val out = java.io.ByteArrayOutputStream()
+                                val buffer = ByteArray(16 * 1024)
+                                var total = 0L
+                                while (true) {
+                                    val read = stream.read(buffer)
+                                    if (read < 0) break
+                                    total += read
+                                    if (total > MAX_RESTORE_FILE_BYTES) {
+                                        throw IOException(
+                                            "Backup file exceeds $MAX_RESTORE_FILE_BYTES bytes"
+                                        )
+                                    }
+                                    out.write(buffer, 0, read)
+                                }
+                                out.toString(Charsets.UTF_8.name())
+                            }
                             val restoredValue = parseJson<BackupFile>(text)
 
                             restore(
