@@ -269,10 +269,18 @@ object APIHolder {
             require(titles.isNotEmpty()) { "titles must no be empty when calling getTracker" }
 
             val mainTitle = titles[0]
+            // Audit-10 #8: trackerCache is a plain HashMap that
+            // used to be read/written from concurrent coroutines
+            // with no lock, and it grew by one full search
+            // response per distinct title forever. Guard both
+            // accesses and cap the size.
             val search =
-                trackerCache[mainTitle]
+                synchronized(trackerCache) { trackerCache[mainTitle] }
                     ?: searchAnilist(mainTitle)?.also {
-                        trackerCache[mainTitle] = it
+                        synchronized(trackerCache) {
+                            if (trackerCache.size >= 200) trackerCache.clear()
+                            trackerCache[mainTitle] = it
+                        }
                     } ?: return null
 
             val res = search.data?.page?.media?.find { media ->
