@@ -78,16 +78,23 @@ class LibraryViewModel : ViewModel() {
         reloadPages(true)
     }
 
-    fun sort(method: ListSorting, query: String? = null) = ioSafe {
+    fun sort(method: ListSorting, query: String? = null) {
         // Audit-11 #8: capture the reload generation — sort()
         // used to post unconditionally, so a sort of the OLD
         // list finishing after an account/API switch overwrote
         // the new account's pages (and reloadPages(false) then
         // refused to reload because pages were non-empty).
+        // Audit-12 #6: capture it HERE, on the caller thread —
+        // #8 sampled it inside the ioSafe coroutine, so a sort
+        // whose coroutine started late could arm itself with
+        // the NEW generation for the OLD pages and still pass
+        // the guard. reloadPages samples at call time too.
         val sortGeneration = libraryLoadIndex
-        val value = _pages.value ?: return@ioSafe
-        if (value is Resource.Success) {
-            sort(method, query, value.value, sortGeneration)
+        ioSafe {
+            val value = _pages.value ?: return@ioSafe
+            if (value is Resource.Success) {
+                sort(method, query, value.value, sortGeneration)
+            }
         }
     }
 
