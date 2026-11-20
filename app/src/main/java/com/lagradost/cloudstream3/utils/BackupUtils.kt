@@ -67,6 +67,11 @@ object BackupUtils {
 
         AccountManager.ACCOUNT_TOKEN,
         AccountManager.ACCOUNT_IDS,
+        // Audit-15 #14: provider usernames are account data
+        // too — the names store sat next to its two blocked
+        // siblings but was itself transferable, so shared
+        // backups carried every provider account's name.
+        AccountManager.ACCOUNT_ID_NAMES,
 
         // Audit-10 #6: the accounts array (DataStoreHelper's
         // "data_store_helper/account") embeds every profile's
