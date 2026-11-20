@@ -1417,8 +1417,12 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         val view = binding.root
         // init variables
         setPlayBackSpeed(DataStoreHelper.playBackSpeed)
-        savedInstanceState?.getLong(SUBTITLE_DELAY_BUNDLE_KEY)?.let {
-            subtitleDelay = it
+        // Audit-14 #47: getLong returns 0 for a MISSING key and
+        // the ?.let always ran when a bundle existed, so a
+        // restore bundle without this key (e.g. from an older
+        // version) silently reset a live subtitle delay to 0.
+        if (savedInstanceState?.containsKey(SUBTITLE_DELAY_BUNDLE_KEY) == true) {
+            subtitleDelay = savedInstanceState.getLong(SUBTITLE_DELAY_BUNDLE_KEY)
         }
 
         // handle tv controls directly based on player state
