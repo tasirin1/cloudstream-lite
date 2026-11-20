@@ -341,6 +341,14 @@ object PluginManager {
     var currentlyLoading: String? = null
 
     // Maps filepath to plugin
+    // Audit-15 #15: paths with a load currently in flight.
+    // The duplicate guard below used to check-then-instantiate
+    // non-atomically, so two concurrent loads of one file both
+    // ran the plugin constructor; the claim makes the check
+    // and the reservation one step (guarded by the plugins
+    // lock, released in loadPlugin's finally).
+    private val loadingPluginPaths: MutableSet<String> = mutableSetOf()
+
     val plugins: MutableMap<String, BasePlugin> =
         LinkedHashMap<String, BasePlugin>()
 
@@ -874,8 +882,16 @@ object PluginManager {
         // first and only then checked, outside the plugins lock, so
         // two parallel loads of the same file could both run the
         // plugin's constructor and load() side effects.
-        if (synchronized(plugins) { plugins.containsKey(filePath) }) {
-            Log.i(TAG, "Plugin already loaded, skipping: $fileName")
+        // Audit-15 #15: claim the path atomically with the
+        // duplicate check — a concurrent load of the same
+        // file now skips here instead of instantiating the
+        // plugin a second time.
+        val claimed = synchronized(plugins) {
+            if (plugins.containsKey(filePath)) false
+            else loadingPluginPaths.add(filePath)
+        }
+        if (!claimed) {
+            Log.i(TAG, "Plugin already loaded or loading, skipping: $fileName")
             currentlyLoading = null
             return true
         }
@@ -988,6 +1004,10 @@ object PluginManager {
             )
             currentlyLoading = null
             false
+        } finally {
+            // Audit-15 #15: release the load claim on every
+            // exit (success, early return, failure).
+            synchronized(plugins) { loadingPluginPaths.remove(filePath) }
         }
     }
 
