@@ -1245,7 +1245,12 @@ class CS3IPlayer : IPlayer {
                         // STATE_IDLE. A bare play() call is a no-op in that state, re-prepare and
                         // then resume to the current position once we are in STATE_READY again.
                         if (playbackState == Player.STATE_IDLE) {
-                            val seekPosition = currentPosition
+                            // Audit-17 #10: resume to the SAVED
+                            // position — ExoPlayer's
+                            // currentPosition is 0 after stop(),
+                            // so resuming from the notification
+                            // always restarted from the beginning.
+                            val seekPosition = playbackPosition
                             // Audit-5 #24: the listener used to
                             // remove itself only on STATE_READY —
                             // when READY never came (prepare error,
