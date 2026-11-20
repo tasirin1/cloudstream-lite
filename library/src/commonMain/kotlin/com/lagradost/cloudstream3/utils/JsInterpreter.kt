@@ -927,10 +927,28 @@ private fun looseEq(a: Any?, b: Any?): Boolean {
 private class JsList(val elements: MutableList<Any?> = mutableListOf()) {
     var length: Int
         get() = elements.size
-        set(v) { while (elements.size < v) elements.add(Unit); while (elements.size > v) elements.removeAt(elements.size - 1) }
+        set(v) {
+            // Audit-14 #2: same single-statement allocation the
+            // Audit-13 #12 cap exists for — `a.length = 2e9` grew
+            // the list with no cap and no budget check inside
+            // the loop. Enforce the same limit here.
+            if (v !in 0..JS_MAX_NATIVE_SIZE) {
+                throw JsExecutionLimitExceeded("list length $v exceeds max native size of $JS_MAX_NATIVE_SIZE")
+            }
+            while (elements.size < v) elements.add(Unit)
+            while (elements.size > v) elements.removeAt(elements.size - 1)
+        }
 
     operator fun get(idx: Int): Any? = elements.getOrElse(idx) { Unit }
-    operator fun set(idx: Int, v: Any?) { while (elements.size <= idx) elements.add(Unit); elements[idx] = v }
+    operator fun set(idx: Int, v: Any?) {
+        // Audit-14 #2: sparse-index assignment is the same
+        // bypass — `a[2e9] = 1` padded the list to the index.
+        if (idx !in 0 until JS_MAX_NATIVE_SIZE) {
+            throw JsExecutionLimitExceeded("list index $idx exceeds max native size of $JS_MAX_NATIVE_SIZE")
+        }
+        while (elements.size <= idx) elements.add(Unit)
+        elements[idx] = v
+    }
 }
 
 private class JsObject(val props: MutableMap<String, Any?> = mutableMapOf(), var constructor: JsFunction? = null)
