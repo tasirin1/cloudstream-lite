@@ -170,8 +170,17 @@ object M3u8Helper2 {
     // AES.Key: the CBC subtype carries the cipher() used below.
     private class CachedAesKey(val raw: ByteArray, val decoded: AES.CBC.Key)
 
+    // Audit-7 #35/#36: the holder now stores a COPY of the
+    // caller's array (the "immutable" pair could previously be
+    // mutated from outside via the retained reference), and the
+    // cache keeps the last few keys instead of one — two
+    // parallel downloads with different keys used to evict each
+    // other's entry on nearly every segment, re-decoding
+    // constantly. The list is immutable and swapped atomically
+    // behind the same @Volatile, preserving the Audit-6 #2
+    // guarantee that a reader never sees a mismatched pair.
     @kotlin.concurrent.Volatile
-    private var cachedAesKey: CachedAesKey? = null
+    private var cachedAesKeys: List<CachedAesKey> = emptyList()
 
     @OptIn(DelicateCryptographyApi::class)
     fun getDecrypted(
@@ -181,12 +190,15 @@ object M3u8Helper2 {
         index: Int,
     ): ByteArray {
         val ivKey = if (iv.isEmpty()) defaultIv(index) else iv
-        val aesKey = cachedAesKey?.takeIf {
+        val aesKey = cachedAesKeys.firstOrNull {
             it.raw.contentEquals(secretKey)
         }?.decoded ?: aesCbc.keyDecoder()
             .decodeFromByteArrayBlocking(AES.Key.Format.RAW, secretKey)
             .also { decoded ->
-                cachedAesKey = CachedAesKey(secretKey, decoded)
+                val entry = CachedAesKey(secretKey.copyOf(), decoded)
+                cachedAesKeys = (listOf(entry) + cachedAesKeys.filterNot {
+                    it.raw.contentEquals(secretKey)
+                }).take(4)
             }
         return aesKey.cipher(padding = true).decryptWithIvBlocking(ivKey, data)
     }
