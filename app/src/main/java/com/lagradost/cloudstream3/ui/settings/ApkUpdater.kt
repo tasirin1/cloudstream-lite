@@ -116,10 +116,15 @@ object ApkUpdater {
             return false
         }
         try {
-            val fileDigest = calculateDigest(
-                digestAlgorithm = digest.algorithm,
-                readStream = file.inputStream()
-            )
+            // Audit-5 #31: calculateDigest never closes the
+            // stream it is given, so the FileInputStream created
+            // here leaked on every call (once per plugin load).
+            val fileDigest = file.inputStream().use { stream ->
+                calculateDigest(
+                    digestAlgorithm = digest.algorithm,
+                    readStream = stream
+                )
+            }
             return fileDigest != null && digest.digest.contentEquals(fileDigest)
         } catch (_: Throwable) {
             // File not found/security/read issues, not very useful errors
