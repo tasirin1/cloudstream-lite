@@ -1852,7 +1852,13 @@ object HlsPlaylistParser {
                 val frameRateString: String? =
                     parseOptionalStringAttr(line, REGEX_FRAME_RATE, variableDefinitions)
                 if (frameRateString != null) {
-                    frameRate = frameRateString.toFloat()
+                    // Audit-15 #5: the regex accepts "1.2.3"
+                    // or "." — a raw toFloat() threw
+                    // NumberFormatException out of parse(),
+                    // killing the whole playlist for one bad
+                    // attribute (same class as Audit-3 #19).
+                    frameRate = frameRateString.toFloatOrNull()
+                        ?: Format.NO_VALUE.toFloat()
                 }
                 val videoGroupId: String? =
                     parseOptionalStringAttr(line, REGEX_VIDEO, variableDefinitions)
@@ -1992,8 +1998,13 @@ object HlsPlaylistParser {
                     val channelsString: String? =
                         parseOptionalStringAttr(line, REGEX_CHANNELS, variableDefinitions)
                     if (channelsString != null) {
+                        // Audit-15 #23: unguarded toInt() on
+                        // arbitrary quoted text ("abc") threw
+                        // out of parse() the same way — skip
+                        // the attribute instead.
                         val channelCount: Int =
-                            Util.splitAtFirst(channelsString, "/")[0].toInt()
+                            Util.splitAtFirst(channelsString, "/")[0].toIntOrNull()
+                                ?: Format.NO_VALUE
                         formatBuilder = formatBuilder.copy(channelCount = channelCount)
                         if (MimeTypes.AUDIO_E_AC3 == sampleMimeType && channelsString.endsWith(
                                 "/JOC"
