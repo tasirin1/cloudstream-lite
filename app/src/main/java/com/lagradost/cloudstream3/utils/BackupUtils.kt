@@ -233,7 +233,11 @@ object BackupUtils {
                 return false
             }
 
-            val date = SimpleDateFormat("yyyy_MM_dd_HH_mm", Locale.getDefault()).format(
+            // Audit-4 #40: seconds added — minute resolution made
+            // two backups within the same minute (e.g. a manual
+            // backup right after the scheduled one) collide on
+            // the same filename and silently overwrite each other.
+            val date = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault()).format(
                 Date(currentTimeMillis())
             )
             val displayName = "CS3_Backup_${date}"
