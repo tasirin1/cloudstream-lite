@@ -351,6 +351,15 @@ class CS3IPlayer : IPlayer {
             playbackPosition = it
         }
 
+        // Audit-20 #3: the `subtitles` parameter was never
+        // used — sources were built from the helper, which
+        // is filled asynchronously by a LiveData observer,
+        // so on the auto-skip path a link could win before
+        // the subtitles arrived and the initial build missed
+        // them (a forced reload followed). Seed the helper
+        // from the caller's authoritative set first.
+        if (subtitles.isNotEmpty()) setActiveSubtitles(subtitles)
+
         // we want autoplay because of TV and UX
         isPlaying = autoPlay ?: isPlaying
 
