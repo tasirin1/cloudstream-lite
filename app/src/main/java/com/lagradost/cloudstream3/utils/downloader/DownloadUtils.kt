@@ -101,15 +101,22 @@ object DownloadUtils {
         return timeFormated?.asString(context) ?: ""
     }
 
-    internal fun downloadSubtitle(
+    // Audit-8 #4: this used to launch the download in a fresh
+    // detached ioSafe scope and return immediately, so the
+    // caller's job handle (EpisodeDownloadInstance.
+    // subtitleDownloadJob, cancelled on stop/delete) controlled
+    // nothing — an in-flight subtitle download ran to
+    // completion and re-created the subtitle file AFTER
+    // cleanup had deleted it. As a suspend function the
+    // download is a child of the caller's job and dies with it.
+    internal suspend fun downloadSubtitle(
         context: Context?,
         link: ExtractorSubtitleLink,
         fileName: String,
         folder: String
     ) {
-        ioSafe {
             VideoDownloadManager.downloadThing(
-                context ?: return@ioSafe,
+                context ?: return,
                 link,
                 // Fork fix (audit #21): link.name comes from the
                 // provider; sanitize it before it becomes a file name.
@@ -130,7 +137,6 @@ object DownloadUtils {
                 // Any non-empty file is a valid subtitle.
                 minimumSize = 1
             )
-        }
     }
 
     fun downloadSubtitle(
@@ -138,15 +144,20 @@ object DownloadUtils {
         link: SubtitleData,
         meta: DownloadObjects.DownloadEpisodeMetadata,
     ) {
+        // Fire-and-forget entry point (single-subtitle action in
+        // the result UI): the launch lives HERE now that the
+        // worker above is a suspend function (Audit-8 #4).
         context?.let { ctx ->
             val fileName = getFileName(ctx, meta)
             val folder = getFolder(meta.type ?: return, meta.mainName)
-            downloadSubtitle(
-                ctx,
-                ExtractorSubtitleLink(link.name, link.url, "", link.headers),
-                fileName,
-                folder
-            )
+            ioSafe {
+                downloadSubtitle(
+                    ctx,
+                    ExtractorSubtitleLink(link.name, link.url, "", link.headers),
+                    fileName,
+                    folder
+                )
+            }
         }
     }
 
