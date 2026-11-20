@@ -44,8 +44,11 @@ data class DigestPair(
                 return null
             }
 
-            val digestAlgorithm = split.getOrNull(0) ?: return null
-            val digestByteArray = safe { split.getOrNull(1)?.hexToByteArray() } ?: return null
+            // Audit-4 #5: tolerate sloppy whitespace around the
+            // algorithm name or hex ("sha256 : ...") instead of
+            // rejecting every plugin of that repository.
+            val digestAlgorithm = split.getOrNull(0)?.trim() ?: return null
+            val digestByteArray = safe { split.getOrNull(1)?.trim()?.hexToByteArray() } ?: return null
 
             return DigestPair(digestAlgorithm, digestByteArray)
         }

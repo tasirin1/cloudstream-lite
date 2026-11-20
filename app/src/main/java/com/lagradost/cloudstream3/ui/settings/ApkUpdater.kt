@@ -135,8 +135,8 @@ object ApkUpdater : AppUpdater {
      *
      * ------------------------------------------------------------------------------------------
      *
-     * throws a DigestException if the Digest can be calculated (non-null + correct algorithm),
-     * and is mismatched
+     * throws a DigestException if a digest was provided but cannot be verified: the algorithm
+     * is unknown to MessageDigest, computing it fails, or the computed digest mismatches
      *
      * throws a CancellationException if canceled, but may not be "instant" if the read is blocking
      *
@@ -144,11 +144,13 @@ object ApkUpdater : AppUpdater {
      *
      * ------------------------------------------------------------------------------------------
      *
-     * In case of crashes from the digest, we ignore it as we do not want to "block" someone from
-     * updating if they got a broken OS without the desired algorithm or implementation.
-     *
-     * This is because a malicious CDN should not be able to "crash" the algorithm, but a broken
-     * OS will. And recovering from a broken OS by ignoring it is better than refusing it.
+     * Policy (Audit-3 #2; this KDoc reconciled with the code in Audit-4 #5): a provided digest
+     * that cannot be verified FAILS the transfer. This deliberately retires the old "ignore
+     * digest failures" policy — the algorithm name comes from the repository itself, so
+     * ignoring an unknown one would let any repository (or a MITM on a cleartext URL) bypass
+     * verification entirely just by naming a bogus algorithm. A repository that provides no
+     * digest at all is still accepted for backwards compatibility; then nothing is verified,
+     * which is the repository's explicit choice, not a silent fallback.
      * */
     @Throws
     suspend fun transfer(
@@ -180,9 +182,10 @@ object ApkUpdater : AppUpdater {
         ) {
             writeStream.write(buffer, 0, read)
 
-            safe {
-                md?.update(buffer, 0, read)
-            }
+            // Audit-4 #5: not wrapped in safe{} — if a provided
+            // digest cannot be computed, the transfer must fail
+            // (see the KDoc policy above), not pass unverified.
+            md?.update(buffer, 0, read)
 
             transferred += read.toLong()
             downloadProgress(transferred, length)
@@ -190,7 +193,9 @@ object ApkUpdater : AppUpdater {
         }
         writeStream.flush()
 
-        val check = safe { md?.digest() }
+        // Audit-4 #5: same fail-closed policy as update() above;
+        // a throwing digest() aborts the transfer.
+        val check = md?.digest()
         if (check != null && !check.contentEquals(digest?.digest)) {
             throw DigestException("Mismatched digest on transfer ${digest?.algorithm} : ${check.toHexString()} / ${digest?.digest?.toHexString()}")
         }
