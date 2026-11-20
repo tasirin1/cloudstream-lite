@@ -15,6 +15,7 @@ import dev.whyoleg.cryptography.CryptographyProvider
 import dev.whyoleg.cryptography.DelicateCryptographyApi
 import dev.whyoleg.cryptography.algorithms.AES
 import dev.whyoleg.cryptography.algorithms.MD5
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -208,6 +209,11 @@ open class Rabbitstream : ExtractorApi() {
         // ErrorLoadingException this function uses everywhere else.
         val decryptedData = try {
             aesKey.cipher(padding = true).decryptWithIv(ivBytes, encrypted)
+        } catch (e: CancellationException) {
+            // Audit-10 #14: decryptWithIv is a suspend call —
+            // the Audit-9 #9 guard re-labelled cancellation as
+            // a load failure.
+            throw e
         } catch (e: Exception) {
             throw ErrorLoadingException("Failed to decrypt source URL")
         }

@@ -8,6 +8,7 @@ import dev.whyoleg.cryptography.CryptographyProvider
 import dev.whyoleg.cryptography.DelicateCryptographyApi
 import dev.whyoleg.cryptography.algorithms.AES
 import dev.whyoleg.cryptography.algorithms.MD5
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -62,6 +63,11 @@ object AesHelper {
             // same convention, same guard.
             val plainBytes = try {
                 cipher.decryptWithIv(iv, ctBytes)
+            } catch (e: CancellationException) {
+                // Audit-10 #13: decryptWithIv is a suspend call —
+                // the Audit-9 #8 guard also caught cancellation
+                // and re-labelled it as an ordinary failure.
+                throw e
             } catch (e: Exception) {
                 return null
             }

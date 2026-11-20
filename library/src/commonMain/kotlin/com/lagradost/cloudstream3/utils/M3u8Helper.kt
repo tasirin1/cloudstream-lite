@@ -484,7 +484,7 @@ object M3u8Helper2 {
                 // Sort by pixels, while this normally is a bad idea if one is -1,
                 // in the m3u8 parsing must contains both or neither, so NO_VALUE => 1
                 // Tie break on averageBitrate
-                # Audit-10 #17: widen to Long BEFORE multiplying — a huge
+                // Audit-10 #17: widen to Long BEFORE multiplying — a huge
                 // provider-declared RESOLUTION overflowed Int and wrapped
                 // negative, inverting best/worst variant selection.
                 variants.maxBy { it.format.width.toLong() * it.format.height * 1000L + it.format.averageBitrate.toLong() }
