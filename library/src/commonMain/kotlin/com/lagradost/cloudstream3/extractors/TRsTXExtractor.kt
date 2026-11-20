@@ -42,7 +42,10 @@ open class TRsTX : ExtractorApi() {
         val vidLinks = mutableSetOf<String>()
         val vidMap = mutableListOf<Map<String, String>>()
         for (item in postJson) {
-            if (item.file == null || item.title == null) continue
+            // Audit-4 #56: isNullOrBlank — an empty file string
+            // made substring(1) below throw and killed the whole
+            // extraction instead of skipping one bad item.
+            if (item.file.isNullOrBlank() || item.title == null) continue
             val fileUrl = "$mainUrl/playlist/" + item.file.substring(1) + ".txt"
             val videoData = app.post(fileUrl, referer = extRef).text
             if (videoData in vidLinks) continue
