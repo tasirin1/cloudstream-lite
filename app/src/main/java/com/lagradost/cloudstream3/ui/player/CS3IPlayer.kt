@@ -786,6 +786,22 @@ class CS3IPlayer : IPlayer {
 
         private var simpleCache: SimpleCache? = null
 
+        // Audit-4 #29: getSubSources() calls createOnlineSource
+        // once per subtitle track, and each call used to build a
+        // brand-new OkHttpClient (own connection pool + dispatcher
+        // threads) whenever an interceptor was present. The client
+        // depends only on the interceptor, so cache one per
+        // interceptor instance; the per-track part (headers) lives
+        // on the cheap Factory, not on the client. Weak keys let a
+        // dead interceptor's client be collected. getOrPut is not
+        // atomic on a synchronized map — worst case a duplicate
+        // client is built once under a race and garbage-collected
+        // unused (an unused client spawns no threads).
+        private val interceptorClients =
+            java.util.Collections.synchronizedMap(
+                java.util.WeakHashMap<Interceptor, okhttp3.OkHttpClient>()
+            )
+
         /// Create a small factory for small things, no cache, no cronet
         private fun createOnlineSource(
             headers: Map<String, String>?,
@@ -794,9 +810,12 @@ class CS3IPlayer : IPlayer {
             val client = if (interceptor == null) {
                 app.baseClient
             } else {
-                app.baseClient.newBuilder()
-                    .addInterceptor(interceptor)
-                    .build()
+                // Audit-4 #29: see interceptorClients.
+                interceptorClients.getOrPut(interceptor) {
+                    app.baseClient.newBuilder()
+                        .addInterceptor(interceptor)
+                        .build()
+                }
             }
             val source = OkHttpDataSource.Factory(client).setUserAgent(USER_AGENT)
 
