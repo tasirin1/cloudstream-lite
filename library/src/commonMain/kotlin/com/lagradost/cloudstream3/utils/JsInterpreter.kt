@@ -82,6 +82,16 @@ private val JS_DEFAULT_MAX_EXECUTION_TIME: Duration = 5.seconds
 private const val JS_DEFAULT_MAX_INSTRUCTIONS: Long = 50_000_000L
 
 /**
+ * Audit-13 #12: cap for a SINGLE native allocation whose size a
+ * script controls (Array(n), String.repeat, padStart/padEnd).
+ * The execution budget is only checked between statements, so
+ * without this a single expression like Array(1e9) or
+ * "x".repeat(2_000_000_000) attempts a multi-GB allocation on
+ * the device heap before any budget check can fire.
+ */
+private const val JS_MAX_NATIVE_SIZE: Int = 1_000_000
+
+/**
  * Convert any JS runtime value to its JavaScript string representation.
  * Mirrors what JS `String(value)` would produce.
  */
@@ -1036,7 +1046,7 @@ private class JsInterpreter(
         globalScope.define("Infinity", Double.POSITIVE_INFINITY)
 
         globalScope.define("Array", nativeFn("Array") { args ->
-            if (args.size == 1 && args[0] is Double) JsList(MutableList((args[0] as Double).toInt()) { Unit })
+            if (args.size == 1 && args[0] is Double) JsList(MutableList((args[0] as Double).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE)) { Unit })
             else JsList(args.toMutableList())
         })
 
@@ -1530,13 +1540,13 @@ private class JsInterpreter(
             "trim" -> nativeFn("trim") { _ -> obj.trim() }
             "trimStart", "trimLeft" -> nativeFn("trimStart") { _ -> obj.trimStart() }
             "trimEnd", "trimRight" -> nativeFn("trimEnd") { _ -> obj.trimEnd() }
-            "repeat" -> nativeFn("repeat") { args -> obj.repeat(toNumber(args.getOrNull(0)).toInt().coerceAtLeast(0)) }
+            "repeat" -> nativeFn("repeat") { args -> obj.repeat(toNumber(args.getOrNull(0)).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE)) }
             "padStart" -> nativeFn("padStart") { args ->
-                val len = toNumber(args.getOrNull(0)).toInt(); val pad = args.getOrNull(1)?.let { toJsString(it) } ?: " "
+                val len = toNumber(args.getOrNull(0)).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE); val pad = args.getOrNull(1)?.let { toJsString(it) } ?: " "
                 if (obj.length >= len) obj else (pad.repeat(len) + obj).takeLast(len)
             }
             "padEnd" -> nativeFn("padEnd") { args ->
-                val len = toNumber(args.getOrNull(0)).toInt(); val pad = args.getOrNull(1)?.let { toJsString(it) } ?: " "
+                val len = toNumber(args.getOrNull(0)).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE); val pad = args.getOrNull(1)?.let { toJsString(it) } ?: " "
                 if (obj.length >= len) obj else (obj + pad.repeat(len)).take(len)
             }
             "toString" -> nativeFn("toString") { _ -> obj }
