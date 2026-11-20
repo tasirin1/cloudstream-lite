@@ -185,12 +185,19 @@ class SettingsAccount {
             // api.login() to complete setupLogin (and its
             // "authenticated" toast) after the user had
             // cancelled the dialog.
-            var pinPollJob: kotlinx.coroutines.Job? = null
+            // Audit-18 #9: a SET of poll jobs — every tick
+            // launches a new one, and a login call slower
+            // than the tick interval was orphaned when the
+            // next tick overwrote the single handle
+            // (Audit-17 #11 residual).
+            val pinPollJobs =
+                java.util.Collections.synchronizedSet(mutableSetOf<kotlinx.coroutines.Job>())
             dialog.setOnDismissListener {
                 pinTimer?.cancel()
                 pinTimer = null
-                pinPollJob?.cancel()
-                pinPollJob = null
+                synchronized(pinPollJobs) { pinPollJobs.toList() }
+                    .forEach { it.cancel() }
+                pinPollJobs.clear()
             }
 
             ioSafe {
@@ -267,7 +274,7 @@ class SettingsAccount {
                                 )
                             )
 
-                            pinPollJob = ioSafe {
+                            val pollJob = ioSafe {
                                 if (secondsUntilFinished.rem(pinCodeData.interval) == 0 && api.login(
                                         pinCodeData
                                     )
@@ -282,6 +289,8 @@ class SettingsAccount {
                                     cancel()
                                 }
                             }
+                            pinPollJobs.add(pollJob)
+                            pollJob.invokeOnCompletion { pinPollJobs.remove(pollJob) }
                         }
 
                         override fun onFinish() {
