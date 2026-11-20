@@ -954,7 +954,12 @@ object VideoDownloadManager {
                 }
 
                 // supports range if status is partial content https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/206
-                getRequest.code == 206
+                (getRequest.code == 206).also {
+                    // Audit-3 #30: the probe body was never consumed
+                    // or closed, so its pooled connection stayed held
+                    // until the socket timed out.
+                    getRequest.body.close()
+                }
             }
         }
 
