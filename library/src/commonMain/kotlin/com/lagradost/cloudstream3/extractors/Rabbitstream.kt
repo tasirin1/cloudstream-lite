@@ -146,9 +146,21 @@ open class Rabbitstream : ExtractorApi() {
     }
 
     private suspend fun decrypt(input: String, key: String): String {
+        // Audit-7 #42: a malformed sources payload (not base64,
+        // or too short to hold the salt) threw a raw
+        // IllegalArgumentException out of the decryption path.
+        // Fail as a clean load error instead.
+        val decoded = try {
+            base64DecodeArray(input)
+        } catch (e: IllegalArgumentException) {
+            throw ErrorLoadingException("Malformed encrypted sources payload")
+        }
+        if (decoded.size < 16) {
+            throw ErrorLoadingException("Encrypted sources payload too short")
+        }
         return decryptSourceUrl(
             generateKey(
-                salt = base64DecodeArray(input).copyOfRange(8, 16),
+                salt = decoded.copyOfRange(8, 16),
                 secret = key.encodeToByteArray(),
             ), input
         )
@@ -170,7 +182,16 @@ open class Rabbitstream : ExtractorApi() {
 
     @OptIn(DelicateCryptographyApi::class)
     private suspend fun decryptSourceUrl(decryptionKey: ByteArray, sourceUrl: String): String {
-        val cipherData = base64DecodeArray(sourceUrl)
+        // Audit-7 #42: same guard as decrypt() — copyOfRange(16, size)
+        // on a shorter payload is an IllegalArgumentException.
+        val cipherData = try {
+            base64DecodeArray(sourceUrl)
+        } catch (e: IllegalArgumentException) {
+            throw ErrorLoadingException("Malformed encrypted source URL")
+        }
+        if (cipherData.size <= 16) {
+            throw ErrorLoadingException("Encrypted source URL too short")
+        }
         val encrypted = cipherData.copyOfRange(16, cipherData.size)
         val keyBytes = decryptionKey.copyOfRange(0, 32)
         val ivBytes = decryptionKey.copyOfRange(32, decryptionKey.size)

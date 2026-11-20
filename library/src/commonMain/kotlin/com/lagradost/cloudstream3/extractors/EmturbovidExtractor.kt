@@ -16,8 +16,11 @@ open class EmturbovidExtractor : ExtractorApi() {
         val response = app.get(url, referer = referer ?: "$mainUrl/")
         val playerScript = response.document
             .select("script")
-            .first { it.data().contains("var urlPlay") }
-            .html()
+            // Audit-7 #43: firstOrNull — a page without the
+            // marker script threw NoSuchElementException instead
+            // of failing cleanly.
+            .firstOrNull { it.data().contains("var urlPlay") }
+            ?.html() ?: return null
 
         val sources = mutableListOf<ExtractorLink>()
         if (playerScript.isNotBlank()) {
