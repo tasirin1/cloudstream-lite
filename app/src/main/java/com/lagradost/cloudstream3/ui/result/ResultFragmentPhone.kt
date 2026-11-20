@@ -973,6 +973,14 @@ open class ResultFragmentPhone : BaseFragment<FragmentResultSwipeBinding>(
                     if (d.contentRatingText == null) {
                         // If there is no rating to display, we don't want an empty gap
                         resultMetaContentRating.width = 0
+                    } else {
+                        // Audit-11 #9: restore the width — the
+                        // first emission for a title (from search)
+                        // has no rating and zeroed it, and nothing
+                        // ever set it back, so the rating stayed
+                        // invisible for the whole screen session.
+                        resultMetaContentRating.width =
+                            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                     }
 
                     if (syncModel.addSyncs(d.syncData)) {
