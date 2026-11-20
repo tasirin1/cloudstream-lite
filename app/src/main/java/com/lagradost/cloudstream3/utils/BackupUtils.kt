@@ -215,6 +215,13 @@ object BackupUtils {
             fileStream = stream.openNew()
             printStream = PrintWriter(fileStream)
             printStream.print(backupFile.toJson())
+            // Audit-3 #5: PrintWriter swallows IOExceptions (they
+            // only surface via checkError()), so a failed write
+            // (full storage, revoked SAF permission) still showed
+            // the success toast over an empty/corrupt file.
+            if (printStream.checkError()) {
+                throw IOException("Backup write failed")
+            }
             showToast(R.string.backup_success, Toast.LENGTH_LONG)
         } catch (e: Exception) {
             logError(e)

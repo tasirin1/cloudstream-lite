@@ -137,6 +137,7 @@ WAJIB dicatat di tabel ini pada commit yang sama.
 | 2026-11-20 | **Audit-3 #1: jangkar hash plugin disimpan SEBELUM load di jalur Compose** — urutan lama (store sesudah load) membuat loadPlugin membandingkan berkas baru dengan jangkar versi lama, jadi update plugin via layar Ekstensi selalu gagal "Unable to load plugin" dan rusak permanen; sekarang sama seperti jalur lama (store dulu, baru load) | `ui/settings/extensions/AndroidRepositoryManager.kt` |
 | 2026-11-20 | **Audit-3 #2: digest plugin yang diberikan repo tapi tak bisa diverifikasi kini MENGGAGALKAN unduhan** — algoritma digest tak dikenal membuat MessageDigest null dan transfer lolos tanpa cek sama sekali; fileHash tak terparse menuruhkan digest jadi null diam-diam. Keduanya sekarang error eksplisit. (Kasus repo tanpa hash sama sekali tetap diizinkan demi kompatibilitas repo lama.) | `ui/settings/ApkUpdater.kt`, `ui/settings/extensions/AndroidRepositoryManager.kt` |
 | 2026-11-20 | **Audit-3 #4: pengambilan master playlist M3U8 tidak lagi `verify = false`** — satu-satunya titik tanpa verifikasi sertifikat di library; playlist yang menentukan semua URL varian/segmen (putar + unduh) kini diambil dengan klien terverifikasi | `library/.../utils/M3u8Helper.kt` |
+| 2026-11-20 | **Audit-3 #5: backup tidak lagi melaporkan sukses palsu** — PrintWriter menelan IOException; kini `checkError()` diperiksa sesudah tulis dan kegagalan melempar ke jalur toast gagal, bukan toast sukses di atas berkas kosong/korup | `utils/BackupUtils.kt` |
 
 ## Cara kerja (aturan owner, berlaku di semua repo Tasirin)
 
