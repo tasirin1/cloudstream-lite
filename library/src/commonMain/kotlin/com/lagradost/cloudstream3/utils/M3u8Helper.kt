@@ -37,6 +37,32 @@ class M3u8Helper {
 }
 
 
+// Audit-7 #16: size caps for the HLS fetch path. Segments,
+// AES keys and playlists were all read fully into RAM with no
+// bound anywhere (body.bytes() / .text), so one rogue URL in
+// a playlist could OOM the STB; the rest of the app already
+// caps its fetches (plugins 100 MB, manifests 10 MB, subtitle
+// archives 50/100 MB). A real AES key is 16 bytes and a real
+// playlist is far under a megabyte; the segment cap is sized
+// generously for high-bitrate chunks.
+private const val MAX_HLS_PLAYLIST_BYTES = 10_000_000L
+private const val MAX_HLS_SEGMENT_BYTES = 256_000_000L
+private const val MAX_HLS_KEY_BYTES = 65_536L
+
+private fun okio.BufferedSource.readBytesBounded(maxBytes: Long, what: String): ByteArray {
+    val buffer = okio.Buffer()
+    var total = 0L
+    while (true) {
+        val read = read(buffer, 8192)
+        if (read < 0) break
+        total += read
+        if (total > maxBytes) {
+            throw ErrorLoadingException("$what exceeds $maxBytes bytes")
+        }
+    }
+    return buffer.readByteArray()
+}
+
 object M3u8Helper2 {
     private val TAG = "M3u8Helper"
 
@@ -193,7 +219,14 @@ object M3u8Helper2 {
         // Audit-3 #4: was verify = false -- the master playlist
         // (which decides every variant/segment URL, for playback
         // AND downloads) was fetched with no certificate check.
-        val response = app.get(m3u8.streamUrl, headers = m3u8.headers).text
+        val responseBody = app.get(m3u8.streamUrl, headers = m3u8.headers).body
+        val response = try {
+            responseBody.source()
+                .readBytesBounded(MAX_HLS_PLAYLIST_BYTES, "Playlist")
+                .decodeToString()
+        } finally {
+            responseBody.close()
+        }
         val parsed = HlsPlaylistParser.parse(m3u8.streamUrl, response)
 
         var anyFound = false
@@ -345,7 +378,7 @@ object M3u8Helper2 {
             // the body was never closed and its connection could
             // not return to the pool.
             val tsData = try {
-                body.bytes()
+                body.source().readBytesBounded(MAX_HLS_SEGMENT_BYTES, "Segment")
             } finally {
                 body.close()
             }
@@ -404,12 +437,17 @@ object M3u8Helper2 {
             throw IllegalArgumentException()
         }
 
-        val playlistResponse =
-            app.get(
-                playlistStream.streamUrl,
-                headers = playlistStream.headers,
-
-            ).text
+        val playlistBody = app.get(
+            playlistStream.streamUrl,
+            headers = playlistStream.headers
+        ).body
+        val playlistResponse = try {
+            playlistBody.source()
+                .readBytesBounded(MAX_HLS_PLAYLIST_BYTES, "Playlist")
+                .decodeToString()
+        } finally {
+            playlistBody.close()
+        }
 
         val parsed = HlsPlaylistParser.parse(playlistStream.streamUrl, playlistResponse)
         if (parsed != null) {
@@ -500,7 +538,8 @@ object M3u8Helper2 {
                                 // Audit-4 #12: finally-close, as
                                 // with the segment body.
                                 try {
-                                    keyBody.bytes()
+                                    keyBody.source()
+                                        .readBytesBounded(MAX_HLS_KEY_BYTES, "Encryption key")
                                 } finally {
                                     keyBody.close()
                                 }
