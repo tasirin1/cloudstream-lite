@@ -72,7 +72,11 @@ class SubtitleRepo(override val api: SubtitleAPI) : AuthRepo(api) {
         val returnValue = api.resource(freshAuth(), data)
         resourceCache.withLock {
             val add = SavedResourceResponse(unixTime, returnValue, data, account, userKey)
-            if (resourceCache.size > CACHE_SIZE) {
+            // Audit-15 #17: was size > CACHE_SIZE — the
+            // cache grew to CACHE_SIZE+1 and the rolling
+            // index (mod CACHE_SIZE) never evicted the
+            // extra slot.
+            if (resourceCache.size >= CACHE_SIZE) {
                 resourceCache[resourceCacheIndex] = add // rolling cache
                 resourceCacheIndex = (resourceCacheIndex + 1) % CACHE_SIZE
             } else {
@@ -106,7 +110,9 @@ class SubtitleRepo(override val api: SubtitleAPI) : AuthRepo(api) {
             if (returnValue.isNotEmpty()) {
                 val add = SavedSearchResponse(unixTime, returnValue, query, idPrefix, account)
                 searchCache.withLock {
-                    if (searchCache.size > CACHE_SIZE) {
+                    // Audit-15 #17: same off-by-one as the
+                    // resource cache above.
+                    if (searchCache.size >= CACHE_SIZE) {
                         searchCache[searchCacheIndex] = add // rolling cache
                         searchCacheIndex = (searchCacheIndex + 1) % CACHE_SIZE
                     } else {
