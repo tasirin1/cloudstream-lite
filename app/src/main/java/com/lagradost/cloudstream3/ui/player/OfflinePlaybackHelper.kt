@@ -53,7 +53,16 @@ object OfflinePlaybackHelper {
             val duration = if (dur != -1L) {
                 dur
             } else DataStoreHelper.getViewPos(id)?.duration ?: pos
-            DataStoreHelper.setViewPos(id, pos, duration)
+            // Audit-20 #5: the write was unconditional, so a
+            // re-delivered intent (process death + task
+            // restore) rewound the position to the intent's
+            // stale value, discarding progress saved while
+            // watching. Never move the stored position
+            // backwards for the same id.
+            val stored = DataStoreHelper.getViewPos(id)
+            if (stored == null || pos >= stored.position) {
+                DataStoreHelper.setViewPos(id, pos, duration)
+            }
         }
 
         activity.navigate(
