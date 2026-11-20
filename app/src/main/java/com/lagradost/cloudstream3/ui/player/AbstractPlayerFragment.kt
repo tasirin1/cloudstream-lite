@@ -117,6 +117,13 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
 
     override fun onBindingCreated(binding: T, savedInstanceState: Bundle?) {
         val ctx = context ?: return
+        // Audit-14 #20: release the previous host before
+        // replacing it — a fragment sitting in the back stack
+        // gets onBindingCreated again for its new view, and the
+        // old host (ExoPlayer, media session, PiP receiver) was
+        // never released anywhere: onDestroy only releases the
+        // LAST host.
+        playerHostView?.release()
         playerHostView = PlayerView(ctx)
         playerHostView?.player = _player
         playerHostView?.callbacks = this
