@@ -1097,7 +1097,7 @@ class GeneratorPlayer : FullScreenPlayer() {
 
                 // try to add every subtitle until we have added a new subtitle file
                 for (subtitleEntry in success) {
-                    if (hasSelectASubtitle || !this.isActive) {
+                    if (hasSelectASubtitle.get() || !this.isActive) {
                         break
                     }
 
@@ -1127,7 +1127,7 @@ class GeneratorPlayer : FullScreenPlayer() {
                 }
             }
             // maybe better error here?
-            if (!hasSelectASubtitle && this.isActive) {
+            if (!hasSelectASubtitle.get() && this.isActive) {
                 showToast(R.string.no_subtitles)
             }
         }
