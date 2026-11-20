@@ -1483,8 +1483,16 @@ private class JsInterpreter(
                 removed
             }
             "indexOf" -> nativeFn("indexOf") { args ->
-                val v = args.getOrNull(0); val start = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
-                obj.elements.indexOfFirst { strictEq(it, v) }.let { if (it < start) -1.0 else it.toDouble() }
+                // Audit-15 #27: fromIndex is the search START
+                // in JS, not a validity check on the first
+                // match — [1,2,1].indexOf(1, 1) returned -1
+                // here instead of 2, breaking deobfuscation
+                // scripts that search with an offset.
+                val v = args.getOrNull(0)
+                val rawStart = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
+                val start = if (rawStart < 0) maxOf(0, obj.elements.size + rawStart) else rawStart
+                val idx = obj.elements.drop(start).indexOfFirst { strictEq(it, v) }
+                if (idx == -1) -1.0 else (start + idx).toDouble()
             }
             "map" -> nativeFn("map") { args ->
                 val fn = args.getOrNull(0)
