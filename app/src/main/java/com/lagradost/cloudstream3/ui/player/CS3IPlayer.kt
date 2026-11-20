@@ -811,7 +811,22 @@ class CS3IPlayer : IPlayer {
             // https://gist.github.com/ShivamKumarJha/3c8398b47053ae05112d2a8f8b5de531
             return try {
                 val cacheDirectory = File(context.cacheDir, "CronetEngine")
-                cacheDirectory.deleteRecursively()
+                // Audit-4 #22: deleteRecursively() here ran
+                // synchronously on the caller's thread (the main
+                // thread on the load path) and could jank on a
+                // large cache. Renaming is atomic and fast; the
+                // old tree is deleted on a background thread.
+                if (cacheDirectory.exists()) {
+                    val trash = File(
+                        context.cacheDir,
+                        "CronetEngine.old-${System.currentTimeMillis()}"
+                    )
+                    if (cacheDirectory.renameTo(trash)) {
+                        Thread { trash.deleteRecursively() }.start()
+                    } else {
+                        cacheDirectory.deleteRecursively()
+                    }
+                }
                 if (!cacheDirectory.exists()) {
                     cacheDirectory.mkdirs()
                 }
