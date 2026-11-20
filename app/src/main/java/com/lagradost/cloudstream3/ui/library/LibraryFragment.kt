@@ -96,6 +96,13 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
 
     private var toggleRandomButton = false
 
+    // Audit-3 #16: the pages observer used to attach a brand new
+    // TabLayoutMediator and tab listener on every reload without
+    // detaching the previous ones, so they stacked up for the
+    // lifetime of the view.
+    private var tabLayoutMediator: TabLayoutMediator? = null
+    private var tabSelectedListener: TabLayout.OnTabSelectedListener? = null
+
     override fun pickLayout(): Int? =
         if (isLayout(PHONE)) R.layout.fragment_library else R.layout.fragment_library_tv
 
@@ -432,7 +439,12 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
                             viewpager.startAnimation(showAnimation)
                         }
 
-                        TabLayoutMediator(
+                        tabLayoutMediator?.detach()
+                        tabSelectedListener?.let {
+                            binding.libraryTabLayout.removeOnTabSelectedListener(it)
+                        }
+
+                        tabLayoutMediator = TabLayoutMediator(
                             libraryTabLayout,
                             viewpager,
                         ) { tab, position ->
@@ -449,9 +461,9 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
                             tab.view.setOnFocusChangeListener { _, _ ->
                                 binding.searchBar.setExpanded(true)
                             }
-                        }.attach()
+                        }.also { it.attach() }
 
-                        binding.libraryTabLayout.addOnTabSelectedListener(object :
+                        tabSelectedListener = object :
                             TabLayout.OnTabSelectedListener {
                             override fun onTabSelected(tab: TabLayout.Tab?) {
                                 binding.libraryTabLayout.selectedTabPosition.let { page ->
@@ -461,7 +473,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
 
                             override fun onTabUnselected(tab: TabLayout.Tab?) = Unit
                             override fun onTabReselected(tab: TabLayout.Tab?) = Unit
-                        })
+                        }
+                        binding.libraryTabLayout.addOnTabSelectedListener(
+                            tabSelectedListener!!
+                        )
                     }
                 }
 
