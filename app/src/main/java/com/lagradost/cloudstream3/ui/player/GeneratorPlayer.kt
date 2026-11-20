@@ -1539,7 +1539,7 @@ class GeneratorPlayer : FullScreenPlayer() {
             // could show, its dismiss listener (the only resume
             // path) never runs — resume here so playback is not
             // left silently frozen.
-            if (isPlaying) {
+            if (player.getIsPlaying()) {
                 player.handleEvent(CSPlayerEvent.Play)
             }
         }
@@ -1707,7 +1707,7 @@ class GeneratorPlayer : FullScreenPlayer() {
             // could show, its dismiss listener (the only resume
             // path) never runs — resume here so playback is not
             // left silently frozen.
-            if (isPlaying) {
+            if (player.getIsPlaying()) {
                 player.handleEvent(CSPlayerEvent.Play)
             }
         }
