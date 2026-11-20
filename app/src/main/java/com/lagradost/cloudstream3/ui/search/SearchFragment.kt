@@ -408,11 +408,25 @@ class SearchFragment : BaseFragment<FragmentSearchBinding>(
                     }
 
                     dialog.setOnDismissListener {
-                        DataStoreHelper.searchPreferenceProviders = currentSelectedApis.toList()
-                        selectedApis = currentSelectedApis
+                        // Audit-12 #8: an all-selected working set
+                        // IS the "search all providers" sentinel —
+                        // persist it as the empty set, not as a
+                        // frozen explicit list (providers installed
+                        // later were silently excluded from every
+                        // search), and compare the working set
+                        // against the EXPANDED previous selection,
+                        // so a no-change open/close (including via
+                        // Cancel) no longer re-runs the search.
+                        val allNames = validAPIs.map { it.name }.toSet()
+                        val persisted =
+                            if (currentSelectedApis == allNames) mutableSetOf() else currentSelectedApis
+                        DataStoreHelper.searchPreferenceProviders = persisted.toList()
+                        selectedApis = persisted
 
                         // run search when dialog is close
-                        if (previousSelectedApis != selectedApis.toSet() || previousSelectedSearchTypes != selectedSearchTypes.toSet()) {
+                        val previousExpanded =
+                            if (previousSelectedApis.isEmpty()) allNames else previousSelectedApis
+                        if (currentSelectedApis != previousExpanded || previousSelectedSearchTypes != selectedSearchTypes.toSet()) {
                             search(binding.mainSearch.query.toString())
                         }
                     }
