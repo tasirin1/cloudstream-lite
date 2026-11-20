@@ -144,6 +144,20 @@ class DownloadViewModel : ViewModel() {
     fun removeRedundantEpisodeKeys(context: Context, keys: List<Pair<Int, Int>>) {
         val settingsManager = context.getSharedPrefs()
         ioSafe {
+            // Audit-5 #11: re-check at execution time. The
+            // "redundant" verdict was computed earlier (a child
+            // whose info key was momentarily absent), and this
+            // block runs asynchronously — a download for such an
+            // episode may have started in between, in which case
+            // moving its freshly written cache key to the backup
+            // folder would hide a live download from the UI
+            // forever. Abort instead; the next refresh recomputes.
+            if (DownloadQueueService.isRunning ||
+                downloadInstances.value.isNotEmpty() ||
+                DownloadQueueManager.queue.value.isNotEmpty()
+            ) {
+                return@ioSafe
+            }
             settingsManager.edit {
                 keys.forEach { (parentId, childId) ->
                     Log.i(TAG, "Removing download episode key: ${parentId}/${childId}")
@@ -235,8 +249,13 @@ class DownloadViewModel : ViewModel() {
                     downloadStats.totalDownloads
                 )
             }
-            // calculateDownloadStats already performed checks when creating redundantDownloads, no extra check required
-            removeRedundantEpisodeKeys(context, downloadStats.redundantDownloads)
+            // Audit-5 #11: episode keys get the same
+            // not-while-downloading guard as header keys above —
+            // they used to be pruned unconditionally (and the
+            // function re-checks again at execution time).
+            if (!isCurrentlyDownloading) {
+                removeRedundantEpisodeKeys(context, downloadStats.redundantDownloads)
+            }
 
             createVisualDownloadList(
                 context,
