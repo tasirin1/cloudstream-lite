@@ -1432,7 +1432,17 @@ class GeneratorPlayer : FullScreenPlayer() {
                         if (index == -1) 0 else index,
                         ctx.getString(R.string.subtitles_encoding),
                         true,
-                        {}) {
+                        // Audit-13 #4: the dismiss callback was
+                        // empty — this dialog chain paused the
+                        // player in showMirrorsDialogue and set
+                        // shouldDismiss = false, so cancelling
+                        // here (Back/outside tap) resumed
+                        // NOTHING and the video stayed paused
+                        // with no dialog on screen. Route every
+                        // exit through the local dismiss(); on a
+                        // selection it runs twice, and a second
+                        // Play event is a no-op.
+                        { dismiss() }) {
                         settingsManager.edit {
                             putString(
                                 ctx.getString(R.string.subtitles_encoding_key), prefValues[it]
