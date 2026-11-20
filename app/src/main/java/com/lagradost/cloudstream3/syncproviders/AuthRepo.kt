@@ -92,7 +92,18 @@ abstract class AuthRepo(open val api: AuthAPI) {
             }
             if (newAccounts.size < currentAccounts.size) {
                 AccountManager.updateAccounts(idPrefix, newAccounts.toTypedArray())
-                AccountManager.updateAccountsId(idPrefix, 0)
+                // Audit-14 #7: reset the selection ONLY when the
+                // removed account was the selected one. This used
+                // to reset unconditionally, so logging out an
+                // INACTIVE account silently deselected the active
+                // one (id 0 matches no user, so the provider
+                // looked fully logged out).
+                val selectedId = synchronized(AccountManager.cachedAccountIds) {
+                    AccountManager.cachedAccountIds[idPrefix]
+                }
+                if (removed.any { it.user.id == selectedId }) {
+                    AccountManager.updateAccountsId(idPrefix, 0)
+                }
             }
             removed
         }
