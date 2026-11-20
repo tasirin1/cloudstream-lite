@@ -1983,7 +1983,13 @@ object VideoDownloadManager {
             context.getKey<DownloadedFileInfo>(KEY_DOWNLOAD_INFO, id.toString()) ?: return false
         val file = info.toFile(context)
 
-        val isFileDeleted = file?.delete() == true || file?.exists() == false
+        // Audit-6 #24: a null handle (the series folder was
+        // deleted outside the app, or the SAF tree was revoked)
+        // made both comparisons false forever, so the info key
+        // could never be removed from inside the app — an orphan
+        // entry the user could not delete. An unreachable file is
+        // gone as far as the app is concerned.
+        val isFileDeleted = file == null || file.delete() || !file.exists()
 
         if (isFileDeleted) {
             deleteMatchingSubtitles(context, info)
