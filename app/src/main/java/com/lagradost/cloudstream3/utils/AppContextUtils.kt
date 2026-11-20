@@ -535,6 +535,14 @@ object AppContextUtils {
             // the repository immediately. Ask the user first; only
             // a confirmed tap adds it.
             activity.runOnUiThread {
+                // Audit-4 #52: parseRepository above is a network
+                // call; if the user left while it ran, showing the
+                // dialog on the finishing/destroyed activity throws
+                // BadTokenException on the main thread. The repo is
+                // simply not added in that case.
+                if (activity.isFinishing || activity.isDestroyed) {
+                    return@runOnUiThread
+                }
                 AlertDialog.Builder(activity).apply {
                     setTitle(repo.name)
                     setMessage(activity.getString(R.string.add_repository_confirm, url))
