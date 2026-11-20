@@ -270,10 +270,19 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
     override var loadedImages: Int = 0
 
     // how many images we can generate in total, == hsl.size ?: 0
+    // Audit-6 #22: written by the IO load job, read by the UI
+    // thread (hasPreview) — the Audit-4 #28 lock move covered
+    // (images, prefixSum) but not this pair. @Volatile for
+    // visibility (and against torn Long reads of durationMs on
+    // 32-bit), and hasPreview reads a consistent snapshot under
+    // imagesLock.
+    @Volatile
     private var totalImages: Int = 0
 
     override fun hasPreview(): Boolean {
-        return totalImages > 0 && loadedImages >= minOf(totalImages, 4)
+        return synchronized(imagesLock) {
+            totalImages > 0 && loadedImages >= minOf(totalImages, 4)
+        }
     }
 
     override fun getPreviewImage(fraction: Float): Bitmap? {
@@ -324,6 +333,8 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
         }
     }
 
+    // Audit-6 #22: @Volatile — see totalImages above.
+    @Volatile
     override var durationMs: Long = 0L
 
     private var currentJob: Job? = null
