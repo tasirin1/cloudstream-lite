@@ -211,6 +211,23 @@ object M3u8Helper2 {
         /** Fork fix (audit #25): base for the default per-segment IV. */
         var mediaSequence: Int = 0
 
+        /**
+         * Audit-4 #11: one encryption key's reign — it applies to
+         * segments from [fromIndex] until the next range starts.
+         * An empty [key] marks a stretch that is not encrypted
+         * (before the first key tag, or a METHOD=NONE range).
+         */
+        internal class KeyRange(
+            val fromIndex: Int,
+            val key: ByteArray,
+            val iv: ByteArray
+        )
+
+        // Audit-4 #11: per-segment key ranges for playlists that
+        // rotate #EXT-X-KEY. Empty = the single constructor key
+        // applies to every segment (the historical model).
+        internal var keyRanges: List<KeyRange> = emptyList()
+
         suspend fun resolveLinkWhileSafe(
             index: Int,
             tries: Int = 3,
@@ -275,15 +292,33 @@ object M3u8Helper2 {
             if (tsData.size < 128 && tsData.all { it >= 0 }) throw ErrorLoadingException("ASCII found instead of data")
 
             return if (isEncrypted) {
-                // Fork fix (audit #25): with no explicit IV attribute,
-                // the IV is the segment's media sequence number
-                // (RFC 8216 section 5.2), not index + 1.
-                val iv = if (encryptionIv.isEmpty()) {
-                    toBytes16Big(mediaSequence + index)
+                // Audit-4 #11: with key rotation, the key whose
+                // range covers this segment wins. A segment before
+                // the first key tag, or inside a METHOD=NONE range,
+                // has an empty key and is returned as-is.
+                val range = keyRanges.lastOrNull { it.fromIndex <= index }
+                val keyData = if (keyRanges.isNotEmpty()) {
+                    range?.key ?: byteArrayOf()
+                } else {
+                    encryptionData
+                }
+                if (keyData.isEmpty()) {
+                    return tsData
+                }
+                val explicitIv = if (keyRanges.isNotEmpty()) {
+                    range?.iv ?: byteArrayOf()
                 } else {
                     encryptionIv
                 }
-                getDecrypted(encryptionData, tsData, iv, index)
+                // Fork fix (audit #25): with no explicit IV attribute,
+                // the IV is the segment's media sequence number
+                // (RFC 8216 section 5.2), not index + 1.
+                val iv = if (explicitIv.isEmpty()) {
+                    toBytes16Big(mediaSequence + index)
+                } else {
+                    explicitIv
+                }
+                getDecrypted(keyData, tsData, iv, index)
             } else {
                 tsData
             }
@@ -359,25 +394,75 @@ object M3u8Helper2 {
         var encryptionIv = byteArrayOf()
         var encryptionData = byteArrayOf()
 
-        val match = ENCRYPTION_URL_IV_REGEX.find(playlistResponse)?.groupValues
-        val encryptionState: Boolean
+        // Audit-4 #11: scan EVERY #EXT-X-KEY tag, not just the
+        // first, and actually look at METHOD. The old code treated
+        // any key tag as AES-128: a METHOD=NONE tag (segments are
+        // plain) still flipped the playlist to "encrypted" and
+        // "decrypted" plain segments into garbage, and when a
+        // playlist rotated keys mid-stream, every segment after
+        // the rotation was decrypted with the first key only.
+        val keyRanges = mutableListOf<LazyHlsDownloadData.KeyRange>()
+        var encryptionState = false
+        var keySegmentIndex = 0
+        val keyCache = mutableMapOf<String, ByteArray>()
+        for (rawLine in playlistResponse.lineSequence()) {
+            val line = rawLine.trim()
+            when {
+                line.startsWith("#EXT-X-KEY:") -> {
+                    val groups = ENCRYPTION_URL_IV_REGEX.find(line)?.groupValues
+                    val method = groups?.getOrNull(1) ?: when {
+                        line.contains("METHOD=NONE") -> "NONE"
+                        else -> continue
+                    }
+                    when {
+                        method.equals("NONE", ignoreCase = true) -> {
+                            keyRanges += LazyHlsDownloadData.KeyRange(
+                                fromIndex = keySegmentIndex,
+                                key = byteArrayOf(),
+                                iv = byteArrayOf()
+                            )
+                        }
 
-        if (!match.isNullOrEmpty()) {
-            encryptionState = true
-            val encryptionUrl = resolveUrl(playlistStream.streamUrl, match[2])
+                        method.equals("AES-128", ignoreCase = true) -> {
+                            val keyUrl = groups?.getOrNull(2)?.takeIf { it.isNotEmpty() }
+                                ?: throw IllegalStateException("EXT-X-KEY without a URI")
+                            val resolvedKeyUrl =
+                                resolveUrl(playlistStream.streamUrl, keyUrl)
+                            val key = keyCache.getOrPut(resolvedKeyUrl) {
+                                val keyResponse = app.get(
+                                    resolvedKeyUrl,
+                                    headers = playlistStream.headers
+                                )
+                                val keyBody = keyResponse.body
+                                // Audit-4 #12: finally-close, as
+                                // with the segment body.
+                                try {
+                                    keyBody.bytes()
+                                } finally {
+                                    keyBody.close()
+                                }
+                            }
+                            val iv = parseEncryptionIv(groups.getOrNull(3))
+                            keyRanges += LazyHlsDownloadData.KeyRange(
+                                fromIndex = keySegmentIndex,
+                                key = key,
+                                iv = iv
+                            )
+                            encryptionState = true
+                            if (encryptionData.isEmpty()) {
+                                encryptionData = key
+                                encryptionIv = iv
+                            }
+                        }
 
-            encryptionIv = parseEncryptionIv(match[3])
-            val encryptionKeyResponse =
-                app.get(encryptionUrl, headers = playlistStream.headers)
-            val body = encryptionKeyResponse.body
-            // Audit-4 #12: same finally-close as the segment body.
-            encryptionData = try {
-                body.bytes()
-            } finally {
-                body.close()
+                        else -> throw IllegalStateException(
+                            "Unsupported HLS encryption method: $method"
+                        )
+                    }
+                }
+
+                line.startsWith("#EXTINF:") -> keySegmentIndex++
             }
-        } else {
-            encryptionState = false
         }
 
         val relativeUrl = getParentLink(playlistStream.streamUrl)
@@ -401,6 +486,7 @@ object M3u8Helper2 {
             headers = playlistStream.headers
         ).apply {
             this.mediaSequence = mediaSequence
+            this.keyRanges = keyRanges
         }
     }
 }
