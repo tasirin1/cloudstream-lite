@@ -156,13 +156,20 @@ abstract class AccountManager {
         // cachedAccounts until a restart (sync looked logged out, or
         // worse, used the wrong profile's token). Reload both.
         fun updateCachedAccounts() {
-            val data = mutableMapOf<String, Array<AuthData>>()
-            for (api in allApis) {
-                data[api.idPrefix] = loadAccountsFromDisk(api.idPrefix)
-            }
-            synchronized(cachedAccounts) {
-                cachedAccounts.clear()
-                cachedAccounts.putAll(data)
+            // Audit-16 #16: read + swap under the write lock
+            // — unlocked, a refresh/logout landing between
+            // the disk read and the cache swap was overwritten
+            // by the older disk snapshot (cache served a stale
+            // token while disk held the new one).
+            synchronized(accountsWriteLock) {
+                val data = mutableMapOf<String, Array<AuthData>>()
+                for (api in allApis) {
+                    data[api.idPrefix] = loadAccountsFromDisk(api.idPrefix)
+                }
+                synchronized(cachedAccounts) {
+                    cachedAccounts.clear()
+                    cachedAccounts.putAll(data)
+                }
             }
         }
 

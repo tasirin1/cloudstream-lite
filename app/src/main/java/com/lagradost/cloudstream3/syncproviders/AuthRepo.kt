@@ -248,7 +248,11 @@ abstract class AuthRepo(open val api: AuthAPI) {
         return setupLogin(
             api.login(
                 redirectUrl,
-                synchronized(oauthPayload) { oauthPayload[api.idPrefix] }) ?: return false
+                // Audit-16 #17: consume the payload — it used
+                // to stay in the map for the process lifetime,
+                // so a stray/repeated redirect for the same
+                // provider replayed setupLogin with stale data.
+                synchronized(oauthPayload) { oauthPayload.remove(api.idPrefix) }) ?: return false
         )
     }
 }
