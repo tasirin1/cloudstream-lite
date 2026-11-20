@@ -271,6 +271,14 @@ class EpisodeAdapter(
                         text = item.description.html()
                         isGone = text.isNullOrBlank()
 
+                        // Audit-11 #10: reset the expansion —
+                        // the toggle below starts collapsed on
+                        // every bind, but maxLines is recycled
+                        // view state; without this a holder that
+                        // showed an expanded description kept it
+                        // expanded while its toggle thought it
+                        // was collapsed (first tap inverted).
+                        maxLines = 4
                         var isExpanded = false
                         setOnClickListener {
                             if (isLayout(TV)) {
@@ -291,6 +299,11 @@ class EpisodeAdapter(
                     }
 
                     if (item.airDate != null) {
+                        // Audit-11 #10: the no-date branch below
+                        // hides this view and nothing restored it
+                        // — a recycled holder kept the air date
+                        // invisible forever.
+                        episodeDate.isVisible = true
                         val isUpcoming = unixTimeMS < item.airDate
 
                         if (isUpcoming) {
