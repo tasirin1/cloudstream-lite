@@ -279,8 +279,14 @@ object AndroidRepositoryManager : RepositoryManager {
          * Because if the file digest is correct, then why do we need to do a network connection?
          * */
         if (isFileDigest(file, source.digest)) {
+            // Audit-9 #2: same stale-anchor clearing as below —
+            // the file on disk already matches this manifest, so
+            // a leftover anchor from an older manifest must not
+            // refuse it at load time.
             if (anchorHash != null) {
                 PluginManager.storePluginHash(file.absolutePath, anchorHash)
+            } else {
+                PluginManager.removePluginHash(file.absolutePath)
             }
             return@withContext file.absolutePath
         }
@@ -378,8 +384,16 @@ object AndroidRepositoryManager : RepositoryManager {
         // loadPlugin compare the new file against the previous
         // version's anchor, so every update via this screen failed
         // with "Unable to load plugin" and stayed broken.
+        //
+        // Audit-9 #2: when the manifest carries no usable SHA-256
+        // digest, CLEAR any previous anchor instead of leaving it
+        // — the stale anchor made loadPlugin refuse the new file
+        // forever and rolled every update back (the Audit-7 #6
+        // bug, which was only ever fixed on the legacy path).
         if (anchorHash != null) {
             PluginManager.storePluginHash(file.absolutePath, anchorHash)
+        } else {
+            PluginManager.removePluginHash(file.absolutePath)
         }
 
         val result = try {
