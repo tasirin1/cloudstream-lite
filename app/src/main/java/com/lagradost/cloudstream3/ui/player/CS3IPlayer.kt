@@ -685,6 +685,12 @@ class CS3IPlayer : IPlayer {
          * */
         private var cronetEngine: CronetEngine? = null
 
+        // Audit-3 #18: createVideoSource used to hand every
+        // CronetDataSource a brand new single-thread executor that
+        // was never shut down, leaking one thread per video load.
+        // The executor is shared with the engine's lifetime instead.
+        private var cronetExecutor: java.util.concurrent.ExecutorService? = null
+
         /**
          * How many active sessions we have.
          *
@@ -721,6 +727,8 @@ class CS3IPlayer : IPlayer {
             if (activePlayers == 0 && id == cronetReleasedId) {
                 try {
                     cronetEngine?.shutdown()
+                    cronetExecutor?.shutdown()
+                    cronetExecutor = null
                 } catch (t: Throwable) {
                     logError(t)
                 } finally {
@@ -819,7 +827,12 @@ class CS3IPlayer : IPlayer {
                     OkHttpDataSource.Factory(app.baseClient).setUserAgent(userAgent)
                 } else {
                     Log.d(TAG, "Using CronetDataSource for $link")
-                    CronetDataSource.Factory(engine, Executors.newSingleThreadExecutor())
+                    CronetDataSource.Factory(
+                        engine,
+                        cronetExecutor ?: Executors.newSingleThreadExecutor().also {
+                            cronetExecutor = it
+                        }
+                    )
                         .setUserAgent(userAgent)
                         .setConnectionTimeoutMs(CRONET_TIMEOUT_MS)
                         .setReadTimeoutMs(CRONET_TIMEOUT_MS)
