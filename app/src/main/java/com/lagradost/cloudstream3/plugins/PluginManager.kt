@@ -279,6 +279,14 @@ object PluginManager {
             val updated = current + (filePath to stamped)
             pluginHashCache = updated
             setKey(PLUGIN_FILE_HASHES_KEY, updated)
+            // Audit-7 #26: this store just read the stored map
+            // successfully and wrote a fresh one back, so the
+            // store is demonstrably healthy again — clear the
+            // Audit-6 #27 corruption flag. It used to stick for
+            // the process lifetime, refusing every anchorless
+            // online plugin until an app restart even after the
+            // transient read failure was long gone.
+            pluginHashStoreCorrupt = false
         }
     }
 
@@ -300,6 +308,8 @@ object PluginManager {
             val updated = current - filePath
             pluginHashCache = updated
             setKey(PLUGIN_FILE_HASHES_KEY, updated)
+            // Audit-7 #26: same recovery as storePluginHash.
+            pluginHashStoreCorrupt = false
         }
     }
 
