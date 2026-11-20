@@ -518,6 +518,8 @@ object M3u8Helper2 {
         val keyRanges = mutableListOf<LazyHlsDownloadData.KeyRange>()
         var encryptionState = false
         var keySegmentIndex = 0
+        // Audit-7 #37: see the EXTINF branch of the scan below.
+        var pendingKeyExtinf = false
         val keyCache = mutableMapOf<String, ByteArray>()
         for (rawLine in playlistResponse.lineSequence()) {
             val line = rawLine.trim()
@@ -577,7 +579,21 @@ object M3u8Helper2 {
                     }
                 }
 
-                line.startsWith("#EXTINF:") -> keySegmentIndex++
+                // Audit-7 #37: count a segment only when its
+                // URI line actually arrives — exactly like the
+                // segment scan below (Audit-5 #4). Counting every
+                // #EXTINF: line made one orphan EXTINF (no URI)
+                // shift every later key range by one segment, so
+                // the segment at a key-rotation boundary was
+                // decrypted with its neighbour's key/IV.
+                line.startsWith("#EXTINF:") -> pendingKeyExtinf = true
+
+                !line.startsWith("#") && line.isNotEmpty() -> {
+                    if (pendingKeyExtinf) {
+                        keySegmentIndex++
+                        pendingKeyExtinf = false
+                    }
+                }
             }
         }
 
