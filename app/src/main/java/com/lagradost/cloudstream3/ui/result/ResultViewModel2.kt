@@ -2463,8 +2463,21 @@ class ResultViewModel2 : ViewModel() {
                     val episode =
                         autostart.id?.let { id -> all.firstOrNull { it.id == id } }
                             ?: autostart.episode?.let { ep ->
-                                currentEpisodes[currentIndex]?.firstOrNull { it.episode == ep && it.season == autostart.episode }
-                                    ?: all.firstOrNull { it.episode == ep && it.season == autostart.episode }
+                                // Audit-11 #2: the season side of
+                                // this comparison used to read
+                                // autostart.episode — the EPISODE
+                                // number — so resuming S2E5 demanded
+                                // an episode with season == 5 and
+                                // silently played nothing. Compare
+                                // against autostart.season, and
+                                // match on the episode alone when
+                                // no season was stored.
+                                currentEpisodes[currentIndex]?.firstOrNull {
+                                    it.episode == ep && (autostart.season == null || it.season == autostart.season)
+                                }
+                                    ?: all.firstOrNull {
+                                        it.episode == ep && (autostart.season == null || it.season == autostart.season)
+                                    }
                             }
                             ?: return@launchSafe
                     handleAction(
