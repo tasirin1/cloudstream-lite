@@ -24,7 +24,9 @@ open class Vixeo : Vidsonic() {
         val dataConfig = AppUtils.parseJson<JsonObject>(dataConfigRaw)
         // Audit-4 #18: was !! — a data-config without "source"
         // crashed with an NPE instead of a clean load failure.
-        return dataConfig["source"]?.jsonPrimitive?.content
+        // Audit-5 #47: as? JsonPrimitive — a non-primitive
+        // "source" (object/array) made .jsonPrimitive throw.
+        return (dataConfig["source"] as? kotlinx.serialization.json.JsonPrimitive)?.content
             ?: throw ErrorLoadingException("Missing source in data-config")
     }
 }
@@ -35,7 +37,15 @@ open class Vidsonic : ExtractorApi() {
     override val requiresReferer: Boolean = false
 
     open fun extractEncodedVideoUrl(response: NiceResponse): String {
-        return response.text
+        // Audit-5 #47: substringAfter returns the WHOLE page when
+        // the marker is missing, and the caller then hex-decodes
+        // the entire HTML page chunk by chunk (NumberFormatException
+        // or a garbage "URL"). Fail cleanly instead.
+        val text = response.text
+        if (!text.contains("const _0x1 = ")) {
+            throw ErrorLoadingException("Vidsonic marker not found")
+        }
+        return text
             .substringAfter("const _0x1 = ")
             .substringBefore(";")
             .replace("'", "")
