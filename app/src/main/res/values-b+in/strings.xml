@@ -181,6 +181,7 @@
     <string name="synopsis">Sinopsis</string>
     <string name="queued">antri</string>
     <string name="no_subtitles">Tidak Ada Subtitel</string>
+    <string name="subtitle_parse_failed">Tidak dapat membaca berkas subtitle</string>
     <string name="action_default">Default</string>
     <string name="free_storage">Tersedia</string>
     <string name="used_storage">Terpakai</string>

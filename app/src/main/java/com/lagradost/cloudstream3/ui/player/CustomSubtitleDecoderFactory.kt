@@ -23,6 +23,7 @@ import androidx.media3.extractor.text.tx3g.Tx3gParser
 import androidx.media3.extractor.text.webvtt.Mp4WebvttParser
 import androidx.media3.extractor.text.webvtt.WebvttParser
 import androidx.preference.PreferenceManager
+import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.ui.subtitles.SaveCaptionStyle
@@ -200,6 +201,12 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
 
     private var realDecoder: SubtitleParser? = null
 
+    // Audit-4 #25: a parse failure used to be swallowed by
+    // logError alone — the user just saw subtitles silently
+    // missing. Report it once per decoder instance instead of
+    // toasting for every chunk of a broken file.
+    private var parseFailureReported = false
+
     private fun getStr(byteArray: ByteArray): Pair<String, Charset> {
         val encoding = try {
             val encoding = overrideEncoding ?: run {
@@ -352,6 +359,11 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
             }
         } catch (e: Exception) {
             logError(e)
+            // Audit-4 #25: see parseFailureReported.
+            if (!parseFailureReported) {
+                parseFailureReported = true
+                showToast(R.string.subtitle_parse_failed)
+            }
         }
     }
 
