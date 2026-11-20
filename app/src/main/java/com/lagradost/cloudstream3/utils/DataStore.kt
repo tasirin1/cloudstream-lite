@@ -34,7 +34,20 @@ class PreferenceDelegate<T : Any>(
 
     // simple cache to make it not get the key every time it is accessed, however this requires
     // that ONLY this changes the key
+    //
+    // Audit-4 #36: the cache used to be unsynchronized plain
+    // fields — a getValue read that started before a concurrent
+    // setValue could write its stale result back over the new
+    // value, after which every read served the stale cache while
+    // the preferences held the new value. And an absent key was
+    // never cached (null doubled as "not loaded"), so every
+    // access re-read + re-parsed the preferences. All cache
+    // access is now under cacheLock, and cacheLoaded separates
+    // "not loaded yet" from "loaded, key absent" (cache == null
+    // then means the default applies).
+    private val cacheLock = Any()
     private var cache: T? = null
+    private var cacheLoaded: Boolean = false
     private var cacheGeneration: Int = -1
 
     companion object {
@@ -53,12 +66,17 @@ class PreferenceDelegate<T : Any>(
     }
 
     operator fun getValue(self: Any?, property: KProperty<*>): T {
-        val cached = cache
-        if (cached != null && cacheGeneration == restoreGeneration) return cached
-        return getKeyClass(key, klass.java).also { newCache ->
-            cache = newCache
+        // Audit-4 #36: see the cache fields.
+        synchronized(cacheLock) {
+            if (cacheLoaded && cacheGeneration == restoreGeneration) {
+                return cache ?: default
+            }
+            val stored = getKeyClass(key, klass.java)
+            cache = stored
+            cacheLoaded = true
             cacheGeneration = restoreGeneration
-        } ?: default
+            return stored ?: default
+        }
     }
 
     operator fun setValue(
@@ -66,12 +84,17 @@ class PreferenceDelegate<T : Any>(
         property: KProperty<*>,
         t: T?
     ) {
-        cache = t
-        cacheGeneration = restoreGeneration
-        if (t == null) {
-            removeKey(key)
-        } else {
-            setKeyClass(key, t)
+        // Audit-4 #36: cache + preferences updated atomically
+        // against a concurrent getValue.
+        synchronized(cacheLock) {
+            cache = t
+            cacheLoaded = true
+            cacheGeneration = restoreGeneration
+            if (t == null) {
+                removeKey(key)
+            } else {
+                setKeyClass(key, t)
+            }
         }
     }
 }
