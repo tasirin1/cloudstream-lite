@@ -31,8 +31,12 @@ open class TRsTX : ExtractorApi() {
         val file = hoistedRegex1.find(videoReq)?.groupValues?.get(1) ?: throw ErrorLoadingException("File not found")
         val postLink = "$mainUrl/" + file.replace("\\", "")
         val rawList = app.post(postLink, referer = extRef).parsedSafe<List<JsonElement>>() ?: throw ErrorLoadingException("Post link not found")
-        val postJson: List<TrstxVideoData> = rawList.drop(1).map { item ->
-            val mapItem = item as Map<*, *>
+        // Audit-5 #42: safe cast — a non-object element in the
+        // server array used to throw ClassCastException on the
+        // hard cast and kill the whole extraction (same class as
+        // Audit-4 #56 one step earlier in this pipeline).
+        val postJson: List<TrstxVideoData> = rawList.drop(1).mapNotNull { item ->
+            val mapItem = item as? Map<*, *> ?: return@mapNotNull null
             TrstxVideoData(
                 title = mapItem["title"] as? String,
                 file = mapItem["file"] as? String,
