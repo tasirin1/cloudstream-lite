@@ -59,7 +59,14 @@ object QualityDataHelper {
 
 
     // Map profile and name to priority
-    val sourcePriorityCache: ConcurrentHashMap<Int, HashMap<String, Int>> = ConcurrentHashMap()
+    // Audit-8 #9: the INNER maps used to be plain HashMap /
+    // EnumMap inside the ConcurrentHashMap outers — they are
+    // read/written concurrently from the main thread (link
+    // sorting, the priority dialog) and download worker threads
+    // (DownloadManager sorts links with these), and a plain
+    // HashMap mutated during a resize can corrupt or spin.
+    val sourcePriorityCache: ConcurrentHashMap<Int, ConcurrentHashMap<String, Int>> =
+        ConcurrentHashMap()
 
     fun getSourcePriority(profile: Int, name: String?): Int {
         if (name == null) return DEFAULT_SOURCE_PRIORITY
@@ -69,7 +76,7 @@ object QualityDataHelper {
             name,
             DEFAULT_SOURCE_PRIORITY
         ) ?: DEFAULT_SOURCE_PRIORITY).also {
-            sourcePriorityCache.getOrPut(profile) { hashMapOf() }
+            sourcePriorityCache.getOrPut(profile) { ConcurrentHashMap() }
             sourcePriorityCache[profile]?.set(name, it)
         }
     }
@@ -107,15 +114,17 @@ object QualityDataHelper {
             ?: txt(R.string.profile_number, profile)
     }
 
-    // Map profile and quality to priority
-    val qualityPriorityCache: ConcurrentHashMap<Int, EnumMap<Qualities, Int>> = ConcurrentHashMap()
+    // Map profile and quality to priority (inner map also
+    // concurrent — Audit-8 #9, see sourcePriorityCache above)
+    val qualityPriorityCache: ConcurrentHashMap<Int, ConcurrentHashMap<Qualities, Int>> =
+        ConcurrentHashMap()
     fun getQualityPriority(profile: Int, quality: Qualities): Int {
         return qualityPriorityCache[profile]?.get(quality) ?: (getKey<Int>(
             "$currentAccount/$VIDEO_QUALITY_PRIORITY/$profile",
             quality.value.toString(),
             quality.defaultPriority
         )?.also {
-            qualityPriorityCache.getOrPut(profile) { EnumMap(Qualities::class.java) }
+            qualityPriorityCache.getOrPut(profile) { ConcurrentHashMap() }
             qualityPriorityCache[profile]?.set(quality, it)
         }) ?: quality.defaultPriority
     }
