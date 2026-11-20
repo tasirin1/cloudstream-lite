@@ -122,7 +122,13 @@ object DownloadUtils {
                     .lowercase()
                     .takeIf { it in setOf("srt", "vtt", "ass", "ssa", "ttml") } ?: "vtt",
                 false,
-                null, createNotificationCallback = {}
+                null, createNotificationCallback = {},
+                // Audit-5 #29: subtitles used the default
+                // minimumSize of 100 bytes, so a legitimately
+                // tiny subtitle (a one-cue forced track can be
+                // ~50 bytes) was deleted and reported invalid.
+                // Any non-empty file is a valid subtitle.
+                minimumSize = 1
             )
         }
     }
