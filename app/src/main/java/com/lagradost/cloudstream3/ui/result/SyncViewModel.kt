@@ -48,7 +48,12 @@ class SyncViewModel : ViewModel() {
     //val syncIds: LiveData<MutableMap<String, String>> get() = _syncIds
 
     fun getSyncs(): Map<String, String> {
-        return syncs
+        // Audit-11 #4: this used to return the LIVE map.
+        // ResultViewModel2 stores it and iterates it off-thread
+        // (applyMeta), and its setMeta change-guard compares
+        // against the same instance, so in-place mutations
+        // were invisible to the guard. Return a snapshot copy.
+        return syncs.toMap()
     }
 
     private val _currentSynced: MutableLiveData<List<CurrentSynced>> =
@@ -160,7 +165,13 @@ class SyncViewModel : ViewModel() {
         val user = userData.value
         _userDataResponse.postValue(Resource.Loading())
         if (user is Resource.Success) {
-            syncs.forEach { (prefix, id) ->
+            // Audit-11 #4: snapshot first, like updateUserData /
+            // updateMetadata (Audit-9 #16) — iterating the live
+            // map here let a concurrent setSync/addSyncs throw
+            // ConcurrentModificationException mid-publish,
+            // silently updating only some repos.
+            val current = ArrayList(syncs.toList())
+            current.forEach { (prefix, id) ->
                 repos.firstOrNull { it.idPrefix == prefix }?.updateStatus(id, user.value)
             }
         }
@@ -181,7 +192,10 @@ class SyncViewModel : ViewModel() {
     /// modifies the current sync data, return null if you don't want to change it
     private fun modifyData(update: ((SyncAPI.AbstractSyncStatus) -> (SyncAPI.AbstractSyncStatus?))) =
         ioSafe {
-            syncs.amap { (prefix, id) ->
+            // Audit-11 #4: snapshot first — same live-map
+            // iteration hazard as publishUserData above.
+            val current = ArrayList(syncs.toList())
+            current.amap { (prefix, id) ->
                 repos.firstOrNull { it.idPrefix == prefix }?.let { repo ->
                     val result =
                         update(repo.status(id).getOrNull() ?: return@let null) ?: return@let null
