@@ -2575,7 +2575,14 @@ object VideoDownloadManager {
             NotificationManagerCompat.from(context)
                 .cancel(DOWNLOAD_NOTIFICATION_TAG, downloadItem.episode.id)
 
-            if (linkLoadingJob?.isCancelled == true) {
+            // Audit-13 #7: also honour THIS instance's flag —
+            // a stop landing before linkLoadingJob was assigned
+            // cancelled a still-null field and only set
+            // isCancelled; checking just the job let the flow
+            // continue into downloadEpisodeWithLinks, writing
+            // subtitle files and toasting "download started"
+            // for a download the user had already stopped.
+            if (isCancelled || linkLoadingJob?.isCancelled == true) {
                 // Same as if no links, but no toast.
                 // Cancelled link loading is presumed to be user initiated
                 isCancelled = true
