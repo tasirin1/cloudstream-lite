@@ -980,27 +980,49 @@ class CS3IPlayer : IPlayer {
             }
         }
 
+        // Audit-7 #8: the offline source factory is built ONCE.
+        // createOfflineSource() used to build a brand-new
+        // OkHttpClient on every load — and buildDefaultClient
+        // attaches a disk Cache in the shared http_cache
+        // directory, so every episode change stacked another
+        // live DiskLruCache on the same directory (journal
+        // corruption risk) plus another connection pool and
+        // dispatcher threads, none of them ever shut down. The
+        // factory depends on nothing per-load, so cache it like
+        // the online interceptor clients above (Audit-4 #29).
+        @Volatile
+        private var offlineSourceFactory: DataSource.Factory? = null
+        private val offlineSourceLock = Any()
+
         private fun Context.createOfflineSource(): DataSource.Factory {
-            // Audit-3 #3: the HTTP fallback for offline items keeps
-            // the old bad-cert tolerance, but scoped to THIS source
-            // via its own insecure OkHttp client -- not via
-            // process-wide HttpsURLConnection defaults.
-            //
-            // Audit-4 #51: the default client also carries the
-            // user's DNS-over-HTTPS choice (Google/Cloudflare/...),
-            // whose public resolvers cannot resolve LAN or mDNS
-            // hostnames — exactly what offline/LAN sources point
-            // at. This source therefore falls back to the system
-            // resolver; IP literals were never affected either way.
-            val offlineClient = buildDefaultClient(this, ignoreSSL = true)
-                .newBuilder()
-                .dns(okhttp3.Dns.SYSTEM)
-                .build()
-            return DefaultDataSource.Factory(
-                this,
-                OkHttpDataSource.Factory(offlineClient)
-                    .setUserAgent(USER_AGENT)
-            )
+            offlineSourceFactory?.let { return it }
+            return synchronized(offlineSourceLock) {
+                offlineSourceFactory ?: run {
+                    // Audit-3 #3: the HTTP fallback for offline items keeps
+                    // the old bad-cert tolerance, but scoped to THIS source
+                    // via its own insecure OkHttp client -- not via
+                    // process-wide HttpsURLConnection defaults.
+                    //
+                    // Audit-4 #51: the default client also carries the
+                    // user's DNS-over-HTTPS choice (Google/Cloudflare/...),
+                    // whose public resolvers cannot resolve LAN or mDNS
+                    // hostnames — exactly what offline/LAN sources point
+                    // at. This source therefore falls back to the system
+                    // resolver; IP literals were never affected either way.
+                    val appContext = applicationContext
+                    val offlineClient = buildDefaultClient(appContext, ignoreSSL = true)
+                        .newBuilder()
+                        .dns(okhttp3.Dns.SYSTEM)
+                        .build()
+                    val factory = DefaultDataSource.Factory(
+                        appContext,
+                        OkHttpDataSource.Factory(offlineClient)
+                            .setUserAgent(USER_AGENT)
+                    )
+                    offlineSourceFactory = factory
+                    factory
+                }
+            }
         }
 
         private fun getCache(context: Context, cacheSize: Long): SimpleCache? {
