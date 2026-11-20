@@ -690,19 +690,26 @@ object PluginManager {
             try {
                 val destinationFile = File(pluginDirectory, file.name)
 
-                // Only copy the file if the destination file doesn't exist or if it
-                // has been modified (check file length and modification time).
-                if (!destinationFile.exists() ||
-                    destinationFile.length() != file.length() ||
-                    destinationFile.lastModified() != file.lastModified()
-                ) {
+                // Only copy the file if the destination file doesn't exist or if
+                // its content differs. Audit-6 #30: length + mtime
+                // used to decide "unchanged" — both are settable by
+                // any app with storage access, so a same-size swap
+                // of the copy in the shared external folder went
+                // unnoticed and the tampered copy kept loading
+                // (local plugins have no stored hash anchor).
+                // Plugin files are a few MB; comparing SHA-256 is
+                // cheap and definitive. A hash failure counts as
+                // "changed" (re-copy from the source).
+                val needsCopy = !destinationFile.exists() ||
+                    runCatching { sha256(destinationFile) != sha256(file) }
+                        .getOrDefault(true)
+                if (needsCopy) {
 
                     // Copy the file to the app-specific plugin directory
                     file.copyTo(destinationFile, overwrite = true)
 
                     // After copying, set the destination file's modification time
-                    // to match the source file. We do this for performance so that we
-                    // can check the modification time and not make redundant writes.
+                    // to match the source file.
                     destinationFile.setLastModified(file.lastModified())
                 }
 
