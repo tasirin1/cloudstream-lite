@@ -1929,7 +1929,15 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
             // this ensures that no unnecessary space is taken
             loadCache()
             File(filesDir, "exoplayer").deleteRecursively() // old cache
-            deleteFileOnExit(File(cacheDir, "exoplayer"))   // current cache
+            // Audit-5 #2: the current cache directory
+            // (cacheDir/exoplayer) is NOT registered with
+            // deleteFileOnExit anymore. It hosts CS3IPlayer's
+            // shared, process-lifetime SimpleCache; Audit-4 #21
+            // removed the player's own registration but missed
+            // this one, so every MainActivity destruction still
+            // recursively deleted the directory from under the
+            // live cache. The cache is bounded by its LRU
+            // evictor and reclaimed by the system cache purge.
         } catch (e: Exception) {
             logError(e)
         }

@@ -995,7 +995,10 @@ class CS3IPlayer : IPlayer {
                     // directory from under the live, shared
                     // SimpleCache on every activity recreation, so
                     // the cache silently broke until the player was
-                    // recreated. The cache is shared process-wide
+                    // recreated. Audit-5 #2 removed the second,
+                    // missed registration in MainActivity.onCreate,
+                    // so the directory is now registered nowhere.
+                    // The cache is shared process-wide
                     // (companion) and bounded by the evictor below;
                     // it is deliberately not release()d from any
                     // one player's lifecycle, exactly like the
