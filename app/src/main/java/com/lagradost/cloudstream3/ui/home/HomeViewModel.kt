@@ -146,7 +146,12 @@ class HomeViewModel : ViewModel() {
     private val _resumeWatching = MutableLiveData<List<SearchResponse>>()
     private val _preview = MutableLiveData<Resource<Pair<Boolean, List<LoadResponse>>>>()
     private val previewResponses = CopyOnWriteArrayList<LoadResponse>()
-    private val previewResponsesAdded = mutableSetOf<String>()
+    // Audit-5 #40: this was a plain HashSet mutated from IO
+    // coroutines alongside the (already copy-on-write) response
+    // list — concurrent adds can corrupt a HashSet and lose
+    // entries, desyncing the "added" bookkeeping from the list.
+    private val previewResponsesAdded =
+        java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     val resumeWatching: LiveData<List<SearchResponse>> = _resumeWatching
     val preview: LiveData<Resource<Pair<Boolean, List<LoadResponse>>>> = _preview
@@ -315,6 +320,10 @@ class HomeViewModel : ViewModel() {
 
     private var addJob: Job? = null
     fun loadMoreHomeScrollResponses() {
+        // Audit-5 #40: the previous job was overwritten without
+        // being cancelled, so rapid "load more" calls ran several
+        // expanders concurrently over the shared preview lists.
+        addJob?.cancel()
         addJob = ioSafe {
             updatePreviewResponses(previewResponses, previewResponsesAdded, currentShuffledList, 1)
             _preview.postValue(Resource.Success((previewResponsesAdded.size < currentShuffledList.size) to previewResponses))
