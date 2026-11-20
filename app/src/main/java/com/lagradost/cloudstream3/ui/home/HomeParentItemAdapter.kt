@@ -96,11 +96,22 @@ open class ParentItemAdapter(
         if (binding !is HomepageParentBinding) return
         val info = item.list
         binding.apply {
-            val currentAdapter = homeChildRecyclerview.adapter as? HomeChildItemAdapter
+            // Audit-5 #39: the child adapter id namespaces its
+            // saved scroll states (BaseAdapter.layoutManagerStates),
+            // but it was derived from the row POSITION — after the
+            // parent list changed, a row inherited the scroll state
+            // of whatever row previously sat at that position. The
+            // parent diff already defines row identity as the list
+            // name, so derive the child id from the name instead,
+            // and do not reuse an adapter whose namespace belongs
+            // to a different list.
+            val childId = id + item.list.name.hashCode() + 100
+            val currentAdapter = (homeChildRecyclerview.adapter as? HomeChildItemAdapter)
+                ?.takeIf { it.id == childId }
             if (currentAdapter == null) {
                 homeChildRecyclerview.setRecycledViewPool(HomeChildItemAdapter.sharedPool)
                 homeChildRecyclerview.adapter = HomeChildItemAdapter(
-                    id = id + position + 100,
+                    id = childId,
                     clickCallback = clickCallback,
                     nextFocusUp = homeChildRecyclerview.nextFocusUpId,
                     nextFocusDown = homeChildRecyclerview.nextFocusDownId,
