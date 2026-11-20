@@ -195,7 +195,12 @@ class SyncViewModel : ViewModel() {
         Log.i(TAG, "updateUserData")
         _userDataResponse.postValue(Resource.Loading())
 
-        val status = syncs.firstNotNullOfOrNull { (prefix, id) ->
+        // Audit-9 #16: snapshot the syncs map first, like
+        // updateMetadata below already does — reading the live
+        // map inside this async job let a fast popup switch pair
+        // one title's metadata with the other title's status.
+        val current = ArrayList(syncs.toList())
+        val status = current.firstNotNullOfOrNull { (prefix, id) ->
             repos.firstOrNull { it.idPrefix == prefix }
                 ?.status(id)?.getOrNull()
         }
