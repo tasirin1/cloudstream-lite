@@ -193,7 +193,14 @@ class GeneralPreferences(preferences: PreferenceStore) {
     val bananas = preferences.getInt("benene_count", 0)
     val parallelDownloads = preferences.getInt("download_parallel_key", 3)
     val concurrentConnections = preferences.getInt("download_concurrent_key", 3)
-    val batterOptimization = preferences.getBoolean("battery_optimisation_key", false)
+    // Audit-12 #7: the key must be "battery_optimisation" —
+    // that is the VALUE of R.string.battery_optimisation_key,
+    // which PowerManagerAPI reads/writes in the same default
+    // prefs. The literal "battery_optimisation_key" was an
+    // orphan: dismissing the settings battery dialog wrote a
+    // flag nothing reads, so the automatic prompt kept
+    // reappearing after the user declined it in settings.
+    val batterOptimization = preferences.getBoolean("battery_optimisation", false)
 
     /** Please note that it used R.array.dns_pref before, this was a bug and caused this setting to be language sensitive **/
     val dns = preferences.getInt("dns_key", 0)
