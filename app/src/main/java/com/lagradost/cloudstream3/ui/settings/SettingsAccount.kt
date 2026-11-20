@@ -258,8 +258,16 @@ class SettingsAccount {
                         deviceAuthQrcode.loadImage(qrCodeImage)
                     }
 
+                    // Audit-20 #7: expiresIn is a
+                    // provider-controlled Int of seconds;
+                    // times(1000) overflowed Int for values
+                    // over ~24.8 days (and negatives went
+                    // negative), making the timer finish
+                    // instantly. Compute in Long and clamp
+                    // to a sane PIN lifetime.
                     val expirationMillis =
-                        pinCodeData.expiresIn.times(1000).toLong()
+                        (pinCodeData.expiresIn.toLong() * 1000L)
+                            .coerceIn(0L, 24L * 60 * 60 * 1000)
 
                     pinTimer = object : CountDownTimer(expirationMillis, 1000) {
                         override fun onTick(millisUntilFinished: Long) {
