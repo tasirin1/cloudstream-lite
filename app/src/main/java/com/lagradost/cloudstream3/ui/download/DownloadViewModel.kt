@@ -415,7 +415,17 @@ class DownloadViewModel : ViewModel() {
         })
     }
 
+    // Audit-9 #5: this ViewModel is activity-scoped and shared
+    // by every folder's child fragment, and _childCards is a
+    // single stream — a slow scan of folder A used to post A's
+    // episodes into folder B's screen (where play/delete then
+    // acted on A's episodes). Remember the latest folder asked
+    // for and drop results for any other.
+    @Volatile
+    private var currentChildFolder: String? = null
+
     fun updateChildList(context: Context, folder: String) = viewModelScope.launchSafe {
+        currentChildFolder = folder
         _childCards.postValue(Resource.Loading()) // always push loading
 
         val visual = withContext(Dispatchers.IO) {
@@ -439,7 +449,9 @@ class DownloadViewModel : ViewModel() {
                 { it.data.episode }
             ))
 
-        postChildren(visual)
+        if (currentChildFolder == folder) {
+            postChildren(visual)
+        }
     }
 
     private fun removeItems(idsToRemove: Set<Int>) = viewModelScope.launchSafe {
