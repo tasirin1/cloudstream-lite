@@ -338,9 +338,22 @@ class HomeViewModel : ViewModel() {
 
         val addItems = arrayListOf<SearchResponse>()
         for (searchResponse in shuffledList) {
-            if (!alreadyAdded.contains(searchResponse.url)) {
+            // Audit-11 #7: the contains/add pair must be ONE
+            // atomic step. The set is a synchronizedSet (each
+            // single op atomic), but this loop runs concurrently
+            // from the load() job and the load-more job — the
+            // same URL could pass contains() in both before
+            // either added it, producing duplicate preview rows.
+            val isNew = synchronized(alreadyAdded) {
+                if (alreadyAdded.contains(searchResponse.url)) {
+                    false
+                } else {
+                    previewResponsesAdded.add(searchResponse.url)
+                    true
+                }
+            }
+            if (isNew) {
                 addItems.add(searchResponse)
-                previewResponsesAdded.add(searchResponse.url)
                 if (++count >= size) {
                     break
                 }
