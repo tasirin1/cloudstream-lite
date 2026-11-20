@@ -1313,15 +1313,6 @@ class ResultViewModel2 : ViewModel() {
             ACTION_SHOW_OPTIONS -> {
                 val options = mutableListOf<Pair<UiText, Int>>()
 
-                if (activity?.isConnectedToChromecast() == true) {
-                    options.addAll(
-                        listOf(
-                            txt(R.string.episode_action_chromecast_episode) to ACTION_CHROME_CAST_EPISODE,
-                            txt(R.string.episode_action_chromecast_mirror) to ACTION_CHROME_CAST_MIRROR,
-                        )
-                    )
-                }
-
                 options.add(txt(R.string.episode_action_play_in_app) to ACTION_PLAY_EPISODE_IN_PLAYER)
                 options.addAll(
                     listOf(
@@ -1369,17 +1360,15 @@ class ResultViewModel2 : ViewModel() {
             }
 
             ACTION_CLICK_DEFAULT -> {
+                // Audit-3 #26: the Chromecast branch here was dead
+                // (isConnectedToChromecast is a stub returning false
+                // since Cast was removed); only the player action
+                // remains.
                 activity?.let { ctx ->
-                    if (ctx.isConnectedToChromecast()) {
-                        handleEpisodeClickEvent(
-                            click.copy(action = ACTION_CHROME_CAST_EPISODE)
-                        )
-                    } else {
-                        val action = getPlayerAction(ctx)
-                        handleEpisodeClickEvent(
-                            click.copy(action = action)
-                        )
-                    }
+                    val action = getPlayerAction(ctx)
+                    handleEpisodeClickEvent(
+                        click.copy(action = action)
+                    )
                 }
             }
 
