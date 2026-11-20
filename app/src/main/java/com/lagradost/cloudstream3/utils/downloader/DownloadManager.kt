@@ -1235,7 +1235,7 @@ object VideoDownloadManager {
             metadata.setResumeLength(stream.startAt)
             metadata.type = DownloadType.IsPending
 
-            val items = streamLazy(
+            var items = streamLazy(
                 url = link.url.replace(" ", "%20"),
                 referer = link.referer,
                 startByte = stream.startAt,
@@ -1299,6 +1299,24 @@ object VideoDownloadManager {
                 metadata.setResumeLength(0)
                 stream = setupStream(baseFile, name, folder, extension, false)
                 fileStream = stream.open()
+                // Audit-8 #1: the chunk table was built from the
+                // OLD resume offset — after this restart every
+                // chunk's startByte sat above the write cursor
+                // (now 0), so chunks only ever buffered: past
+                // 16 MB buffered the jobs spun in the throttle
+                // loop forever, below it the download failed
+                // having written nothing. Rebuild the table for
+                // the fresh stream.
+                items = streamLazy(
+                    url = link.url.replace(" ", "%20"),
+                    referer = link.referer,
+                    startByte = stream.startAt,
+                    headers = link.headers.appendAndDontOverride(
+                        mapOf(
+                            "user-agent" to USER_AGENT,
+                        )
+                    )
+                )
             }
 
             metadata.totalBytes = items.totalLength
