@@ -81,22 +81,33 @@ open class ByseSX : ExtractorApi() {
         return app.get(playbackUrl, headers = headers).parsedSafe<PlaybackRoot>()
     }
 
-    private fun buildAesKey(playback: Playback): ByteArray {
-        val p1 = b64UrlDecode(playback.keyParts[0])
-        val p2 = b64UrlDecode(playback.keyParts[1])
+    private fun buildAesKey(playback: Playback): ByteArray? {
+        // Audit-6 #16: keyParts comes from the server's playback
+        // JSON and was indexed [0]/[1] unguarded, outside any
+        // try/catch — a partial payload (0-1 parts) threw
+        // IndexOutOfBoundsException and killed extraction for
+        // every Byse* host instead of failing cleanly.
+        val p1 = playback.keyParts.getOrNull(0)?.let { b64UrlDecode(it) } ?: return null
+        val p2 = playback.keyParts.getOrNull(1)?.let { b64UrlDecode(it) } ?: return null
         return p1 + p2
     }
 
     @OptIn(DelicateCryptographyApi::class)
     private suspend fun decryptPlayback(playback: Playback): String? {
-        val keyBytes = buildAesKey(playback)
-        val ivBytes = b64UrlDecode(playback.iv)
-        val cipherBytes = b64UrlDecode(playback.payload)
+        val keyBytes = buildAesKey(playback) ?: return null
+        // Audit-6 #16: malformed base64url in iv/payload threw
+        // IllegalArgumentException on the same unguarded path.
+        val plainBytes = try {
+            val ivBytes = b64UrlDecode(playback.iv)
+            val cipherBytes = b64UrlDecode(playback.payload)
 
-        val aesKey = aesGcm.keyDecoder().decodeFromByteArray(AES.Key.Format.RAW, keyBytes)
-        // 128-bit GCM tag (default)
-        val cipher = aesKey.cipher()
-        val plainBytes = cipher.decryptWithIv(ivBytes, cipherBytes)
+            val aesKey = aesGcm.keyDecoder().decodeFromByteArray(AES.Key.Format.RAW, keyBytes)
+            // 128-bit GCM tag (default)
+            val cipher = aesKey.cipher()
+            cipher.decryptWithIv(ivBytes, cipherBytes)
+        } catch (_: Exception) {
+            return null
+        }
 
         var jsonStr = plainBytes.decodeToString()
         if (jsonStr.startsWith("\uFEFF")) jsonStr = jsonStr.substring(1)
