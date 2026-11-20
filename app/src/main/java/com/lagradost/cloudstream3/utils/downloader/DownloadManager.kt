@@ -2021,12 +2021,18 @@ object VideoDownloadManager {
     fun getDownloadFileInfo(
         context: Context,
         id: Int,
+        // Audit-18 #8: decision callers (the queue's
+        // is-it-complete check) must not trust the 15 s cache:
+        // a file deleted outside the app within the TTL made
+        // the tap a silent no-op. Display callers keep the
+        // cache; the fresh result still refills it.
+        forceRefresh: Boolean = false,
     ): DownloadedFileInfoResult? {
         // Audit-4 #39: see fileInfoCache. (containsKey, not `in`:
         // downloadStatus is a ConcurrentHashMap, whose legacy
         // contains() means containsValue — Kotlin rejects it.)
         val cacheable = !downloadStatus.containsKey(id)
-        if (cacheable) {
+        if (cacheable && !forceRefresh) {
             val cached = fileInfoCache[id]
             if (cached != null &&
                 System.currentTimeMillis() - cached.atMs < FILE_INFO_CACHE_TTL_MS

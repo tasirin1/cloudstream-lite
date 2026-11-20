@@ -277,7 +277,8 @@ object DownloadQueueManager {
     /** Add a new object to the queue. Will not queue completed downloads or current downloads. */
     fun addToQueue(downloadQueueWrapper: DownloadQueueWrapper) = safe {
         val context = CloudStreamApp.context ?: return@safe
-        val fileInfo = getDownloadFileInfo(context, downloadQueueWrapper.id)
+        // Audit-18 #8: fresh read for the queue decision.
+        val fileInfo = getDownloadFileInfo(context, downloadQueueWrapper.id, forceRefresh = true)
         val isComplete = fileInfo != null &&
                 fileInfo.totalBytes > 0 &&
                 // Fork fix (audit #17): 98% is not complete. A download
