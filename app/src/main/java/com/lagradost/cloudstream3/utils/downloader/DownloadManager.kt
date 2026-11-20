@@ -580,6 +580,14 @@ object VideoDownloadManager {
         @Volatile
         private var hlsCheckpoint: Pair<Int, Long> = Pair(0, 0L)
 
+        // Audit-5 #9: fingerprint of the playlist the checkpoint
+        // belongs to (segment URL paths + durations), persisted as
+        // the third extraInfo component. The (count, bytes) pair
+        // alone cannot tell that the content behind a stable m3u8
+        // URL changed between sessions.
+        @Volatile
+        var hlsPlaylistFingerprint: String? = null
+
         // Audit-4 #37: segment index of the checkpoint as of the
         // last updateFileInfo() persist (any path). notify() uses
         // it to avoid re-persisting every second.
@@ -678,8 +686,12 @@ object VideoDownloadManager {
                         extraInfo = if (isHLS) {
                             // Audit-4 #1: persist the (segment count,
                             // file byte length) checkpoint pair.
+                            // Audit-5 #9: plus the playlist
+                            // fingerprint as a third component.
                             val checkpoint = hlsCheckpoint
-                            "${checkpoint.first}:${checkpoint.second}"
+                            val base = "${checkpoint.first}:${checkpoint.second}"
+                            val fingerprint = hlsPlaylistFingerprint
+                            if (fingerprint != null) "$base:$fingerprint" else base
                         } else null
                     )
                 )
@@ -1446,6 +1458,21 @@ object VideoDownloadManager {
         }
     }
 
+    // Audit-5 #9: stable identity of a playlist's segment list —
+    // SHA-256 over each segment's URL path (query stripped, since
+    // signed tokens rotate between fetches of identical content)
+    // and duration, truncated to 16 hex chars.
+    private fun hlsPlaylistFingerprint(links: List<M3u8Helper2.TsLink>): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        for (link in links) {
+            digest.update(link.url.substringBefore('?').toByteArray(Charsets.UTF_8))
+            digest.update(0)
+            digest.update((link.time?.toString() ?: "").toByteArray(Charsets.UTF_8))
+            digest.update(0)
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }.take(16)
+    }
+
     private suspend fun downloadHLS(
         context: Context,
         link: ExtractorLink,
@@ -1454,6 +1481,7 @@ object VideoDownloadManager {
         parentId: Int?,
         startIndex: Int?,
         startBytes: Long?,
+        startFingerprint: String?,
         createNotificationCallback: (CreateNotificationMetadata) -> Unit,
         parallelConnections: Int = 3
     ): DownloadStatus = withContext(Dispatchers.IO) {
@@ -1521,6 +1549,30 @@ object VideoDownloadManager {
             )
 
             val items = M3u8Helper2.hslLazy(m3u8, selectBest = true, requireAudio = true)
+
+            // Audit-5 #9: verify the playlist is still the one the
+            // checkpoint was written for. The m3u8 URL is stable
+            // and unsigned; if the provider swapped the encode or
+            // trimmed segments between sessions, resuming would
+            // append the new playlist's segments onto the old
+            // prefix (a hybrid, unplayable file) — or, when the
+            // new playlist is shorter than startAt, declare the
+            // stale file done. The fingerprint covers segment URL
+            // paths (query stripped: tokens rotate) and durations.
+            val playlistFingerprint = hlsPlaylistFingerprint(items.allTsLinks)
+            metadata.hlsPlaylistFingerprint = playlistFingerprint
+            if (startAt > 0 && startFingerprint != null &&
+                startFingerprint != playlistFingerprint
+            ) {
+                fileStream?.closeQuietly()
+                stream = setupStream(baseFile, name, folder, extension, false)
+                fileStream = stream.open()
+                startAt = 0
+                metadata.setResumeLength(0)
+                metadata.setHlsCheckpoint(0, 0)
+                metadata.hlsProgress = 0
+                metadata.hlsWrittenProgress = 0
+            }
 
             metadata.hlsTotal = items.size
             metadata.type = DownloadType.IsDownloading
@@ -1739,8 +1791,12 @@ object VideoDownloadManager {
                             null
                         )?.extraInfo
                     } else null
-                    val startIndex = savedInfo?.substringBefore(':')?.toIntOrNull()
-                    val startBytes = savedInfo?.substringAfter(':', "")?.toLongOrNull()
+                    // Audit-5 #9: split-based parse — extraInfo is
+                    // "<count>:<bytes>[:<playlist fingerprint>]".
+                    val infoParts = savedInfo?.split(':')
+                    val startIndex = infoParts?.getOrNull(0)?.toIntOrNull()
+                    val startBytes = infoParts?.getOrNull(1)?.toLongOrNull()
+                    val startFingerprint = infoParts?.getOrNull(2)
 
                     return downloadHLS(
                         context,
@@ -1750,6 +1806,7 @@ object VideoDownloadManager {
                         ep.id,
                         startIndex,
                         startBytes,
+                        startFingerprint,
                         callback, parallelConnections = maxConcurrentConnections(context)
                     )
                 }
