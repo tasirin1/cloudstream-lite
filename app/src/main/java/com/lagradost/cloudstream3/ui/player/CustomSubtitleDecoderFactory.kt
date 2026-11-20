@@ -63,10 +63,17 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
         const val SSA_ALIGNMENT_TOP_CENTER = 8
         const val SSA_ALIGNMENT_TOP_RIGHT = 9
 
-        /** Subtitle offset in milliseconds */
+        /** Subtitle offset in milliseconds.
+         * Audit-7 #38: @Volatile — written from the UI thread,
+         * read on the decoder thread; a plain Long can be read
+         * torn in half on 32-bit devices. Same for the encoding
+         * override below. */
+        @Volatile
         var subtitleOffset: Long = 0
         private const val UTF_8 = "UTF-8"
         private const val TAG = "CustomDecoder"
+
+        @Volatile
         private var overrideEncoding: String? = null
         val style: SaveCaptionStyle get() = SubtitlesFragment.getCurrentSavedStyle()
         private val locationRegex = Regex("""\{\\an(\d+)\}""", RegexOption.IGNORE_CASE)
@@ -334,10 +341,14 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
             )
 
             // offset timing for the final
+            // Audit-7 #39: floor at zero — a positive offset
+            // larger than an early cue's start pushed its start
+            // time negative, and a negative-time cue never
+            // displays, with no explanation to the user.
             val updatedCues =
                 CuesWithTiming(
                     newCue.cues,
-                    newCue.startTimeUs - subtitleOffset.times(1000),
+                    maxOf(0L, newCue.startTimeUs - subtitleOffset.times(1000)),
                     newCue.durationUs
                 )
 
