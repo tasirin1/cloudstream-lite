@@ -25,8 +25,16 @@ object LiveHelper {
         val liveManager = LiveManager(player)
         val listener = object : Player.Listener {
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
+                // Audit-14 #25: an empty/failed source reports
+                // timeline changes with no windows — indexing
+                // getWindow with the current index (or -1) threw
+                // IndexOutOfBounds on the player thread.
+                val index = player.currentMediaItemIndex
+                if (timeline.isEmpty || index < 0 || index >= timeline.windowCount) {
+                    return
+                }
                 val window = Timeline.Window()
-                timeline.getWindow(player.currentMediaItemIndex, window)
+                timeline.getWindow(index, window)
                 if (window.isDynamic) {
                     liveManager.submitLivestreamChunk(LivestreamChunk(window.durationMs))
                 }
