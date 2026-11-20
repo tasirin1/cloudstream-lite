@@ -958,6 +958,26 @@ object VideoDownloadManager {
                 ),
                 referer = referer,
             )
+            // Audit-6 #3: the body was trusted to start at
+            // startByte without ever looking at the status code
+            // (only the one-time probe in streamLazy checks for
+            // 206). A parallel chunk answered 200 — a CDN node
+            // ignoring Range — had the start of the file written
+            // at this chunk's offset; the total length still
+            // matched, so the final size check declared the
+            // corrupt file done. An error status would likewise
+            // write the error page into the file. Fail the chunk
+            // instead (IllegalStateException = no retries in
+            // resolveSafe, partial file kept for resume).
+            if (request.code !in 200..299 ||
+                (startByte > 0 && request.code != 206)
+            ) {
+                val code = request.code
+                request.body.close()
+                throw IllegalStateException(
+                    "Chunk at byte $startByte answered with HTTP $code"
+                )
+            }
             val requestStream = request.body.byteStream()
 
             var read: Int
