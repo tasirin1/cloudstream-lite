@@ -87,9 +87,18 @@ open class ByseSX : ExtractorApi() {
         // try/catch — a partial payload (0-1 parts) threw
         // IndexOutOfBoundsException and killed extraction for
         // every Byse* host instead of failing cleanly.
-        val p1 = playback.keyParts.getOrNull(0)?.let { b64UrlDecode(it) } ?: return null
-        val p2 = playback.keyParts.getOrNull(1)?.let { b64UrlDecode(it) } ?: return null
-        return p1 + p2
+        //
+        // Audit-7 #48: the base64url DECODE itself was still
+        // unguarded — a part that is present but not valid
+        // base64url threw IllegalArgumentException here, before
+        // decryptPlayback's try block is ever reached.
+        return try {
+            val p1 = playback.keyParts.getOrNull(0)?.let { b64UrlDecode(it) } ?: return null
+            val p2 = playback.keyParts.getOrNull(1)?.let { b64UrlDecode(it) } ?: return null
+            p1 + p2
+        } catch (e: IllegalArgumentException) {
+            null
+        }
     }
 
     @OptIn(DelicateCryptographyApi::class)
