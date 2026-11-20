@@ -243,7 +243,11 @@ class SettingsGeneral {
                 listOf(),
                 context.getString(R.string.remove_site_pref),
                 {}) { indexes ->
-                current.removeAll(indexes.map { current[it] })
+                // Audit-17 #12: remove by INDEX, not by
+                // value — removeAll on a data class deleted
+                // every identical copy, so removing one of
+                // two duplicate custom sites removed both.
+                indexes.sortedDescending().forEach { current.removeAt(it) }
                 setKey(USER_PROVIDER_API, current.toTypedArray())
             }
         }
