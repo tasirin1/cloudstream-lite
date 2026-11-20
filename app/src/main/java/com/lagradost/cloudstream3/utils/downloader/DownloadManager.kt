@@ -700,7 +700,13 @@ object VideoDownloadManager {
                             val base = "${checkpoint.first}:${checkpoint.second}"
                             val fingerprint = hlsPlaylistFingerprint
                             if (fingerprint != null) "$base:$fingerprint" else base
-                        } else null
+                        } else template.extraInfo
+                        // Audit-14 #1: the plain-file branch used
+                        // to write null here, discarding the
+                        // "v1:" content validator the template
+                        // carries (Audit-7 #3) — the stored
+                        // validator was therefore always null and
+                        // the resume check never fired.
                     )
                 )
                 // Audit-4 #37: every persist path funnels through
