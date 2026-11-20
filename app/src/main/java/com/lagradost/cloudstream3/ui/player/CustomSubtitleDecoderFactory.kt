@@ -365,6 +365,16 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
                     TAG,
                     "Parser selected: $realDecoder"
                 )
+                // Audit-6 #19: no parser matched and there is no
+                // fallback format — the parse below then silently
+                // does nothing and the user just sees missing
+                // subtitles (the exact complaint Audit-4 #25
+                // fixed for the exception path). Report it the
+                // same way, once per decoder instance.
+                if (realDecoder == null && !parseFailureReported) {
+                    parseFailureReported = true
+                    showToast(R.string.subtitle_parse_failed)
+                }
                 realDecoder?.let { decoder ->
                     if (decoder !is SsaParser) {
                         if (currentStyle.removeBloat)
@@ -408,7 +418,14 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
 
     override fun reset() {
         currentSubtitleCues.clear()
-        detectedEncodingName = null
+        // Audit-6 #18: detectedEncodingName is deliberately NOT
+        // cleared here. reset() is a flush within the same file
+        // (e.g. after a seek), and the parser (realDecoder) is
+        // likewise kept — clearing only the charset made the
+        // next chunk re-detect from mid-file bytes (possibly
+        // mid-character), flipping the verdict the Audit-5 #17
+        // per-file cache exists to keep stable, and garbling
+        // the rest of the episode's subtitles.
         super.reset()
     }
 }
