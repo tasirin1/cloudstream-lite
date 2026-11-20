@@ -110,7 +110,15 @@ abstract class AuthRepo(open val api: AuthAPI) {
                 val selectedId = synchronized(AccountManager.cachedAccountIds) {
                     AccountManager.cachedAccountIds[idPrefix]
                 }
-                if (removed.any { it.user.id == selectedId }) {
+                // Audit-15 #13: match the selection by
+                // (id, name) like the removal above — with
+                // hashCode-derived ids, logging out the
+                // INACTIVE colliding account still reset the
+                // active one's selection on the id alone.
+                val selectedName = synchronized(AccountManager.cachedAccountNames) {
+                    AccountManager.cachedAccountNames[idPrefix]
+                }
+                if (removed.any { it.user.id == selectedId && it.user.name == selectedName }) {
                     AccountManager.updateAccountsId(idPrefix, 0)
                 }
             }
