@@ -34,6 +34,7 @@ import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.newTvSeriesSearchResponse
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -61,9 +62,16 @@ open class TraktProvider : MainAPI() {
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val apiResponse = getApi("${request.data}?extended=full,images&page=$page")
-        val results = parseJson<List<MediaDetails>>(apiResponse).map { element ->
+        // Audit-9 #11: every parseJson in this file used to
+        // throw a raw SerializationException on a non-JSON Trakt
+        // response (rate-limit / error page) — all remote sites
+        // now use tryParseJson with a per-site fallback, like
+        // MyDramaList in Audit-8 #20. (The parseJson<Data>(url)
+        // in load() parses this app's own round-trip string and
+        // is intentionally left alone.)
+        val results = tryParseJson<List<MediaDetails>>(apiResponse)?.map { element ->
             element.toSearchResponse()
-        }
+        } ?: emptyList()
 
         return newHomePageResponse(request.name, results)
     }
@@ -107,7 +115,8 @@ open class TraktProvider : MainAPI() {
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
         val apiResponse = getApi("$traktApiUrl/search/movie,show?extended=full,images&limit=20&page=$page&query=$query")
-        return newSearchResponseList(parseJson<List<MediaDetails>>(apiResponse).map { element ->
+        val results = tryParseJson<List<MediaDetails>>(apiResponse) ?: return null
+        return newSearchResponseList(results.map { element ->
             element.toSearchResponse()
         })
     }
@@ -124,7 +133,7 @@ open class TraktProvider : MainAPI() {
         val resActor = getApi("$traktApiUrl/$moviesOrShows/${mediaDetails?.ids?.trakt}/people?extended=full,images")
         // Fork fix (audit #33): one cast entry without a person/name
         // used to crash the whole load via !!; skip such entries.
-        val actors = parseJson<People>(resActor).cast?.mapNotNull {
+        val actors = tryParseJson<People>(resActor)?.cast?.mapNotNull {
             ActorData(
                 Actor(
                     name = it.person?.name ?: return@mapNotNull null,
@@ -135,7 +144,7 @@ open class TraktProvider : MainAPI() {
         }
 
         val resRelated = getApi("$traktApiUrl/$moviesOrShows/${mediaDetails?.ids?.trakt}/related?extended=full,images&limit=20")
-        val relatedMedia = parseJson<List<MediaDetails>>(resRelated).map { it.toSearchResponse() }
+        val relatedMedia = tryParseJson<List<MediaDetails>>(resRelated)?.map { it.toSearchResponse() } ?: emptyList()
 
         val isCartoon =
             mediaDetails?.genres?.contains("animation") == true || mediaDetails?.genres?.contains("anime") == true
@@ -204,7 +213,7 @@ open class TraktProvider : MainAPI() {
             val resSeasons =
                 getApi("$traktApiUrl/shows/${mediaDetails?.ids?.trakt.toString()}/seasons?extended=full,images,episodes")
             val episodes = mutableListOf<Episode>()
-            val seasons = parseJson<List<Seasons>>(resSeasons)
+            val seasons = tryParseJson<List<Seasons>>(resSeasons) ?: emptyList()
             var nextAir: NextAiring? = null
 
             seasons.forEach { season ->
