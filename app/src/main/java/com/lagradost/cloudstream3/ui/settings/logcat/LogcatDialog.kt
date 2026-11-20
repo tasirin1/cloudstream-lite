@@ -1,5 +1,8 @@
 package com.lagradost.cloudstream3.ui.settings.logcat
 
+// Audit-6 #33: newest logcat entries kept by the debug dialog.
+private const val MAX_LOGCAT_ITEMS = 2000
+
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -57,15 +60,24 @@ fun LogcatDialog(dismiss: () -> Unit) {
 
             // https://developer.android.com/studio/command-line/logcat
             val process = Runtime.getRuntime().exec("logcat --binary -d")
-            val items = arrayListOf<LogcatItem>()
+            // Audit-6 #33: the whole logcat buffer was parsed
+            // into an unbounded list — on a long-running STB the
+            // buffer can hold hundreds of thousands of entries,
+            // and this debug dialog could OOM the app it is meant
+            // to diagnose. Keep only the newest MAX_LOGCAT_ITEMS
+            // (the tail is what matters for debugging).
+            val items = java.util.ArrayDeque<LogcatItem>()
             LogcatBinaryParser(process.inputStream).use { parser ->
                 while (true) {
                     val item = parser.parseItem() ?: break
-                    items.add(item)
+                    items.addLast(item)
+                    if (items.size > MAX_LOGCAT_ITEMS) {
+                        items.pollFirst()
+                    }
                 }
             }
 
-            list.value = items.toPersistentList()
+            list.value = ArrayList(items).toPersistentList()
         } catch (e: Exception) {
             logError(e) // kinda ironic
         } finally {
