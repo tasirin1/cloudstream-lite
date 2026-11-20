@@ -153,6 +153,13 @@ class SettingsGeneral {
     // Audit-14 #43: fragment body dead (navigation routes
     // to SettingsGeneral2); CustomSite + companion
     // (pickDownloadPath) are live.
+    // Audit-15 #10: the Audit-14 #43 surgery dropped the
+    // @OptIn/@Serializable annotations this class carried;
+    // restored for scope honesty (persistence runs through
+    // Jackson, so this is behaviour-neutral today, but the
+    // class must not silently lose its declared contract).
+    @OptIn(ExperimentalSerializationApi::class) // JsonNames is an experimental annotation for now
+    @Serializable
     data class CustomSite(
         @JsonProperty("parentClassName") @JsonAlias("parentJavaClass")
         @SerialName("parentClassName") @JsonNames("parentJavaClass")
