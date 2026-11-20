@@ -624,6 +624,11 @@ object PluginManager {
         val onlinePlugins = (getPluginsOnline()).toList()
         for (pluginData in onlinePlugins) {
             val pluginFile = File(pluginData.filePath)
+            // Audit-10 #10: a leftover ".new" staging file from
+            // an interrupted download is never a loadable
+            // plugin — delete it instead of letting it sit in
+            // the plugin folder forever.
+            File(pluginFile.parentFile, pluginFile.name + ".new").delete()
             if (!pluginFile.exists()) {
                 val bakFile = File(pluginFile.parentFile, pluginFile.name + ".bak")
                 if (bakFile.exists()) {
@@ -1059,6 +1064,17 @@ object PluginManager {
         data: PluginData,
     ) {
         try {
+            // Audit-10 #12: restore the anchor BEFORE the file.
+            // File-first left a death window pairing the old
+            // (working) file with the NEW anchor — a permanent
+            // hash-mismatch refusal the startup sweep cannot
+            // see because the file exists. Anchor-first leaves
+            // at worst the already-failed new file refused.
+            if (previousAnchor != null) {
+                storePluginHash(file.absolutePath, previousAnchor)
+            } else {
+                removePluginHash(file.absolutePath)
+            }
             file.delete()
             if (backupFile != null && backupFile.exists()) {
                 Files.move(
@@ -1066,11 +1082,6 @@ object PluginManager {
                     file.toPath(),
                     StandardCopyOption.REPLACE_EXISTING
                 )
-            }
-            if (previousAnchor != null) {
-                storePluginHash(file.absolutePath, previousAnchor)
-            } else {
-                removePluginHash(file.absolutePath)
             }
             if (file.exists()) {
                 loadPlugin(activity, file, data)
@@ -1245,16 +1256,22 @@ object PluginManager {
         return try {
             val pluginFile = File(file.absolutePath)
             val deleted = pluginFile.delete()
+            // Audit-10 #11: confirm the plugin file is really
+            // gone BEFORE touching the .bak — deleting the
+            // backup first and then failing left a registered
+            // plugin with nothing to roll back to.
+            if (!deleted && pluginFile.exists()) {
+                return false
+            }
             // Audit-9 #14: also remove a .bak left behind by an
             // interrupted update, and don't abandon the cleanup
             // when the plugin file was already gone (e.g. only
             // the .bak survived an interrupted update) — the old
             // early false left the data record and the anchor
-            // registered forever.
+            // registered forever. Audit-10 #10: the ".new"
+            // staging sibling gets the same treatment.
             File(pluginFile.parentFile, pluginFile.name + ".bak").delete()
-            if (!deleted && pluginFile.exists()) {
-                return false
-            }
+            File(pluginFile.parentFile, pluginFile.name + ".new").delete()
             unloadPlugin(file.absolutePath)
             list.forEach { deletePluginData(it) }
             // Audit-7 #6: drop the deleted plugin's anchor

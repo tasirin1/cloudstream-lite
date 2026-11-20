@@ -212,6 +212,13 @@ object AndroidRepositoryManager : RepositoryManager {
         data: PluginData? = null,
     ) {
         try {
+            // Audit-10 #12: anchor before file — see
+            // PluginManager.rollbackLegacyPluginUpdate.
+            if (previousAnchor != null) {
+                PluginManager.storePluginHash(file.absolutePath, previousAnchor)
+            } else {
+                PluginManager.removePluginHash(file.absolutePath)
+            }
             file.delete()
             if (backupFile != null && backupFile.exists()) {
                 Files.move(
@@ -219,11 +226,6 @@ object AndroidRepositoryManager : RepositoryManager {
                     file.toPath(),
                     StandardCopyOption.REPLACE_EXISTING
                 )
-            }
-            if (previousAnchor != null) {
-                PluginManager.storePluginHash(file.absolutePath, previousAnchor)
-            } else {
-                PluginManager.removePluginHash(file.absolutePath)
             }
         } catch (_: Exception) {
             // Best effort only: the caller still reports the
