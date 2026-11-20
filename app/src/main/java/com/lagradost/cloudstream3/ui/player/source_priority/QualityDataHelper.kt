@@ -77,13 +77,20 @@ object QualityDataHelper {
     fun getSourcePriority(profile: Int, name: String?): Int {
         if (name == null) return DEFAULT_SOURCE_PRIORITY
 
-        return sourcePriorityCache[priorityCacheKey(profile)]?.get(name) ?: (getKey<Int>(
-            "$currentAccount/$VIDEO_SOURCE_PRIORITY/$profile",
+        // Audit-10 #16: capture the account and cache key ONCE.
+        // currentAccount is a live getter and the key used to be
+        // recomputed at every access — an account switch mid-call
+        // could write one account's stored value into the other
+        // account's cache entry.
+        val account = currentAccount
+        val cacheKey = "$account/$profile"
+        return sourcePriorityCache[cacheKey]?.get(name) ?: (getKey<Int>(
+            "$account/$VIDEO_SOURCE_PRIORITY/$profile",
             name,
             DEFAULT_SOURCE_PRIORITY
         ) ?: DEFAULT_SOURCE_PRIORITY).also {
-            sourcePriorityCache.getOrPut(priorityCacheKey(profile)) { ConcurrentHashMap() }
-            sourcePriorityCache[priorityCacheKey(profile)]?.set(name, it)
+            sourcePriorityCache.getOrPut(cacheKey) { ConcurrentHashMap() }
+            sourcePriorityCache[cacheKey]?.set(name, it)
         }
     }
 
@@ -125,13 +132,16 @@ object QualityDataHelper {
     val qualityPriorityCache: ConcurrentHashMap<String, ConcurrentHashMap<Qualities, Int>> =
         ConcurrentHashMap()
     fun getQualityPriority(profile: Int, quality: Qualities): Int {
-        return qualityPriorityCache[priorityCacheKey(profile)]?.get(quality) ?: (getKey<Int>(
-            "$currentAccount/$VIDEO_QUALITY_PRIORITY/$profile",
+        // Audit-10 #16: same single-capture as getSourcePriority.
+        val account = currentAccount
+        val cacheKey = "$account/$profile"
+        return qualityPriorityCache[cacheKey]?.get(quality) ?: (getKey<Int>(
+            "$account/$VIDEO_QUALITY_PRIORITY/$profile",
             quality.value.toString(),
             quality.defaultPriority
         )?.also {
-            qualityPriorityCache.getOrPut(priorityCacheKey(profile)) { ConcurrentHashMap() }
-            qualityPriorityCache[priorityCacheKey(profile)]?.set(quality, it)
+            qualityPriorityCache.getOrPut(cacheKey) { ConcurrentHashMap() }
+            qualityPriorityCache[cacheKey]?.set(quality, it)
         }) ?: quality.defaultPriority
     }
 
