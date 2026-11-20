@@ -2041,10 +2041,20 @@ class CS3IPlayer : IPlayer {
     // the handles thrown away, so every addTimeStamps() call
     // stacked another permanent set of messages on the player —
     // old episodes' stamps kept firing updatedTime() forever.
+    // Audit-16 #13: listening-percentage messages, tracked
+    // like the timestamp messages below — they used to be
+    // sent with the handle discarded, living for the whole
+    // player lifetime and re-firing on every seek pass.
+    private val listeningPercentageMessages =
+        Collections.synchronizedList(mutableListOf<PlayerMessage>())
     private val timestampMessages =
         mutableListOf<androidx.media3.exoplayer.PlayerMessage>()
 
     private fun cancelTimestampMessages() {
+        synchronized(listeningPercentageMessages) {
+            listeningPercentageMessages.forEach { it.cancel() }
+            listeningPercentageMessages.clear()
+        }
         synchronized(timestampMessages) {
             timestampMessages.forEach { it.cancel() }
             timestampMessages.clear()
@@ -2098,6 +2108,11 @@ class CS3IPlayer : IPlayer {
                         //   .setPayload(customPayloadData)
                         .setDeleteAfterDelivery(false)
                         .send()
+                        ?.let { message ->
+                            synchronized(listeningPercentageMessages) {
+                                listeningPercentageMessages.add(message)
+                            }
+                        }
                 }
             }
         }
