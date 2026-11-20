@@ -890,17 +890,20 @@ class CS3IPlayer : IPlayer {
                 if (existing != null && builtCacheSize == cacheSize) {
                     return@synchronized existing
                 }
-                // Size changed (or first build): release the
-                // old cache and rebuild. This runs while a new
-                // player is being set up, before it plays.
-                existing?.release()
-                simpleCache = null
-                builtCacheSize = -1L
-                // Never assign a failed build over an existing
-                // cache: only publish non-null results.
-                getCache(context, cacheSize)?.also {
-                    simpleCache = it
+                // Audit-15 #9: build the replacement FIRST.
+                // The Audit-14 #54 version released the old
+                // cache before building, so a failed rebuild
+                // (disk full, locked dir) destroyed a working
+                // cache. Only swap on success; on failure the
+                // old cache keeps serving.
+                val built = getCache(context, cacheSize)
+                if (built != null) {
+                    existing?.release()
+                    simpleCache = built
                     builtCacheSize = cacheSize
+                    built
+                } else {
+                    existing
                 }
             }
         }
