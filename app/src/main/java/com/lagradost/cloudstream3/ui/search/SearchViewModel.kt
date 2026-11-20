@@ -168,6 +168,14 @@ class SearchViewModel : ViewModel() {
     suspend fun expandAndReturn(name: String): HomeViewModel.ExpandableHomepageList? {
         val query = lastQuery ?: return null
         val repo = repos.find { it.name == name } ?: return null
+        // Audit-8 #6: capture the search generation — search()
+        // is guarded by currentSearchIndex, this expand path
+        // never was. Without it, a slow page-2 fetch for query
+        // "abc" resuming after the user searched "xyz" appended
+        // abc's items into xyz's entry, overwrote its page
+        // counter, and posted the polluted bundle over the new
+        // search's results.
+        val searchIndex = currentSearchIndex
 
         // Audit-6 #12: atomic claim + finally release — see
         // HomeViewModel.expandAndReturn for the failure modes
@@ -184,6 +192,9 @@ class SearchViewModel : ViewModel() {
 
             val nextPage = current.currentPage + 1
             val next = repo.search(query, nextPage)
+            // Audit-8 #6: a newer search started while this page
+            // was loading — drop the stale page entirely.
+            if (searchIndex != currentSearchIndex) return null
             if (next is Resource.Success) {
                 val nextValue = next.value
                 expandableSearches[name]?.apply {
