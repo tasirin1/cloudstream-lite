@@ -1660,6 +1660,15 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         updateOrientation()
     }
 
+    // Audit-15 #4: the subclass episode-click path hides
+    // the overlay directly; without this the flag stayed
+    // true forever (isDialogOpen() stuck, MENU/Back eaten
+    // by a ghost overlay). Playback is not resumed here —
+    // the caller is loading the selected episode.
+    protected fun onEpisodesOverlayDismissedExternally() {
+        isShowingEpisodeOverlay = false
+    }
+
     private fun toggleEpisodesOverlay(show: Boolean) {
         if (show && !isShowingEpisodeOverlay) {
             previousPlayStatus = player.getIsPlaying()
