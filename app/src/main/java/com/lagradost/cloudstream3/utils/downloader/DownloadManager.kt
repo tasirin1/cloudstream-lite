@@ -92,6 +92,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -1469,7 +1470,13 @@ object VideoDownloadManager {
             }
 
             jobs.join()
-            fileChecker.cancel()
+            // Audit-13 #5: cancel() alone does not wait — a
+            // checker already past its exists() check and
+            // queued on fileMutex could still write IsStopped
+            // AFTER this download completed and closed,
+            // resurrecting a ghost status entry + a "canceled"
+            // notification over the "done" one.
+            fileChecker.cancelAndJoin()
 
             // jobs are finished so we don't want to stop them anymore
             metadata.removeStopListener()
@@ -1798,7 +1805,13 @@ object VideoDownloadManager {
             }
 
             jobs.join()
-            fileChecker.cancel()
+            // Audit-13 #5: cancel() alone does not wait — a
+            // checker already past its exists() check and
+            // queued on fileMutex could still write IsStopped
+            // AFTER this download completed and closed,
+            // resurrecting a ghost status entry + a "canceled"
+            // notification over the "done" one.
+            fileChecker.cancelAndJoin()
 
             metadata.removeStopListener()
 
