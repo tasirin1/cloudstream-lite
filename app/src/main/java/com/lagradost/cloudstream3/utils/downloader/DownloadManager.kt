@@ -2234,13 +2234,28 @@ object VideoDownloadManager {
         ) {
             val item = downloadResumePackage.item
             val id = item.ep.id
-            if (currentDownloads.value.contains(id)) { // IF IT IS ALREADY DOWNLOADING, RESUME IT
+            // Audit-13 #1: claim the id atomically — the old
+            // contains-check and the add were two separate
+            // operations, so two starts of the same episode
+            // racing each other (queue relaunch + manual
+            // resume) both passed the check and downloaded
+            // the same file concurrently, corrupting it.
+            // StateFlow.update retries its lambda under
+            // contention with the newest value, so seeing the
+            // id inside the lambda means another start owns
+            // it. (Same claim pattern as popQueue, Audit-4 #2.)
+            var alreadyDownloading = false
+            _currentDownloads.update { downloads ->
+                if (downloads.contains(id)) {
+                    alreadyDownloading = true
+                    downloads
+                } else {
+                    downloads + id
+                }
+            }
+            if (alreadyDownloading) { // IF IT IS ALREADY DOWNLOADING, RESUME IT
                 downloadEvent.invoke(id to DownloadActionType.Resume)
                 return
-            }
-
-            _currentDownloads.update { downloads ->
-                downloads + id
             }
 
             try {
