@@ -1254,7 +1254,6 @@ object VideoDownloadManager {
         }
 
         var fileStream: OutputStream? = null
-        //var requestStream: InputStream? = null
         val metadata = DownloadMetaData(
             totalBytes = 0,
             bytesDownloaded = 0,
