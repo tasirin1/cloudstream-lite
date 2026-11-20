@@ -230,7 +230,17 @@ class HomeViewModel : ViewModel() {
         var hasNext: Boolean,
     )
 
-    private val expandable: MutableMap<String, ExpandableHomepageList> = mutableMapOf()
+    // Audit-6 #11: synchronized + snapshot-posted, same fix as
+    // SearchViewModel in Audit-6 #10 — load() mutates this map
+    // on ioSafe while the fragment iterates the posted instance
+    // on the main thread with no try/catch, so a concurrent
+    // clear/rebuild could crash the Home screen with a CME.
+    private val expandable: MutableMap<String, ExpandableHomepageList> =
+        java.util.Collections.synchronizedMap(mutableMapOf())
+
+    private fun expandableSnapshot(): Map<String, ExpandableHomepageList> =
+        synchronized(expandable) { LinkedHashMap(expandable) }
+
     private val _page =
         MutableLiveData<Resource<Map<String, ExpandableHomepageList>>>(Resource.Loading())
     val page: LiveData<Resource<Map<String, ExpandableHomepageList>>> = _page
@@ -279,7 +289,7 @@ class HomeViewModel : ViewModel() {
                     current.hasNext = false
                 }
             }
-            _page.postValue(Resource.Success(expandable))
+            _page.postValue(Resource.Success(expandableSnapshot()))
         }
 
         lock -= name
@@ -411,7 +421,7 @@ class HomeViewModel : ViewModel() {
                     } else {
                         _preview.postValue(Resource.Success((previewResponsesAdded.size < currentShuffledList.size) to previewResponses))
                     }
-                    _page.postValue(Resource.Success(expandable))
+                    _page.postValue(Resource.Success(expandableSnapshot()))
                 } catch (e: Exception) {
                     _randomItems.postValue(emptyList())
                     logError(e)
