@@ -232,6 +232,17 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
     }
 
     override fun onDestroyView() {
+        // Audit-13 #25: dismiss any open player dialog — none
+        // of the five tracked dialogs was dismissed on
+        // teardown, so a rotation or a notification Stop
+        // leaked the window and the dismiss listeners (which
+        // carry the playback-resume logic) never ran through
+        // the normal path.
+        selectSourceDialog?.dismissSafe(activity)
+        selectTrackDialog?.dismissSafe(activity)
+        selectSpeedDialog?.dismissSafe(activity)
+        selectSubtitlesDialog?.dismissSafe(activity)
+        selectCompressorDialog?.dismissSafe(activity)
         playerHostView?.releaseOverlayLayoutListener()
         playerBinding = null
         super.onDestroyView()
