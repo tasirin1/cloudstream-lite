@@ -422,12 +422,4 @@ class SettingsAccount {
         }
     }
 
-    private fun updateAuthPreference(enabled: Boolean) {
-        val biometricKey = getString(R.string.biometric_key)
-
-        PreferenceManager.getDefaultSharedPreferences(context ?: return).edit {
-            putBoolean(biometricKey, enabled)
-        }
-        findPreference<SwitchPreference>(biometricKey)?.isChecked = enabled
-    }
 }
