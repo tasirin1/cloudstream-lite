@@ -247,6 +247,16 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
     // generated images 1:1 to idx of hsl
     private var images: Array<Bitmap?> = arrayOf()
 
+    // Audit-4 #28: every synchronized block in this class used
+    // to lock on `images` itself, but `images` is REASSIGNED by
+    // clear()/load() — two threads could hold locks on different
+    // array instances and mutate concurrently, and a reader
+    // could pair a fresh empty `images` with a stale `prefixSum`
+    // (or index a just-emptied array) and throw. A dedicated,
+    // never-reassigned lock keeps the (images, prefixSum,
+    // counters) tuple consistent.
+    private val imagesLock = Any()
+
     companion object {
         private const val TAG = "PreviewImgM3u8"
     }
@@ -269,7 +279,7 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
     override fun getPreviewImage(fraction: Float): Bitmap? {
         var bestIdx = -1
         var bestDiff = Double.MAX_VALUE
-        synchronized(images) {
+        synchronized(imagesLock) {
             // just find the best one in a for loop, we don't care about bin searching rn
             for (i in images.indices) {
                 val diff = prefixSum[i].minus(fraction).absoluteValue
@@ -295,7 +305,7 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
     }
 
     private fun clear() {
-        synchronized(images) {
+        synchronized(imagesLock) {
             currentJob?.cancel()
             // for (i in images.indices) {
             //     images[i]?.recycle()
@@ -309,7 +319,9 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
 
     override fun release() {
         clear()
-        images = arrayOf()
+        synchronized(imagesLock) {
+            images = arrayOf()
+        }
     }
 
     override var durationMs: Long = 0L
@@ -369,7 +381,7 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
                     runningSum += (hsl.allTsLinks[i].time ?: 0.0)
                     prefixSum[i + 1] = runningSum * durationInv
                 }
-                synchronized(images) {
+                synchronized(imagesLock) {
                     images = Array(hsl.size) { null }
                     loadedImages = 0
                 }
@@ -380,7 +392,9 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
                     val items = (1 shl (l - 1))
                     for (i in 0 until items) {
                         val index = (count.div(1 shl l) + (i * count) / items).coerceIn(0, hsl.size)
-                        if (synchronized(images) { images[index] } != null) {
+                        // getOrNull: a concurrent clear()/load()
+                        // may have swapped in a shorter array.
+                        if (synchronized(imagesLock) { images.getOrNull(index) } != null) {
                             continue
                         }
                         Log.i(TAG, "Generating preview for $index")
@@ -396,9 +410,14 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
                                 return@withContext
                             }
                             if (img == null || img.width <= 1 || img.height <= 1) continue
-                            synchronized(images) {
-                                images[index] = img
-                                loadedImages += 1
+                            synchronized(imagesLock) {
+                                // Same swap guard as the check
+                                // above: drop the frame instead of
+                                // indexing an array clear() emptied.
+                                if (index < images.size) {
+                                    images[index] = img
+                                    loadedImages += 1
+                                }
                             }
                         } catch (t: Throwable) {
                             logError(t)
