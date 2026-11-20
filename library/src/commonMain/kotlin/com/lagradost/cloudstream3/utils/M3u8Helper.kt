@@ -151,7 +151,10 @@ object M3u8Helper2 {
         returnThis: Boolean = true
     ): List<M3u8Helper.M3u8Stream> {
         val list = mutableListOf<M3u8Helper.M3u8Stream>()
-        val response = app.get(m3u8.streamUrl, headers = m3u8.headers, verify = false).text
+        // Audit-3 #4: was verify = false -- the master playlist
+        // (which decides every variant/segment URL, for playback
+        // AND downloads) was fetched with no certificate check.
+        val response = app.get(m3u8.streamUrl, headers = m3u8.headers).text
         val parsed = HlsPlaylistParser.parse(m3u8.streamUrl, response)
 
         var anyFound = false
