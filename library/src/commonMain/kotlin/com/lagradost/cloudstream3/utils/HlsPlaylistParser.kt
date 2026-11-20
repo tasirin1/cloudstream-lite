@@ -1188,6 +1188,19 @@ object HlsPlaylistParser {
     }
 
     @Throws(ParserException::class)
+    // Audit-18 #5: a malformed Base64 payload in a DRM
+    // data URI threw the strict decoder's raw
+    // IllegalArgumentException out of parse(), outside the
+    // parser's ParserException contract (Audit-17 #1 closed
+    // the comma case; the payload itself was still raw).
+    private fun decodeDrmDataUriPayload(payload: String): ByteArray {
+        return try {
+            base64DecodeArray(payload)
+        } catch (e: IllegalArgumentException) {
+            throw ParserException("Invalid DRM data URI payload", e)
+        }
+    }
+
     private fun parseDrmSchemeData(
         line: String, keyFormat: String, variableDefinitions: Map<String, String>
     ): SchemeData? {
@@ -1209,7 +1222,7 @@ object HlsPlaylistParser {
                 // payload threw. The payload starts AFTER
                 // the comma.
                 data = if (commaIndex == -1) ByteArray(0)
-                else base64DecodeArray(urlString.substring(commaIndex + 1))
+                else decodeDrmDataUriPayload(urlString.substring(commaIndex + 1))
             )
         } else if (KEYFORMAT_WIDEVINE_PSSH_JSON == keyFormat) {
             return SchemeData(
@@ -1223,7 +1236,7 @@ object HlsPlaylistParser {
             val commaIndex = urlString.indexOf(',')
             val data: ByteArray =
                 if (commaIndex == -1) ByteArray(0)
-                else base64DecodeArray(urlString.substring(commaIndex + 1))
+                else decodeDrmDataUriPayload(urlString.substring(commaIndex + 1))
             val psshData: ByteArray =
                 PsshAtomUtil.buildPsshAtom(
                     systemId = C.PLAYREADY_UUID,
