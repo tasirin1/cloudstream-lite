@@ -73,8 +73,8 @@ object M3u8Helper2 {
 
     private val ENCRYPTION_URL_IV_REGEX =
         Regex("#EXT-X-KEY:METHOD=([^,]+),URI=\"([^\"]+)\"(?:,IV=(.*))?")
-    private val TS_EXTENSION_REGEX =
-        Regex("""#EXTINF:(([0-9]*[.])?[0-9]+|).*\n(.+?\n)""") // fuck it we ball, who cares about the type anyways
+    // TS_EXTENSION_REGEX was removed in Audit-5 #4: segment
+    // extraction is a line scan in hslLazy now (see there).
 
     private fun toBytes16Big(n: Int): ByteArray {
         // Audit-4 #19: this was 16 Double pow() calls, and it runs
@@ -188,7 +188,7 @@ object M3u8Helper2 {
         // If it is not a "Master Playlist", or if it does not contain any playable "Media Playlist" or if it should return itself
         if (parsed == null || !anyFound || returnThis) {
             // Only include it if is a "Media Playlist" (any TS files are found), or if it is a "Master Playlist" (parsing is non null)
-            if (parsed != null || TS_EXTENSION_REGEX.containsMatchIn(response)) {
+            if (parsed != null || response.lineSequence().any { it.trim().startsWith("#EXTINF:") }) {
                 list += m3u8
             } else {
                 Log.i(TAG, "M3u8 Playlist is not a \"Master Playlist\" nor a \"Media Playlist\". Removing this link as it is invalid and will not open in player: ${m3u8.streamUrl}")
@@ -487,11 +487,36 @@ object M3u8Helper2 {
         }
 
         val relativeUrl = getParentLink(playlistStream.streamUrl)
-        val allTsList = TS_EXTENSION_REGEX.findAll(playlistResponse + "\n").map { ts ->
-            val time = ts.groupValues[1]
-            val url = resolveUrl(playlistStream.streamUrl, ts.groupValues[3].trim())
-            TsLink(url = url, time = time.toDoubleOrNull())
-        }.toList()
+        // Audit-5 #4: line-based segment scan. The old
+        // TS_EXTENSION_REGEX demanded the segment URI on the very
+        // next line after #EXTINF:, so a legal intervening tag
+        // (#EXT-X-BYTERANGE in single-file VOD, #EXT-X-PROGRAM-
+        // DATE-TIME) was stored AS the segment URL and the real
+        // segment was dropped — every fetch for such playlists
+        // failed. Now a tag line between #EXTINF: and its URI is
+        // skipped, matching the #EXT-X-KEY scan above (segment
+        // indices stay aligned with the key ranges).
+        val allTsList = mutableListOf<TsLink>()
+        var pendingDuration: Double? = null
+        var awaitingSegment = false
+        for (rawLine in playlistResponse.lineSequence()) {
+            val line = rawLine.trim()
+            when {
+                line.startsWith("#EXTINF:") -> {
+                    pendingDuration = line.removePrefix("#EXTINF:")
+                        .substringBefore(',').toDoubleOrNull()
+                    awaitingSegment = true
+                }
+
+                awaitingSegment && line.isNotEmpty() && !line.startsWith("#") -> {
+                    allTsList += TsLink(
+                        url = resolveUrl(playlistStream.streamUrl, line),
+                        time = pendingDuration
+                    )
+                    awaitingSegment = false
+                }
+            }
+        }
 
         if (allTsList.isEmpty()) throw IllegalStateException("M3u8 must contains TS files")
 
