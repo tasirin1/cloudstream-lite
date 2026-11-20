@@ -965,7 +965,9 @@ class GeneratorPlayer : FullScreenPlayer() {
             dismissCallback.invoke()
         }
 
-        dialog.show()
+        // Audit-14 #62: a second dialog.show() used to sit
+        // here — the dialog was already shown above; show() on
+        // a showing dialog is a no-op.
         binding.subtitlesSearch.setQuery(currentTempMeta.name, true)
         //TODO: Set year text from currently loaded movie on Player
         //dialog.subtitles_search_year?.setText(currentTempMeta.year)
@@ -2484,9 +2486,9 @@ class GeneratorPlayer : FullScreenPlayer() {
             }
         }
 
-        unwrapBundle(savedInstanceState)
-        unwrapBundle(arguments)
-
+        // Audit-14 #62: a duplicate unwrapBundle pair used to
+        // sit here — the same two calls already ran at the top
+        // of this function.
         sync.updateUserData()
 
         preferredAutoSelectSubtitles = getAutoSelectLanguageTagIETF()
