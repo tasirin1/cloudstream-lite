@@ -1996,18 +1996,13 @@ class CS3IPlayer : IPlayer {
                         }
 
                         Player.STATE_ENDED -> {
-                            // Only play next episode if autoplay is on (default)
-                            if (PreferenceManager.getDefaultSharedPreferences(context)
-                                    ?.getBoolean(
-                                        context.getString(R.string.autoplay_next_key),
-                                        true
-                                    ) == true
-                            ) {
-                                handleEvent(
-                                    CSPlayerEvent.NextEpisode,
-                                    source = PlayerEventSource.Player
-                                )
-                            }
+                            // Audit-16 #1: no autoplay advance
+                            // here — onPlayerStateChanged emits
+                            // VideoEndedEvent for this same
+                            // transition and PlayerView's handler
+                            // performs the (single) advance.
+                            // Advancing in both listeners skipped
+                            // an episode on every video end.
                         }
 
                         Player.STATE_BUFFERING -> {
