@@ -212,6 +212,18 @@ object BackupUtils {
         // restored accounts/settings apply without a force-stop.
         PreferenceDelegate.invalidateAllDelegateCaches()
 
+        // Audit-14 #8: the account_key_index key is
+        // transferable (Audit-10 #6 blocks "account" exactly /
+        // "account/" prefix, and this key starts "account_"),
+        // so a restore can switch the active profile — but
+        // AccountManager's in-memory account caches were never
+        // refreshed on this path (only setAccount does it), so
+        // auth kept using the OLD profile's logins while local
+        // data read the new profile's folder until a
+        // force-stop. Refresh them like setAccount does.
+        AccountManager.updateAccountIds()
+        AccountManager.updateCachedAccounts()
+
         // Make sure the library is fresh
         for (api in AccountManager.syncApis) {
             api.requireLibraryRefresh = true
