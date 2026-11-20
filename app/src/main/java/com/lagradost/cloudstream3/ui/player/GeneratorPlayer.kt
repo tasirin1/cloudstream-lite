@@ -1175,7 +1175,13 @@ class GeneratorPlayer : FullScreenPlayer() {
                         }
 
                         providerList.setOnItemLongClickListener { _, _, position, _ ->
-                            sortedLinks.getOrNull(position)?.link?.first?.url?.let {
+                            // Audit-5 #22: the adapter displays
+                            // filteredLinks, but this handler used
+                            // to index sortedLinks — with any link
+                            // filtered out, a long-press copied the
+                            // URL of a different source than the
+                            // row pressed.
+                            filteredLinks.getOrNull(position)?.link?.first?.url?.let {
                                 clipboardHelper(
                                     txt(R.string.video_source),
                                     it
