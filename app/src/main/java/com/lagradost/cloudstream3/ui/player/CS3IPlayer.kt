@@ -965,9 +965,20 @@ class CS3IPlayer : IPlayer {
             // the old bad-cert tolerance, but scoped to THIS source
             // via its own insecure OkHttp client -- not via
             // process-wide HttpsURLConnection defaults.
+            //
+            // Audit-4 #51: the default client also carries the
+            // user's DNS-over-HTTPS choice (Google/Cloudflare/...),
+            // whose public resolvers cannot resolve LAN or mDNS
+            // hostnames — exactly what offline/LAN sources point
+            // at. This source therefore falls back to the system
+            // resolver; IP literals were never affected either way.
+            val offlineClient = buildDefaultClient(this, ignoreSSL = true)
+                .newBuilder()
+                .dns(okhttp3.Dns.SYSTEM)
+                .build()
             return DefaultDataSource.Factory(
                 this,
-                OkHttpDataSource.Factory(buildDefaultClient(this, ignoreSSL = true))
+                OkHttpDataSource.Factory(offlineClient)
                     .setUserAgent(USER_AGENT)
             )
         }
