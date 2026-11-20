@@ -2569,11 +2569,17 @@ object VideoDownloadManager {
                         deleteMatchingSubtitles(context, info)
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                // The work is only failed if the job did not get started
-                if (this.downloadJob == null) {
-                    isFailed = true
-                }
+                // Audit-14 #13: the old guard only marked failure
+                // when downloadJob was still null, but this code
+                // always runs INSIDE the launched job, so the
+                // guard never fired — a setup exception (setKey,
+                // getFolder) left the queue entry hanging forever
+                // instead of failed. Any exception here is a
+                // failure of this entry.
+                isFailed = true
                 logError(e)
             }
         }
