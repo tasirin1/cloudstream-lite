@@ -191,17 +191,25 @@ object PluginManager {
 
     private fun pluginHashMap(): Map<String, String> {
         pluginHashCache?.let { return it }
-        // Audit sesi 15 #11: a parse failure used to be swallowed and
-        // treated as "no anchor", silently disabling the integrity
-        // check for every online plugin. At least leave evidence.
-        val hashes = try {
-            getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
-        } catch (e: Exception) {
-            logError(e)
-            null
-        } ?: emptyMap()
-        pluginHashCache = hashes
-        return hashes
+        // Audit-4 #4: initialize under the same lock storePluginHash
+        // uses. The unsynchronized lazy init could finish after a
+        // store had already written a newer cache, rolling the
+        // in-memory map back to a stale snapshot.
+        return synchronized(pluginHashLock) {
+            pluginHashCache ?: run {
+                // Audit sesi 15 #11: a parse failure used to be swallowed and
+                // treated as "no anchor", silently disabling the integrity
+                // check for every online plugin. At least leave evidence.
+                val hashes = try {
+                    getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
+                } catch (e: Exception) {
+                    logError(e)
+                    null
+                } ?: emptyMap()
+                pluginHashCache = hashes
+                hashes
+            }
+        }
     }
 
     private fun getStoredPluginHash(filePath: String): String? {
@@ -233,7 +241,19 @@ object PluginManager {
             } else {
                 hash
             }
-            val updated = pluginHashMap() + (filePath to stamped)
+            // Audit-4 #4: build on a fresh read of the stored map,
+            // not on the read cache. A cache initialized from a
+            // failed read (empty map) would otherwise be written
+            // back over the real anchors on the next store, wiping
+            // every other plugin's anchor. As before Audit-3 #15,
+            // a read that throws aborts the store instead.
+            val current = try {
+                getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
+            } catch (e: Exception) {
+                logError(e)
+                return
+            } ?: emptyMap()
+            val updated = current + (filePath to stamped)
             pluginHashCache = updated
             setKey(PLUGIN_FILE_HASHES_KEY, updated)
         }
