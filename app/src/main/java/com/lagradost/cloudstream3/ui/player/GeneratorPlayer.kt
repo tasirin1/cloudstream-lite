@@ -775,11 +775,18 @@ class GeneratorPlayer : FullScreenPlayer() {
             )
         }
 
+        // Audit-13 #24: keep handles on this dialog's jobs so
+        // dismissing the dialog cancels them — an Apply fetch
+        // that outlived its dialog used to install the
+        // subtitles anyway seconds after the user cancelled.
+        var subtitleSearchJob: kotlinx.coroutines.Job? = null
+        var subtitleApplyJob: kotlinx.coroutines.Job? = null
+
         binding.subtitlesSearch.setOnQueryTextListener(object :
             androidx.appcompat.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 binding.searchLoadingBar.show()
-                ioSafe {
+                subtitleSearchJob = ioSafe {
                     val search =
                         SubtitleSearch(
                             query = query ?: return@ioSafe,
@@ -871,7 +878,7 @@ class GeneratorPlayer : FullScreenPlayer() {
             }
 
             binding.applyBtt.showProgress()
-            ioSafe {
+            subtitleApplyJob = ioSafe {
                 val apiResource =
                     Resource.fromResult(api.resource(currentSubtitle))
                 binding.applyBtt.hideProgress()
@@ -913,6 +920,9 @@ class GeneratorPlayer : FullScreenPlayer() {
         }
 
         dialog.setOnDismissListener {
+            // Audit-13 #24: cancel this dialog's in-flight work.
+            subtitleSearchJob?.cancel()
+            subtitleApplyJob?.cancel()
             dismissCallback.invoke()
         }
 
