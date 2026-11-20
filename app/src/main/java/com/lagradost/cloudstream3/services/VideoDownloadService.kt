@@ -26,7 +26,10 @@ class VideoDownloadService : Service() {
                     "resume" -> VideoDownloadManager.DownloadActionType.Resume
                     "pause" -> VideoDownloadManager.DownloadActionType.Pause
                     "stop" -> VideoDownloadManager.DownloadActionType.Stop
-                    else -> return START_NOT_STICKY
+                    else -> {
+                        stopSelf()
+                        return START_NOT_STICKY
+                    }
                 }
 
                 downloadScope.launch {
@@ -35,6 +38,10 @@ class VideoDownloadService : Service() {
             }
         }
 
+        // Audit-3 #34: this service only relays one command per
+        // start; without stopSelf it stayed alive doing nothing
+        // after every notification action.
+        stopSelf()
         return START_NOT_STICKY
     }
 
