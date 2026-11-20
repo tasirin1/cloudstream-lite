@@ -251,7 +251,9 @@ object DataStore {
             val json: String = getSharedPrefs().getString(path, null) ?: return defVal
             parseJson<T>(json)
         } catch (_: Exception) {
-            null
+            // Audit-3 #35: a parse failure used to return null even
+            // when the caller supplied a default value.
+            defVal
         }
     }
 
