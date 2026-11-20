@@ -15,6 +15,7 @@ import com.lagradost.cloudstream3.CloudStreamApp.Companion.getActivity
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.mvvm.logError
+import com.lagradost.cloudstream3.plugins.PLUGIN_FILE_HASHES_KEY
 import com.lagradost.cloudstream3.plugins.PLUGINS_KEY
 import com.lagradost.cloudstream3.plugins.PLUGINS_KEY_LOCAL
 import com.lagradost.cloudstream3.syncproviders.AccountManager
@@ -64,6 +65,12 @@ object BackupUtils {
         // The plugins themselves are not backed up
         PLUGINS_KEY,
         PLUGINS_KEY_LOCAL,
+        // Audit-16 #15: the load-time integrity anchors are
+        // device-local state like the plugins themselves —
+        // a restored anchor map made loadPlugin reject
+        // legitimately updated plugin files until they were
+        // re-downloaded.
+        PLUGIN_FILE_HASHES_KEY,
 
         AccountManager.ACCOUNT_TOKEN,
         AccountManager.ACCOUNT_IDS,
