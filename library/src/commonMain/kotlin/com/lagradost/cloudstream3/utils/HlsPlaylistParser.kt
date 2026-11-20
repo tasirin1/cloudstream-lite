@@ -2071,10 +2071,14 @@ object HlsPlaylistParser {
                     val sampleMimeType: String
                     if (instreamId.startsWith("CC")) {
                         sampleMimeType = MimeTypes.APPLICATION_CEA608
-                        accessibilityChannel = instreamId.substring(2).toInt()
+                        // Audit-16 #4: toIntOrNull — an
+                        // INSTREAM-ID with 20 digits matched
+                        // the regex and threw a raw
+                        // NumberFormatException out of parse().
+                        accessibilityChannel = instreamId.substring(2).toIntOrNull() ?: 0
                     } else  /* starts with SERVICE */ {
                         sampleMimeType = MimeTypes.APPLICATION_CEA708
-                        accessibilityChannel = instreamId.substring(7).toInt()
+                        accessibilityChannel = instreamId.substring(7).toIntOrNull() ?: 0
                     }
                     muxedCaptionFormats.add(
                         formatBuilder.copy(
