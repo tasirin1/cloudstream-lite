@@ -1521,8 +1521,26 @@ class ResultViewModel2 : ViewModel() {
 
                     seasons.keys.forEach { currentSeason ->
                         var episodeIds = seasons[currentSeason] ?: emptyArray()
-                        if (currentSeason == clickSeason) episodeIds =
-                            episodeIds.sliceArray(0 until clickEpisode)
+                        if (currentSeason == clickSeason) {
+                            // Audit-11 #3: clickEpisode is the
+                            // provider's episode NUMBER, not a
+                            // position in this array. Slicing by
+                            // it threw (silently, via ioSafe) on
+                            // absolute/gapped numbering — nothing
+                            // got marked at all — and missed the
+                            // clicked episode on 0-based
+                            // numbering. Cut by the clicked
+                            // episode's own position instead; the
+                            // numeric cut (bounds-coerced) remains
+                            // only as a fallback for when the id
+                            // is not in the filtered list.
+                            val clickIndex = episodeIds.indexOf(click.data.id.toString())
+                            episodeIds = if (clickIndex >= 0) {
+                                episodeIds.sliceArray(0..clickIndex)
+                            } else {
+                                episodeIds.sliceArray(0 until minOf(clickEpisode, episodeIds.size))
+                            }
+                        }
                         markEpisodes(editor, episodeIds, watchState)
                     }
                     editor.apply()
