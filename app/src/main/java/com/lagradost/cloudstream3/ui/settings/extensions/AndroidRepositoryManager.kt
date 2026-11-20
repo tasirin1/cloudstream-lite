@@ -141,7 +141,14 @@ object AndroidRepositoryManager : RepositoryManager {
                             repositoryUrl = url,
                             pluginUrl = plugin.url,
                             internalName = plugin.internalName,
-                            digest = DigestPair.parse(plugin.fileHash)
+                            digest = plugin.fileHash?.let { hash ->
+                                // Audit-3 #2: a hash the repo DID
+                                // provide but we cannot parse must
+                                // refuse the download, not silently
+                                // degrade to "no digest".
+                                DigestPair.parse(hash)
+                                    ?: throw ErrorLoadingException("Unparseable fileHash for plugin ${plugin.internalName}")
+                            }
                         ),
                         status = PluginStatus.Idle,
                         downloadLocation = if (file.exists()) {

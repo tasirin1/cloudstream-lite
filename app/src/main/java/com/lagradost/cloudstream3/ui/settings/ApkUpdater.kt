@@ -164,6 +164,13 @@ object ApkUpdater : AppUpdater {
             }
         }
 
+        // Audit-3 #2: a digest was provided but its algorithm is
+        // unknown to MessageDigest -> fail loudly instead of
+        // transferring the file with no verification at all.
+        if (digest != null && md == null) {
+            throw DigestException("Unsupported digest algorithm: ${digest.algorithm}")
+        }
+
         val context = currentCoroutineContext()
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         var read: Int
