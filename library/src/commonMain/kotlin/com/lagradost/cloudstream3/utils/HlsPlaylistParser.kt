@@ -1192,7 +1192,7 @@ object HlsPlaylistParser {
             return SchemeData(
                 uuid = C.WIDEVINE_UUID,
                 mimeType = MimeTypes.VIDEO_MP4,
-                data = if (commaIndex == -1) null
+                data = if (commaIndex == -1) ByteArray(0)
                 else base64DecodeArray(urlString.substring(commaIndex))
             )
         } else if (KEYFORMAT_WIDEVINE_PSSH_JSON == keyFormat) {
