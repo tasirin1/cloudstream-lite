@@ -70,13 +70,18 @@
         android:required="false" />
 
     <!-- Without the large heap Exoplayer buffering gets reset due to OOM. -->
+    <!-- Audit-4 #33: allowBackup was true with EMPTY rule files,
+         which under the legacy rules format means "back up
+         everything" (preferences incl. account data) to cloud /
+         adb. The app has its own in-app backup (BackupUtils) and
+         its KeyStore-encrypted tokens cannot survive a cross-device
+         restore anyway, so platform backup is disabled outright
+         and the empty rule files are deleted. -->
     <application
         android:name=".CloudStreamApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:appCategory="video"
         android:banner="@mipmap/ic_banner"
-        android:fullBackupContent="@xml/backup_descriptor"
-        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
@@ -87,9 +92,10 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="${target_sdk_version}">
 
-        <profileable
-            android:shell="true"
-            tools:targetApi="q" />
+        <!-- Audit-4 #34: the <profileable android:shell="true">
+             element is gone — it let any adb shell user profile
+             the app and inspect its data; a production build has
+             no use for it. -->
 
         <activity
             android:name=".ui.player.DownloadedPlayerActivity"
