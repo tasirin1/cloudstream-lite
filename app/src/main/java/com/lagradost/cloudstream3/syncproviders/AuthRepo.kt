@@ -82,7 +82,14 @@ abstract class AuthRepo(open val api: AuthAPI) {
         // token invalidation (network) stays outside the lock.
         val oldAccounts = synchronized(AccountManager.accountsWriteLock) {
             val currentAccounts = AccountManager.accounts(idPrefix)
-            val (newAccounts, removed) = currentAccounts.partition { it.user.id != from.id }
+            // Audit-13 #26: match on (id, name) — several
+            // providers derive user.id from String.hashCode()
+            // (OpenSubtitles, Subdl, AnimeSkip), whose 32-bit
+            // collisions made logout remove the OTHER account
+            // too. Same account = same id AND same name.
+            val (newAccounts, removed) = currentAccounts.partition {
+                it.user.id != from.id || it.user.name != from.name
+            }
             if (newAccounts.size < currentAccounts.size) {
                 AccountManager.updateAccounts(idPrefix, newAccounts.toTypedArray())
                 AccountManager.updateAccountsId(idPrefix, 0)
@@ -106,7 +113,10 @@ abstract class AuthRepo(open val api: AuthAPI) {
         synchronized(AccountManager.accountsWriteLock) {
             val currentAccounts = AccountManager.accounts(idPrefix)
             val newAccounts = currentAccounts.map {
-                if (it.user.id == newAuth.user.id) {
+                // Audit-13 #26: (id, name), see logout above —
+                // an id-only match let a token refresh overwrite
+                // a different account whose hashCode collided.
+                if (it.user.id == newAuth.user.id && it.user.name == newAuth.user.name) {
                     newAuth
                 } else {
                     it
@@ -162,7 +172,12 @@ abstract class AuthRepo(open val api: AuthAPI) {
         // be atomic against logout/refresh writes.
         synchronized(AccountManager.accountsWriteLock) {
             val currentAccounts = AccountManager.accounts(idPrefix)
-            if (currentAccounts.any { it.user.id == newAccount.user.id }) {
+            // Audit-13 #26: (id, name), see logout above — an
+            // id-only check refused a second, DIFFERENT account
+            // as a "duplicate" whenever the hashCodes collided.
+            if (currentAccounts.any {
+                    it.user.id == newAccount.user.id && it.user.name == newAccount.user.name
+                }) {
                 throw ErrorLoadingException("Already logged into this account")
             }
 
