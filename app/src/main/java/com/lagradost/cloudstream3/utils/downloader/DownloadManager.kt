@@ -730,6 +730,12 @@ object VideoDownloadManager {
             if (id != null) {
                 downloadEvent -= downloadEventListener
                 downloadStatus -= id
+                // Audit-13 #18: evict the file-info cache too —
+                // an entry cached just before this download ran
+                // (partial size) became cacheable again the
+                // moment downloadStatus dropped the id, and was
+                // served as current for the rest of its TTL.
+                fileInfoCache.remove(id)
             }
             stopListener = null
         }
