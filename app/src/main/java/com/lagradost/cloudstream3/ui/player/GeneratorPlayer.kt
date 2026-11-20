@@ -150,6 +150,16 @@ class GeneratorPlayer : FullScreenPlayer() {
         const val STOP_ACTION = "stopcs3"
 
         private val generators = ConcurrentHashMap<String, VideoGenerator<*>>()
+
+        // Audit-5 #6: the map used to grow forever — one full
+        // generator graph (with its whole episode list) leaked per
+        // player session for the process lifetime. Entries are
+        // only ever read by the fragment being created, and a
+        // recreated fragment re-reads its own (recent) uuid, so
+        // retaining the few most recent entries is enough.
+        private val generatorOrder = ArrayDeque<String>()
+        private const val MAX_RETAINED_GENERATORS = 3
+
         fun newInstance(
             generator: VideoGenerator<*>,
             index: Int,
@@ -158,6 +168,12 @@ class GeneratorPlayer : FullScreenPlayer() {
             Log.i(TAG, "newInstance = $syncData")
             val uuid = UUID.randomUUID().toString()
             generators[uuid] = generator
+            synchronized(generatorOrder) {
+                generatorOrder.addLast(uuid)
+                while (generatorOrder.size > MAX_RETAINED_GENERATORS) {
+                    generators.remove(generatorOrder.removeFirst())
+                }
+            }
             return Bundle().apply {
                 putString("uuid", uuid)
                 putInt("index", index)
