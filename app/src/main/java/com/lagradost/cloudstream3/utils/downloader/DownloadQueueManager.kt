@@ -82,6 +82,18 @@ object DownloadQueueManager {
                         getDownloadResumePackage(context, id)?.toWrapper()
                             ?: getDownloadQueuePackage(context, id)
                     }
+                    // Audit-15 #2: also skip wrappers whose
+                    // episode already has a live instance —
+                    // currentDownloads only covers downloads
+                    // past the claim, so an episode still in
+                    // its link-loading phase was merged back
+                    // in as a duplicate. When popped, the
+                    // duplicate hit the alreadyDownloading
+                    // early return without ever setting a
+                    // terminal flag: a zombie holding a
+                    // concurrency slot forever. add() below
+                    // already guards with the same check.
+                    .filterNot { it.isCurrentlyDownloading() }
 
             val newQueue = _queue.updateAndGet { localQueue ->
                 // Add resume packages to the first part of the queue, since they may have been removed from the queue when they started
