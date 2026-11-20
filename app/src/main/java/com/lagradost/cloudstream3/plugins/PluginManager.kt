@@ -1263,6 +1263,16 @@ object PluginManager {
                 setPluginData(data)
                 true
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Audit-14 #34: cancellation is not a download
+            // failure — the outer catch turned it into a plain
+            // "false", so a cancelled update run kept going
+            // through the rest of the queue. Roll back the
+            // parked file like the failure path, then rethrow.
+            if (parked) {
+                rollbackLegacyPluginUpdate(activity, file, backupFile, previousAnchor, data)
+            }
+            throw e
         } catch (e: Exception) {
             if (parked) {
                 rollbackLegacyPluginUpdate(activity, file, backupFile, previousAnchor, data)
