@@ -576,7 +576,12 @@ class UpdatedDefaultExtractorsFactory : ExtractorsFactory {
         private val extensionLoaded = AtomicBoolean(false)
 
         @GuardedBy("extensionLoaded")
-        private val extractorConstructor: Constructor<out Extractor?>? = null
+        // Audit-14 #52: this was a val null that was never
+        // assigned — the success path below returned the
+        // constructor without caching it or setting
+        // extensionLoaded, so every createExtractors() call
+        // re-ran the Class.forName + getConstructor reflection.
+        private var extractorConstructor: Constructor<out Extractor?>? = null
 
         fun getExtractor(vararg constructorParams: Any?): Extractor? {
             val extractorConstructor: Constructor<out Extractor?> = maybeLoadExtractorConstructor()
@@ -594,7 +599,10 @@ class UpdatedDefaultExtractorsFactory : ExtractorsFactory {
                     return extractorConstructor
                 }
                 try {
-                    return constructorSupplier.constructor
+                    val loaded = constructorSupplier.constructor
+                    extractorConstructor = loaded
+                    extensionLoaded.set(true)
+                    return loaded
                 } catch (e: ClassNotFoundException) {
                     // Expected if the app was built without the extension.
                 } catch (e: Exception) {
