@@ -2321,7 +2321,18 @@ class GeneratorPlayer : FullScreenPlayer() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt("index", viewModel.episodeIndex)
+        // Audit-7 #13: viewModel is only assigned in
+        // onBindingCreated. A fragment restored after process
+        // death can sit in the backstack with its view never
+        // created in this process, yet still receive
+        // onSaveInstanceState — touching the lateinit then
+        // crashed the whole app. Fall back to the launch index.
+        val index = if (::viewModel.isInitialized) {
+            viewModel.episodeIndex
+        } else {
+            arguments?.getInt("index") ?: 0
+        }
+        outState.putInt("index", index)
         super.onSaveInstanceState(outState)
     }
 
