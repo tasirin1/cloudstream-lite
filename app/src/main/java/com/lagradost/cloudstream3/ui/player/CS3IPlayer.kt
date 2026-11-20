@@ -2046,7 +2046,7 @@ class CS3IPlayer : IPlayer {
     // sent with the handle discarded, living for the whole
     // player lifetime and re-firing on every seek pass.
     private val listeningPercentageMessages =
-        Collections.synchronizedList(mutableListOf<PlayerMessage>())
+        mutableListOf<androidx.media3.exoplayer.PlayerMessage>()
     private val timestampMessages =
         mutableListOf<androidx.media3.exoplayer.PlayerMessage>()
 
