@@ -168,7 +168,10 @@ class Videa : ExtractorApi() {
             }
 
             // Extract hash for this source
-            val hashMatch = """<hash_value_$sourceName>([^<]+)<""".toRegex().find(xml)
+            // Audit-5 #46: sourceName comes from the remote page
+            // and was interpolated into the regex unescaped —
+            // metacharacters in it broke the pattern or threw.
+            val hashMatch = """<hash_value_${Regex.escape(sourceName)}>([^<]+)<""".toRegex().find(xml)
 
             hashMatch?.let { match ->
                 val hash = match.groupValues[1]
@@ -190,6 +193,10 @@ class Videa : ExtractorApi() {
     }
 
     private fun rc4DecryptBytes(encryptedBytes: ByteArray, key: String): String {
+        // Audit-5 #45: an empty key made the KSA loop divide by
+        // keyBytes.size == 0. Bail out with an empty result,
+        // which callers already treat as a failed extraction.
+        if (key.isEmpty()) return ""
         // Check if data is Base64 encoded
         val isBase64 = encryptedBytes.all { byte ->
             val char = byte.toInt() and 0xFF
