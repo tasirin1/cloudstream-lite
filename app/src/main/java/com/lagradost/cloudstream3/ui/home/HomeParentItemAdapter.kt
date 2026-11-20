@@ -105,7 +105,15 @@ open class ParentItemAdapter(
             // name, so derive the child id from the name instead,
             // and do not reuse an adapter whose namespace belongs
             // to a different list.
-            val childId = id + item.list.name.hashCode() + 100
+            // Audit-6 #37: CRC32 of the name instead of
+            // String.hashCode() — the polynomial hash collides
+            // trivially ("Aa"/"BB" both hash to 2112), which made
+            // one shelf reuse another's adapter and scroll state.
+            // CRC32 distributes uniformly, so an accidental
+            // collision among a screenful of shelves is negligible.
+            val childId = id + 100 + java.util.zip.CRC32().apply {
+                update(item.list.name.toByteArray(Charsets.UTF_8))
+            }.value.toInt()
             val currentAdapter = (homeChildRecyclerview.adapter as? HomeChildItemAdapter)
                 ?.takeIf { it.id == childId }
             if (currentAdapter == null) {
