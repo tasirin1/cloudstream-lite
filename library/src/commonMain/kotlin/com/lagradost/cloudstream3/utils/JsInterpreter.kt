@@ -292,20 +292,45 @@ private class Lexer(private val src: String) {
         if (quote == '`') {
             // template literal. We flatten it to a plain string (no interpolation yet)
             while (pos < src.length && src[pos] != '`') {
-                if (src[pos] == '\\' && pos + 1 < src.length) {
-                    sb.append(unescape(src[++pos])); pos++
-                } else sb.append(src[pos++])
+                if (src[pos] == '\\') appendEscape(sb)
+                else sb.append(src[pos++])
             }
             if (pos < src.length) pos++ // consume closing `
         } else {
             while (pos < src.length && src[pos] != quote) {
-                if (src[pos] == '\\' && pos + 1 < src.length) {
-                    sb.append(unescape(src[++pos])); pos++
-                } else sb.append(src[pos++])
+                if (src[pos] == '\\') appendEscape(sb)
+                else sb.append(src[pos++])
             }
             if (pos < src.length) pos++
         }
         tokens.add(Token(TT.STRING, sb.toString(), start))
+    }
+
+    // Audit-18 #4: \xHH and \uHHHH were never decoded —
+    // unescape() only maps single letters, so "\x68\x74"
+    // came out as "x68x74" instead of "ht". Hex/unicode
+    // escapes are a standard deobfuscation idiom.
+    private fun appendEscape(sb: StringBuilder) {
+        // src[pos] is the backslash
+        if (pos + 1 >= src.length) {
+            sb.append('\\'); pos++; return
+        }
+        when (val c = src[pos + 1]) {
+            'x' -> {
+                val hex = src.substring(pos + 2, minOf(pos + 4, src.length))
+                val v = if (hex.length == 2) hex.toIntOrNull(16) else null
+                if (v != null) { sb.append(v.toChar()); pos += 4 }
+                else { sb.append('x'); pos += 2 }
+            }
+            'u' -> {
+                val hex = src.substring(pos + 2, minOf(pos + 6, src.length))
+                val v = if (hex.length == 4) hex.toIntOrNull(16) else null
+                if (v != null) { sb.append(v.toChar()); pos += 6 }
+                else { sb.append('u'); pos += 2 }
+            }
+            '0' -> { sb.append('\u0000'); pos += 2 }
+            else -> { sb.append(unescape(c)); pos += 2 }
+        }
     }
 
     private fun unescape(c: Char): Char = when (c) {
