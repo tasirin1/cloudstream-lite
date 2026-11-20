@@ -14,6 +14,11 @@ import kotlinx.serialization.Serializable
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""/e/([^/]*)""")
+
+
 class Streamlare : Slmaxed() {
     override val mainUrl = "https://streamlare.com/"
 }
@@ -24,7 +29,7 @@ open class Slmaxed : ExtractorApi() {
     override val requiresReferer = true
 
     // https://slmaxed.com/e/oLvgezw3LjPzbp8E -> oLvgezw3LjPzbp8E
-    val embedRegex = Regex("""/e/([^/]*)""")
+    val embedRegex = hoistedRegex1
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         // Audit-3 #48: a non-embed URL used to NPE on the !! here.
         val id = embedRegex.find(url)?.groupValues?.get(1) ?: return null

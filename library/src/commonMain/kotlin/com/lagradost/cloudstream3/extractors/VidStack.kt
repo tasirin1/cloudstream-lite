@@ -15,6 +15,13 @@ import dev.whyoleg.cryptography.DelicateCryptographyApi
 import dev.whyoleg.cryptography.algorithms.AES
 import io.ktor.http.Url
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("\"source\":\"(.*?)\"")
+private val hoistedRegex2 = Regex("\"([^\"]+)\":\\s*\"([^\"]+)\"")
+private val hoistedRegex3 = Regex("\"subtitle\":\\{(.*?)\\}")
+
+
 class Server1uns : VidStack() {
     override var name = "Vidstack"
     override var mainUrl = "https://server1.uns.bio"
@@ -50,11 +57,11 @@ open class VidStack : ExtractorApi() {
             }
         } ?: throw Exception("Failed to decrypt with all IVs")
 
-        val m3u8 = Regex("\"source\":\"(.*?)\"").find(decryptedText)
+        val m3u8 = hoistedRegex1.find(decryptedText)
             ?.groupValues?.get(1)
             ?.replace("\\/", "/") ?: ""
-        val subtitlePattern = Regex("\"([^\"]+)\":\\s*\"([^\"]+)\"")
-        val subtitleSection = Regex("\"subtitle\":\\{(.*?)\\}").find(decryptedText)?.groupValues?.get(1)
+        val subtitlePattern = hoistedRegex2
+        val subtitleSection = hoistedRegex3.find(decryptedText)?.groupValues?.get(1)
 
         subtitleSection?.let { section ->
             subtitlePattern.findAll(section).forEach { match ->

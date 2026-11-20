@@ -13,6 +13,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("/(\\d+p)\\.")
+
+
 open class GUpload: ExtractorApi() {
     override val name: String = "GUpload"
     override val mainUrl: String = "https://gupload.xyz"
@@ -35,7 +40,7 @@ open class GUpload: ExtractorApi() {
                 name = name,
                 url = playerConfig.videoUrl,
             ) {
-                Regex("/(\\d+p)\\.").find(playerConfig.videoUrl)?.groupValues?.get(1)?.let {
+                hoistedRegex1.find(playerConfig.videoUrl)?.groupValues?.get(1)?.let {
                     quality = getQualityFromName(it)
                 }
             }

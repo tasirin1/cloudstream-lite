@@ -9,6 +9,11 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""\[(.*?)\](.*)""")
+
+
 open class SecvideoOnline : ExtractorApi() {
     override val name: String = "Secvideo1"
     override val mainUrl: String = "https://secvideo1.online"
@@ -16,7 +21,7 @@ open class SecvideoOnline : ExtractorApi() {
 
     private val fileListRegex = Regex("""file:\s*"(.*)\"""")
     private val subtitleListRegex = Regex("""subtitle:\s*"(.*)\"""")
-    private val labelSourceRegex = Regex("""\[(.*?)\](.*)""")
+    private val labelSourceRegex = hoistedRegex1
 
     override suspend fun getUrl(
         url: String,

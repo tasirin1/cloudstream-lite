@@ -3,6 +3,12 @@ package com.lagradost.cloudstream3.extractors
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""video .*src="(.*)""""")
+private val hoistedRegex2 = Regex("src\":\"(.*?)\"")
+
+
 class Evoload1 : Evoload() {
     override var mainUrl = "https://evoload.io"
 }
@@ -10,7 +16,7 @@ class Evoload1 : Evoload() {
 open class Evoload : ExtractorApi() {
     override val name: String = "Evoload"
     override val mainUrl: String = "https://www.evoload.io"
-    //private val srcRegex = Regex("""video .*src="(.*)""""")  // would be possible to use the parse and find src attribute
+    //private val srcRegex = hoistedRegex1  // would be possible to use the parse and find src attribute
     override val requiresReferer = true
 
 
@@ -26,7 +32,7 @@ open class Evoload : ExtractorApi() {
         if (captchaPass.isEmpty()) return listOf()
         val payload = mapOf("code" to id, "csrv_token" to csrv_token, "pass" to captchaPass)
         val r = app.post("https://evoload.io/SecurePlayer", data=(payload)).text
-        val link = Regex("src\":\"(.*?)\"").find(r)?.destructured?.component1() ?: return listOf()
+        val link = hoistedRegex2.find(r)?.destructured?.component1() ?: return listOf()
         return listOf(
             newExtractorLink(
                 name,

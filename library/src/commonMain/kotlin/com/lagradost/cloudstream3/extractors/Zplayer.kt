@@ -7,6 +7,11 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.getAndUnpack
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("((https:|http:)\\/\\/.*\\.m3u8)")
+
+
 class Zplayer: ZplayerV2() {
     override var name: String = "Zplayer"
     override var mainUrl: String = "https://zplayer.live"
@@ -33,7 +38,7 @@ open class ZplayerV2 : ExtractorApi() {
         doc.select("script").map { script ->
             if (script.data().contains("eval(function(p,a,c,k,e,d)")) {
                 val testdata = getAndUnpack(script.data())
-                val m3u8regex = Regex("((https:|http:)\\/\\/.*\\.m3u8)")
+                val m3u8regex = hoistedRegex1
                 m3u8regex.findAll(testdata).map {
                     it.value
                 }.toList().amap { urlm3u8 ->

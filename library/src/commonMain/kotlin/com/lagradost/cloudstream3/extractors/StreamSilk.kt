@@ -5,11 +5,16 @@ import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.*
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("var urlPlay =\\s*\"(.*?m3u8.*?)\"")
+
+
 open class StreamSilk : ExtractorApi() {
     override val name = "StreamSilk"
     override val mainUrl = "https://streamsilk.com"
     override val requiresReferer = true
-    private val srcRegex = Regex("var urlPlay =\\s*\"(.*?m3u8.*?)\"")
+    private val srcRegex = hoistedRegex1
 
     override suspend fun getUrl(
         url: String,

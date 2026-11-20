@@ -14,10 +14,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.collections.orEmpty
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex(""""?sources"?:\s*(\[.*?\])""")
+private val hoistedRegex2 = Regex(""""?tracks"?:\s*(\[.*?\])""")
+private val hoistedRegex3 = Regex("""[:=]\s*\"([^\"\s]+(\.m3u8|master\.txt)[^\"\s]*)""")
+
+
 object JwPlayerHelper {
-    private val sourceRegex = Regex(""""?sources"?:\s*(\[.*?\])""")
-    private val tracksRegex = Regex(""""?tracks"?:\s*(\[.*?\])""")
-    private val m3u8Regex = Regex("""[:=]\s*\"([^\"\s]+(\.m3u8|master\.txt)[^\"\s]*)""")
+    private val sourceRegex = hoistedRegex1
+    private val tracksRegex = hoistedRegex2
+    private val m3u8Regex = hoistedRegex3
 
     /**
      * Get stream links the "sources" attribute inside a JWPlayer script, e.g.

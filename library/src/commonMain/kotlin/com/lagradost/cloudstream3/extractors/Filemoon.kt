@@ -10,6 +10,12 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.JsUnpacker
 import com.lagradost.cloudstream3.utils.M3u8Helper
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""(m3u8|master\.txt)""")
+private val hoistedRegex2 = Regex("""(m3u8|master\.txt)""")
+
+
 
 class FileMoon : FilemoonV2() {
     override var mainUrl = "https://filemoon.to"
@@ -91,8 +97,8 @@ open class FilemoonV2 : ExtractorApi() {
         if (!linkFound) {
             // Last-resort fallback using WebView interception
             val resolver = WebViewResolver(
-                interceptUrl = Regex("""(m3u8|master\.txt)"""),
-                additionalUrls = listOf(Regex("""(m3u8|master\.txt)""")),
+                interceptUrl = hoistedRegex1,
+                additionalUrls = listOf(hoistedRegex2),
                 useOkhttp = false,
                 timeout = 15_000L
             )

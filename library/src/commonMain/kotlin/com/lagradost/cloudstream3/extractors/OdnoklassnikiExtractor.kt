@@ -16,6 +16,12 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("\\\\u([0-9A-Fa-f]{4})")
+private val hoistedRegex2 = Regex(""""videos":(\[[^]]*])""")
+
+
 open class Odnoklassniki : ExtractorApi() {
     override val name = "Odnoklassniki"
     override val mainUrl = "https://odnoklassniki.ru"
@@ -39,11 +45,11 @@ open class Odnoklassniki : ExtractorApi() {
 
         val embedUrl = url.replace("/video/", "/videoembed/")
         val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"").replace("\\\\", "\\")
-            .replace(Regex("\\\\u([0-9A-Fa-f]{4})")) { matchResult ->
+            .replace(hoistedRegex1) { matchResult ->
                 matchResult.groupValues[1].toInt(16).toChar().toString()
             }
 
-        val videosStr = Regex(""""videos":(\[[^]]*])""").find(videoReq)?.groupValues?.get(1) ?: throw ErrorLoadingException("Video not found")
+        val videosStr = hoistedRegex2.find(videoReq)?.groupValues?.get(1) ?: throw ErrorLoadingException("Video not found")
         val videos = tryParseJson<List<OkRuVideo>>(videosStr) ?: throw ErrorLoadingException("Video not found")
         for (video in videos) {
             val videoUrl = if (video.url.startsWith("//")) "https:${video.url}" else video.url

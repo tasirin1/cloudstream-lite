@@ -11,6 +11,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.random.Random
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("(embed-[a-zA-Z\\d]{0,8}[a-zA-Z\\d_-]+|/e/[a-zA-Z\\d]{0,8}[a-zA-Z\\d_-]+)")
+private val hoistedRegex2 = Regex("(embed-|/e/)")
+
+
 class Sblona : StreamSB() {
     override var name = "Sblona"
     override var mainUrl = "https://sblona.com"
@@ -146,9 +152,9 @@ open class StreamSB : ExtractorApi() {
         callback: (ExtractorLink) -> Unit,
     ) {
         val regexId =
-            Regex("(embed-[a-zA-Z\\d]{0,8}[a-zA-Z\\d_-]+|/e/[a-zA-Z\\d]{0,8}[a-zA-Z\\d_-]+)")
+            hoistedRegex1
         val id = regexId.findAll(url).map {
-            it.value.replace(Regex("(embed-|/e/)"), "")
+            it.value.replace(hoistedRegex2, "")
         }.first()
         val master = "$mainUrl/375664356a494546326c4b797c7c6e756577776778623171737/${encodeId(id)}"
         val headers = mapOf("watchsb" to "sbstream")

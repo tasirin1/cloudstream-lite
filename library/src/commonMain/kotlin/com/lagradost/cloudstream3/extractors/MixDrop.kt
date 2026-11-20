@@ -3,6 +3,11 @@ package com.lagradost.cloudstream3.extractors
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.*
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""wurl.*?=.*?"(.*?)";""")
+
+
 class MixDropPs : MixDrop() {
     override var mainUrl = "https://mixdrop.ps"
 }
@@ -37,7 +42,7 @@ class MixDropTo : MixDrop(){
 open class MixDrop : ExtractorApi() {
     override var name = "MixDrop"
     override var mainUrl = "https://mixdrop.co"
-    private val srcRegex = Regex("""wurl.*?=.*?"(.*?)";""")
+    private val srcRegex = hoistedRegex1
     override val requiresReferer = false
 
     override fun getExtractorUrl(id: String): String {

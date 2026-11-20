@@ -7,6 +7,11 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("src[\"|'],\\s[\"|'](\\S+)[\"|']\\)")
+
+
 class MoviehabNet : Moviehab() {
     override var mainUrl = "https://play.moviehab.asia"
 }
@@ -32,7 +37,7 @@ open class Moviehab : ExtractorApi() {
                 url
             ).forEach(callback)
 
-            Regex("src[\"|'],\\s[\"|'](\\S+)[\"|']\\)").find(res.text)?.groupValues?.get(1).let {sub ->
+            hoistedRegex1.find(res.text)?.groupValues?.get(1).let {sub ->
                 subtitleCallback.invoke(
                     newSubtitleFile(
                         it.select("track").attr("label"),

@@ -7,6 +7,13 @@ import com.lagradost.cloudstream3.utils.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("/(?:d|download|player|f|file)/(\\w+)")
+private val hoistedRegex2 = Regex("""service\s*=\s*['"]([^'"]+)""")
+private val hoistedRegex3 = Regex("""['"](\S+check&id\S+?)['"]""")
+
+
 open class Acefile : ExtractorApi() {
     override val name = "Acefile"
     override val mainUrl = "https://acefile.co"
@@ -18,10 +25,10 @@ open class Acefile : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val id = "/(?:d|download|player|f|file)/(\\w+)".toRegex().find(url)?.groupValues?.get(1)
+        val id = hoistedRegex1.find(url)?.groupValues?.get(1)
         val script = getAndUnpack(app.get("$mainUrl/player/${id ?: return}").text)
-        val service = """service\s*=\s*['"]([^'"]+)""".toRegex().find(script)?.groupValues?.get(1)
-        val serverUrl = """['"](\S+check&id\S+?)['"]""".toRegex().find(script)?.groupValues?.get(1)
+        val service = hoistedRegex2.find(script)?.groupValues?.get(1)
+        val serverUrl = hoistedRegex3.find(script)?.groupValues?.get(1)
             ?.replace("\"+service+\"", service ?: return)
 
         val video = app.get(serverUrl ?: return, referer = "$mainUrl/").parsedSafe<Source>()?.data

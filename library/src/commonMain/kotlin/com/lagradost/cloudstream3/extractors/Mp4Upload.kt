@@ -7,6 +7,11 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""mp4upload\.com/(embed-|)([A-Za-z0-9]*)""")
+
+
 open class Mp4Upload : ExtractorApi() {
     override var name = "Mp4Upload"
     override var mainUrl = "https://www.mp4upload.com"
@@ -14,7 +19,7 @@ open class Mp4Upload : ExtractorApi() {
     private val srcRegex2 = Regex("""player\.src\([\w\W]*src: "(.*?)"""")
 
     override val requiresReferer = true
-    private val idMatch = Regex("""mp4upload\.com/(embed-|)([A-Za-z0-9]*)""")
+    private val idMatch = hoistedRegex1
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val realUrl = idMatch.find(url)?.groupValues?.get(2)?.let { id ->
             "$mainUrl/embed-$id.html"

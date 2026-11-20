@@ -14,6 +14,11 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""window.location.href\s*=\s*'([^']+)';""")
+
+
 class Tubeless : Voe() {
     override val name = "Tubeless"
     override val mainUrl = "https://tubelessceliolymph.com"
@@ -55,7 +60,7 @@ open class Voe : ExtractorApi() {
     override val name = "Voe"
     override val mainUrl = "https://voe.sx"
     override val requiresReferer = true
-    private val redirectRegex = Regex("""window.location.href\s*=\s*'([^']+)';""")
+    private val redirectRegex = hoistedRegex1
 
     override suspend fun getUrl(
         url: String,

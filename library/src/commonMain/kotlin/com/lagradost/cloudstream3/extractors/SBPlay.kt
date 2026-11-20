@@ -10,6 +10,11 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getPostForm
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("download_video\\('(.*?)','(.*?)','(.*?)'\\)")
+
+
 //class SBPlay1 : SBPlay() {
 //    override var mainUrl = "https://sbplay1.com"
 //}
@@ -34,7 +39,7 @@ open class SBPlay : ExtractorApi() {
             val onDownload = item.attr("onclick")
             val name = "${this.name} - ${item.text()}"
             try {
-                Regex("download_video\\('(.*?)','(.*?)','(.*?)'\\)").matchEntire(onDownload)?.let {
+                hoistedRegex1.matchEntire(onDownload)?.let {
                     val id = it.groupValues[1]
                     val mode = it.groupValues[2]
                     val hash = it.groupValues[3]

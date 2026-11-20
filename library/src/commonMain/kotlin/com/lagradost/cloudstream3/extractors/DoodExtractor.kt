@@ -8,6 +8,12 @@ import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import io.ktor.http.Url
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("/pass_md5/[^']*")
+private val hoistedRegex2 = Regex("\\d{3,4}[pP]")
+
+
 class Doodspro : DoodLaExtractor() {
     override var mainUrl = "https://doods.pro"
 }
@@ -108,9 +114,9 @@ open class DoodLaExtractor : ExtractorApi() {
         val req = app.get(embedUrl)
         val host = getBaseUrl(req.url)
         val response0 = req.text
-        val md5 = host + (Regex("/pass_md5/[^']*").find(response0)?.value ?: return)
+        val md5 = host + (hoistedRegex1.find(response0)?.value ?: return)
         val trueUrl = app.get(md5, referer = req.url).text + createHashTable() + "?token=" + md5.substringAfterLast("/")
-        val quality = Regex("\\d{3,4}[pP]")
+        val quality = hoistedRegex2
             .find(response0.substringAfter("<title>").substringBefore("</title>"))
             ?.groupValues
             ?.getOrNull(0)

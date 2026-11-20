@@ -14,6 +14,11 @@ import io.ktor.http.decodeURLPart
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("^[kx][a-zA-Z0-9]+$")
+
+
 class Geodailymotion : Dailymotion() {
     override val name = "GeoDailymotion"
     override val mainUrl = "https://geo.dailymotion.com"
@@ -25,7 +30,7 @@ open class Dailymotion : ExtractorApi() {
     override val requiresReferer = false
     private val baseUrl = "https://www.dailymotion.com"
 
-    private val videoIdRegex = "^[kx][a-zA-Z0-9]+$".toRegex()
+    private val videoIdRegex = hoistedRegex1
 
     override suspend fun getUrl(
         url: String,

@@ -6,6 +6,11 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""master\.m3u8""")
+
+
 
 open class GenericM3U8 : ExtractorApi() {
     override var name = "Upstream"
@@ -15,7 +20,7 @@ open class GenericM3U8 : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
         val response = app.get(
             url, interceptor = WebViewResolver(
-                Regex("""master\.m3u8""")
+                hoistedRegex1
             )
         )
         val sources = mutableListOf<ExtractorLink>()

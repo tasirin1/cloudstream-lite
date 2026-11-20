@@ -9,6 +9,12 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.getPacked
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("emb.html\\?(.*)=")
+private val hoistedRegex2 = Regex("(emb.html.*fastream)")
+
+
 open class Fastream : ExtractorApi() {
     override var mainUrl = "https://fastream.to"
     override var name = "Fastream"
@@ -20,8 +26,8 @@ open class Fastream : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val idregex = Regex("emb.html\\?(.*)=")
-        val response = if (url.contains(Regex("(emb.html.*fastream)"))) {
+        val idregex = hoistedRegex1
+        val response = if (url.contains(hoistedRegex2)) {
             val id = idregex.find(url)?.destructured?.component1() ?: ""
             app.post(
                 "$mainUrl/dl", allowRedirects = false,

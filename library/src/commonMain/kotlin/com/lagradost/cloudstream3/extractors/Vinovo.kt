@@ -11,6 +11,11 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""\.(\d+)p\.""")
+
+
 class VinovoSi : VinovoTo() {
     override val name = "VinovoSi"
     override val mainUrl = "https://vinovo.si"
@@ -53,7 +58,7 @@ open class VinovoTo : ExtractorApi() {
         callback.invoke(
             newExtractorLink(source = name, name = name, url = fileUrl) {
                 val dataTitle = doc.selectFirst("video")?.attr("data-title").orEmpty()
-                quality = Regex("""\.(\d+)p\.""").find(dataTitle)?.groupValues?.getOrNull(1)
+                quality = hoistedRegex1.find(dataTitle)?.groupValues?.getOrNull(1)
                     ?.toIntOrNull() ?: Qualities.Unknown.value
             }
         )

@@ -8,6 +8,11 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.httpsify
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("/(?:view|embed-video)/([\\da-zA-Z]+)")
+
+
 open class Krakenfiles : ExtractorApi() {
     override val name = "Krakenfiles"
     override val mainUrl = "https://krakenfiles.com"
@@ -19,7 +24,7 @@ open class Krakenfiles : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
-        val id = Regex("/(?:view|embed-video)/([\\da-zA-Z]+)").find(url)?.groupValues?.get(1)
+        val id = hoistedRegex1.find(url)?.groupValues?.get(1)
         val doc = app.get("$mainUrl/embed-video/$id").document
         val link = doc.selectFirst("source")?.attr("src")
 

@@ -10,6 +10,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""file\":\"([^\"]+)""")
+
+
 open class TRsTX : ExtractorApi() {
     override val name = "TRsTX"
     override val mainUrl = "https://trstx.org"
@@ -23,7 +28,7 @@ open class TRsTX : ExtractorApi() {
     ) {
         val extRef = referer ?: ""
         val videoReq = app.get(url, referer = extRef).text
-        val file = Regex("""file\":\"([^\"]+)""").find(videoReq)?.groupValues?.get(1) ?: throw ErrorLoadingException("File not found")
+        val file = hoistedRegex1.find(videoReq)?.groupValues?.get(1) ?: throw ErrorLoadingException("File not found")
         val postLink = "$mainUrl/" + file.replace("\\", "")
         val rawList = app.post(postLink, referer = extRef).parsedSafe<List<JsonElement>>() ?: throw ErrorLoadingException("Post link not found")
         val postJson: List<TrstxVideoData> = rawList.drop(1).map { item ->

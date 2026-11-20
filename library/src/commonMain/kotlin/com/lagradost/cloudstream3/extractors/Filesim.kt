@@ -7,6 +7,12 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.extractors.helper.JwPlayerHelper
 import com.lagradost.cloudstream3.network.WebViewResolver
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""(m3u8|master\.txt)""")
+private val hoistedRegex2 = Regex("""(m3u8|master\.txt)""")
+
+
 class Multimoviesshg : Filesim() {
     override var mainUrl = "https://multimoviesshg.com"
 }
@@ -84,8 +90,8 @@ open class Filesim : ExtractorApi() {
         if (!linkFound) {
             // Fallback using WebViewResolver
             val resolver = WebViewResolver(
-                interceptUrl = Regex("""(m3u8|master\.txt)"""),
-                additionalUrls = listOf(Regex("""(m3u8|master\.txt)""")),
+                interceptUrl = hoistedRegex1,
+                additionalUrls = listOf(hoistedRegex2),
                 useOkhttp = false,
                 timeout = 15_000L
             )

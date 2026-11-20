@@ -13,6 +13,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.round
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("/(?:\\?c=|d/)([\\da-zA-Z-]+)")
+private val hoistedRegex2 = Regex("""appdata\.wt\s*=\s*[\"']([^\"']+)[\"']""")
+
+
 open class Gofile : ExtractorApi() {
     override val name = "Gofile"
     override val mainUrl = "https://gofile.io"
@@ -25,13 +31,13 @@ open class Gofile : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val id = Regex("/(?:\\?c=|d/)([\\da-zA-Z-]+)").find(url)?.groupValues?.get(1) ?: return
+        val id = hoistedRegex1.find(url)?.groupValues?.get(1) ?: return
         val token = app.post(
             "$mainApi/accounts",
         ).parsedSafe<AccountResponse>()?.data?.token ?: return
 
         val globalRes = app.get("$mainUrl/dist/js/config.js").text
-        val wt = Regex("""appdata\.wt\s*=\s*[\"']([^\"']+)[\"']""").find(globalRes)?.groupValues?.get(1) ?: return
+        val wt = hoistedRegex2.find(globalRes)?.groupValues?.get(1) ?: return
         val headers = mapOf(
             "Authorization" to "Bearer $token",
             "X-Website-Token" to wt,

@@ -20,6 +20,11 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.jsoup.nodes.Document
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("id=([^&]+)")
+
+
 object GogoHelper {
 
     private val aesCbc = CryptographyProvider.Default.get(AES.CBC)
@@ -83,7 +88,7 @@ object GogoHelper {
         if ((iv == null || secretKey == null || secretDecryptKey == null) && !isUsingAdaptiveKeys)
             return@safeApiCall
 
-        val id = Regex("id=([^&]+)").find(iframeUrl)!!.value.removePrefix("id=")
+        val id = hoistedRegex1.find(iframeUrl)!!.value.removePrefix("id=")
 
         var document: Document? = iframeDocument
         val foundIv = iv ?: (document ?: app.get(iframeUrl).document.also { document = it })

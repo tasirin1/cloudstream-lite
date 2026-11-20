@@ -11,6 +11,14 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""bePlayer\('([^']+)',\s*'(\{[^\}]+\})'\);""")
+private val hoistedRegex2 = Regex("""video_location\":\"([^\"]+)""")
+private val hoistedRegex3 = Regex("""file:\"([^\"]+)""")
+private val hoistedRegex4 = Regex("""tracks:\[([^\]]+)""")
+
+
 open class HDMomPlayer : ExtractorApi() {
     override val name = "HDMomPlayer"
     override val mainUrl = "https://hdmomplayer.com"
@@ -25,15 +33,15 @@ open class HDMomPlayer : ExtractorApi() {
         val m3uLink: String?
         val extRef = referer ?: ""
         val iSource = app.get(url, referer = extRef).text
-        val bePlayer = Regex("""bePlayer\('([^']+)',\s*'(\{[^\}]+\})'\);""").find(iSource)?.groupValues
+        val bePlayer = hoistedRegex1.find(iSource)?.groupValues
         if (bePlayer != null) {
             val bePlayerPass = bePlayer.get(1)
             val bePlayerData = bePlayer.get(2)
             val encrypted = AesHelper.cryptoAESHandler(bePlayerData, bePlayerPass.encodeToByteArray(), false)?.replace("\\", "") ?: throw ErrorLoadingException("failed to decrypt")
-            m3uLink = Regex("""video_location\":\"([^\"]+)""").find(encrypted)?.groupValues?.get(1)
+            m3uLink = hoistedRegex2.find(encrypted)?.groupValues?.get(1)
         } else {
-            m3uLink = Regex("""file:\"([^\"]+)""").find(iSource)?.groupValues?.get(1)
-            val trackStr = Regex("""tracks:\[([^\]]+)""").find(iSource)?.groupValues?.get(1)
+            m3uLink = hoistedRegex3.find(iSource)?.groupValues?.get(1)
+            val trackStr = hoistedRegex4.find(iSource)?.groupValues?.get(1)
             if (trackStr != null) {
                 val tracks = parseJson<List<Track>>("[${trackStr}]")
                 for (track in tracks) {

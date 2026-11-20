@@ -7,6 +7,12 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("file|player")
+private val hoistedRegex2 = Regex("file: \"(https:\\/\\/[a-z0-9.\\/-_?=&]+)\",")
+
+
 class GoodstreamExtractor : ExtractorApi() {
     override var name = "Goodstream"
     override val mainUrl = "https://goodstream.uno"
@@ -19,8 +25,8 @@ class GoodstreamExtractor : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         app.get(url).document.select("script").map { script ->
-            if (script.data().contains(Regex("file|player"))) {
-                val urlRegex = Regex("file: \"(https:\\/\\/[a-z0-9.\\/-_?=&]+)\",")
+            if (script.data().contains(hoistedRegex1)) {
+                val urlRegex = hoistedRegex2
                 urlRegex.find(script.data())?.groupValues?.get(1).let { link ->
                     callback.invoke(
                         newExtractorLink(

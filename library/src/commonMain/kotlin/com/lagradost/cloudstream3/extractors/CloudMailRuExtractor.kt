@@ -11,6 +11,11 @@ import com.lagradost.cloudstream3.utils.INFER_TYPE
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex(pattern = "videowl_view\":\\{\"count\":\"1\",\"url\":\"([^\"]*)\"\\}", options = setOf(RegexOption.IGNORE_CASE))
+
+
 open class CloudMailRu : ExtractorApi() {
     override val name            = "CloudMailRu"
     override val mainUrl         = "https://cloud.mail.ru"
@@ -30,7 +35,7 @@ open class CloudMailRu : ExtractorApi() {
         val vidId      = url.substringAfter("public/").encodeToByteArray()
         val vidIdEnc   = base64Encode(vidId)
         val videoReq   = app.get(url, headers=headers).text
-        val regex      = Regex(pattern = "videowl_view\":\\{\"count\":\"1\",\"url\":\"([^\"]*)\"\\}", options = setOf(RegexOption.IGNORE_CASE))
+        val regex      = hoistedRegex1
         val videoMatch = regex.find(videoReq)?.groupValues?.get(1).toString()
         val videoUrl   = "$videoMatch/0p/$vidIdEnc.m3u8?double_encode=1"
 //        Log.d("kraptor_${this.name}","videoMatch = $videoMatch hani base64 = $vidIdEnc vidurl = $videoUrl")

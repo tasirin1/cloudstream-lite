@@ -10,6 +10,11 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("\\d{3,4}p")
+
+
 open class YourUpload : ExtractorApi() {
     override val name = "Yourupload"
     override val mainUrl = "https://www.yourupload.com"
@@ -18,7 +23,7 @@ open class YourUpload : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink> {
         val sources = mutableListOf<ExtractorLink>()
         with(app.get(url).document) {
-            val quality = Regex("\\d{3,4}p").find(this.select("title").text())?.groupValues?.get(0)
+            val quality = hoistedRegex1.find(this.select("title").text())?.groupValues?.get(0)
             this.select("script").map { script ->
                 if (script.data().contains("var jwplayerOptions = {")) {
                     val data = script.data().substringAfter("var jwplayerOptions = {").substringBefore(",\n")

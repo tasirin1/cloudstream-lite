@@ -7,6 +7,12 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""\{var\s*[^\s]+\s*=\s*(\[[^]]+])""")
+private val hoistedRegex2 = Regex("source\\s*src=\"([^\"]+)")
+
+
 open class Mvidoo : ExtractorApi() {
     override val name = "Mvidoo"
     override val mainUrl = "https://mvidoo.com"
@@ -27,9 +33,9 @@ open class Mvidoo : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         val document = app.get(url, referer = referer).text
-        val data = Regex("""\{var\s*[^\s]+\s*=\s*(\[[^]]+])""").find(document)?.groupValues?.get(1)
+        val data = hoistedRegex1.find(document)?.groupValues?.get(1)
             ?.removeSurrounding("[", "]")?.replace("\"", "")?.replace("\\x", "")?.split(",")?.map { it.decodeHex() }?.reversed()?.joinToString("") ?: return
-        Regex("source\\s*src=\"([^\"]+)").find(data)?.groupValues?.get(1)?.let { link ->
+        hoistedRegex2.find(data)?.groupValues?.get(1)?.let { link ->
             callback.invoke(
                 newExtractorLink(
                     this.name,

@@ -7,6 +7,11 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("(\\d{3,4})[pP]")
+
+
 open class Userscloud : ExtractorApi() {
     override val name = "Userscloud"
     override val mainUrl = "https://userscloud.com"
@@ -40,7 +45,7 @@ open class Userscloud : ExtractorApi() {
     }
 
     private fun getQuality(str: String?): Int {
-        return Regex("(\\d{3,4})[pP]").find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
+        return hoistedRegex1.find(str ?: "")?.groupValues?.getOrNull(1)?.toIntOrNull()
             ?: Qualities.Unknown.value
     }
 

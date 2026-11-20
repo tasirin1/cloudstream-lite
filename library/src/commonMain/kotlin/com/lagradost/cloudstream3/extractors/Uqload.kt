@@ -7,6 +7,11 @@ import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.newSubtitleFile
 import com.lagradost.cloudstream3.utils.*
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""sources:.*"(.*?)".*""")
+
+
 // import android.util.Log
 
 class Uqload1 : Uqload() {
@@ -30,7 +35,7 @@ open class Uqload : ExtractorApi() {
     override var mainUrl: String = "https://www.uqload.com"
     override val requiresReferer = true
 
-    private val  srcRegex = Regex("""sources:.*"(.*?)".*""")  // would be possible to use the parse and find src attribute
+    private val  srcRegex = hoistedRegex1  // would be possible to use the parse and find src attribute
 
     override suspend fun getUrl(
         url: String,

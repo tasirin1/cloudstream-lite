@@ -6,6 +6,12 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("(?<=master)(.*)(?=hls)")
+private val hoistedRegex2 = Regex("(?<=\\|file\\|)(.*)(?=\\|remove\\|)")
+
+
 open class UpstreamExtractor : ExtractorApi() {
     override val name: String = "Upstream"
     override val mainUrl: String = "https://upstream.to"
@@ -20,11 +26,11 @@ open class UpstreamExtractor : ExtractorApi() {
         //Log.i(this.name, "Result => (no extractor) ${url}")
         val doc = app.get(url, referer = referer).text
         if (doc.isNotBlank()) {
-            var reg = Regex("(?<=master)(.*)(?=hls)")
+            var reg = hoistedRegex1
             val result = reg.find(doc)?.groupValues?.map {
                 it.trim('|')
             }?.toList()
-            reg = Regex("(?<=\\|file\\|)(.*)(?=\\|remove\\|)")
+            reg = hoistedRegex2
             val domainList = reg.find(doc)?.groupValues?.get(1)?.split("|")
             var domain = when (!domainList.isNullOrEmpty()) {
                 true -> {

@@ -7,6 +7,11 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.JsUnpacker
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("eval((.|\\n)*?)</script>")
+
+
 open class Supervideo : ExtractorApi() {
     override var name = "Supervideo"
     override var mainUrl = "https://supervideo.cc"
@@ -19,7 +24,7 @@ open class Supervideo : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         val response = app.get(url).text
-        val jstounpack = Regex("eval((.|\\n)*?)</script>").find(response)?.groups?.get(1)?.value
+        val jstounpack = hoistedRegex1.find(response)?.groups?.get(1)?.value
         val unpacked = JsUnpacker(jstounpack).unpack()
 
         JwPlayerHelper.extractStreamLinks(unpacked.orEmpty(), name, mainUrl, callback, subtitleCallback)

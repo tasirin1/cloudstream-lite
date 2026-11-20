@@ -4,6 +4,13 @@ import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.*
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""\s+|/\*.*?\*/""")
+private val hoistedRegex2 = Regex("ext/javascript\">eval((.|\\n)*?)</script>")
+private val hoistedRegex3 = Regex("<title>(.*?)</title>", RegexOption.IGNORE_CASE)
+
+
 open class Userload : ExtractorApi() {
     override var name = "Userload"
     override var mainUrl = "https://userload.co"
@@ -36,7 +43,7 @@ open class Userload : ExtractorApi() {
     private suspend fun decodeVideoJs(text: String): List<String> {
         // Audit-3 #20: the replace result used to be discarded, so
         // the cleanup never applied.
-        val cleaned = text.replace("""\s+|/\*.*?\*/""".toRegex(), "")
+        val cleaned = text.replace(hoistedRegex1, "")
         val data = cleaned.split("""+(ﾟДﾟ)[ﾟoﾟ]""").getOrNull(1) ?: return emptyList()
         val chars = data.split("""+ (ﾟДﾟ)[ﾟεﾟ]+""").drop(1)
         val newchars = chars.map { char ->
@@ -71,7 +78,7 @@ open class Userload : ExtractorApi() {
         val extractedLinksList: MutableList<ExtractorLink> = mutableListOf()
 
         val response = app.get(url).text
-        val jsToUnpack = Regex("ext/javascript\">eval((.|\\n)*?)</script>").find(response)?.groups?.get(1)?.value
+        val jsToUnpack = hoistedRegex2.find(response)?.groups?.get(1)?.value
         // Audit-3 #20: forced indexes and !! on remote-controlled
         // content used to kill the whole extractor on any small
         // format change; bail out with null instead.
@@ -92,7 +99,7 @@ open class Userload : ExtractorApi() {
         // Audit-3 #20: the title used to be fetched with a second
         // full GET of the same page; take it from the copy already
         // downloaded above.
-        val nameSource = Regex("<title>(.*?)</title>", RegexOption.IGNORE_CASE)
+        val nameSource = hoistedRegex3
             .find(response)?.groupValues?.get(1)?.trim() ?: name
         extractedLinksList.add(
             newExtractorLink(

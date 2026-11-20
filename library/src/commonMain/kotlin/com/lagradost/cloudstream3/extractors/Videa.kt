@@ -6,6 +6,16 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.base64DecodeArray
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""<error.*?"noembed".*>(.*)</error>""")
+private val hoistedRegex2 = Regex("""sl=([^;]+)""")
+private val hoistedRegex3 = Regex("""<iframe.*?src="(/player\?[^\"]+)""")
+private val hoistedRegex4 = Regex("""sl=([^;]+)""")
+private val hoistedRegex5 = Regex("""_xt\s*=\s*"([^"]+)""")
+private val hoistedRegex6 = Regex("""video_source\s*name="([^"]+)".*exp="([^"]+)"[^>]*>([^<]+)""")
+
+
 /**
  * Extractor for Videa.hu video hosting service
  * Handles encrypted XML responses and redirect chains
@@ -56,7 +66,7 @@ class Videa : ExtractorApi() {
             }
 
             // Check for redirect in XML error
-            val redirectMatch = """<error.*?"noembed".*>(.*)</error>""".toRegex().find(videaXml)
+            val redirectMatch = hoistedRegex1.find(videaXml)
 
             if (redirectMatch != null && redirectMatch.groupValues[1] != currentUrl) {
                 currentUrl = redirectMatch.groupValues[1]
@@ -79,7 +89,7 @@ class Videa : ExtractorApi() {
 
         // Extract sl cookie if present
         response.headers["Set-Cookie"]?.let { cookieHeader ->
-            """sl=([^;]+)""".toRegex().find(cookieHeader)?.let {
+            hoistedRegex2.find(cookieHeader)?.let {
                 cookieCallback(it.value)
             }
         }
@@ -88,7 +98,7 @@ class Videa : ExtractorApi() {
         val playerUrl = if ("/player" in url) {
             url
         } else {
-            val iframeMatch = """<iframe.*?src="(/player\?[^\"]+)""".toRegex().find(html)
+            val iframeMatch = hoistedRegex3.find(html)
             iframeMatch?.let { "$mainUrl${it.groupValues[1]}" } ?: return null
         }
 
@@ -98,13 +108,13 @@ class Videa : ExtractorApi() {
 
         // Update cookie from player response
         playerResponse.headers["Set-Cookie"]?.let { cookieHeader ->
-            """sl=([^;]+)""".toRegex().find(cookieHeader)?.let {
+            hoistedRegex4.find(cookieHeader)?.let {
                 cookieCallback(it.value)
             }
         }
 
         // Extract nonce and generate tokens
-        val nonceMatch = """_xt\s*=\s*"([^"]+)""".toRegex().find(playerHtml) ?: return null
+        val nonceMatch = hoistedRegex5.find(playerHtml) ?: return null
         val (s, t, key) = generateTokens(nonceMatch.groupValues[1])
 
         // Extract video parameter
@@ -136,7 +146,7 @@ class Videa : ExtractorApi() {
     }
 
     private suspend fun parseVideoSources(xml: String, callback: (ExtractorLink) -> Unit) {
-        val sourceRegex = """video_source\s*name="([^"]+)".*exp="([^"]+)"[^>]*>([^<]+)""".toRegex()
+        val sourceRegex = hoistedRegex6
         val sources = sourceRegex.findAll(xml).toList()
 
         for (sourceMatch in sources) {

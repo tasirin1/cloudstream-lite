@@ -13,6 +13,12 @@ import io.ktor.http.Url
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""/tv/\d+/(\d+)/""")
+private val hoistedRegex2 = Regex("""/tv/\d+/\d+/(\d+)""")
+
+
 class Techinmind : GDMirrorbot() {
     override val name = "Techinmind Cloud AIO"
     override val mainUrl = "https://stream.techinmind.space"
@@ -41,8 +47,8 @@ open class GDMirrorbot : ExtractorApi() {
             val hostUrl = baseUrl?.let { getBaseUrl(it) }
             if (finalId != null && myKey != null) {
                 val apiUrl = if (url.contains("/tv/")) {
-                    val season = Regex("""/tv/\d+/(\d+)/""").find(url)?.groupValues?.get(1) ?: "1"
-                    val episode = Regex("""/tv/\d+/\d+/(\d+)""").find(url)?.groupValues?.get(1) ?: "1"
+                    val season = hoistedRegex1.find(url)?.groupValues?.get(1) ?: "1"
+                    val episode = hoistedRegex2.find(url)?.groupValues?.get(1) ?: "1"
                     "$mainUrl/myseriesapi?tmdbid=$finalId&season=$season&epname=$episode&key=$myKey"
                 } else "$mainUrl/mymovieapi?$idType=$finalId&key=$myKey"
                 pageText = app.get(apiUrl).text

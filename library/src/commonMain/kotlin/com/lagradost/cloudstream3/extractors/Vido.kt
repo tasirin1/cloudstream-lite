@@ -7,10 +7,15 @@ import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""sources:\s*\["(.*?)"\]""")
+
+
 class Vido : ExtractorApi() {
     override var name = "Vido"
     override var mainUrl = "https://vido.lol"
-    private val srcRegex = Regex("""sources:\s*\["(.*?)"\]""")
+    private val srcRegex = hoistedRegex1
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {

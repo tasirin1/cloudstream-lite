@@ -12,6 +12,12 @@ import com.lagradost.cloudstream3.utils.getAndUnpack
 import com.lagradost.cloudstream3.utils.getPacked
 import com.lagradost.cloudstream3.network.WebViewResolver
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""txt|m3u8""")
+private val hoistedRegex2 = Regex("""txt|m3u8""")
+
+
 class Mwish : StreamWishExtractor() {
     override val name = "Mwish"
     override val mainUrl = "https://mwish.pro"
@@ -188,8 +194,8 @@ open class StreamWishExtractor : ExtractorApi() {
 
         if (!linkFound) {
             val webViewM3u8Resolver = WebViewResolver(
-                interceptUrl = Regex("""txt|m3u8"""),
-                additionalUrls = listOf(Regex("""txt|m3u8""")),
+                interceptUrl = hoistedRegex1,
+                additionalUrls = listOf(hoistedRegex2),
                 useOkhttp = false,
                 timeout = 15_000L
             )

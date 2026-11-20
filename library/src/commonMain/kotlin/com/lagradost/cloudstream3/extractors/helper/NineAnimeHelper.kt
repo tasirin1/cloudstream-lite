@@ -3,6 +3,14 @@ package com.lagradost.cloudstream3.extractors.helper
 import com.lagradost.cloudstream3.utils.StringUtils.decodeUrl
 import com.lagradost.cloudstream3.utils.StringUtils.encodeUrl
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""=+$""")
+private val hoistedRegex2 = Regex("""[\t\n\f\r]""")
+private val hoistedRegex3 = Regex("""==?$""")
+private val hoistedRegex4 = Regex("""[^+/0-9A-Za-z]""")
+
+
 // Taken from https://github.com/saikou-app/saikou/blob/b35364c8c2a00364178a472fccf1ab72f09815b4/app/src/main/java/ani/saikou/parsers/anime/NineAnime.kt
 // GNU General Public License v3.0 https://github.com/saikou-app/saikou/blob/main/LICENSE.md
 object NineAnimeHelper {
@@ -15,7 +23,7 @@ object NineAnimeHelper {
             encrypt(
                 cipher(mainKey, encode(text)),
                 nineAnimeKey
-        )//.replace("""=+$""".toRegex(), "")
+        )//.replace(hoistedRegex1, "")
         )
     }
 
@@ -74,10 +82,10 @@ object NineAnimeHelper {
 
     @Suppress("SameParameterValue")
     private fun decrypt(input: String, key: String): String {
-        val t = if (input.replace("""[\t\n\f\r]""".toRegex(), "").length % 4 == 0) {
-            input.replace("""==?$""".toRegex(), "")
+        val t = if (input.replace(hoistedRegex2, "").length % 4 == 0) {
+            input.replace(hoistedRegex3, "")
         } else input
-        if (t.length % 4 == 1 || t.contains("""[^+/0-9A-Za-z]""".toRegex())) throw Exception("bad input")
+        if (t.length % 4 == 1 || t.contains(hoistedRegex4)) throw Exception("bad input")
         var i: Int
         var r = ""
         var e = 0

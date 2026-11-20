@@ -9,6 +9,11 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.getQualityFromName
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex(pattern = "\"url([0-9]+)\":\"([^\"]*)\"", options = setOf(RegexOption.IGNORE_CASE))
+
+
 open class VkExtractor : ExtractorApi() {
     override val name = "Vk"
     override val mainUrl = "https://vkvideo.ru"
@@ -40,7 +45,7 @@ open class VkExtractor : ExtractorApi() {
 
         listUrl.forEach { linkType ->
             if (linkType == "url") {
-                val regex = Regex(pattern = "\"url([0-9]+)\":\"([^\"]*)\"", options = setOf(RegexOption.IGNORE_CASE))
+                val regex = hoistedRegex1
                 regex.findAll(response).forEach { url ->
                     val video = url.groupValues[2].replace("\\", "")
                     val quality = url.groupValues[1].replace("\\", "")

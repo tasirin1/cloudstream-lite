@@ -10,6 +10,11 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""(?:/f/|/file/|\?id=)(\w+)""")
+
+
 open class Linkbox : ExtractorApi() {
     override val name = "Linkbox"
     override val mainUrl = "https://www.linkbox.to"
@@ -21,7 +26,7 @@ open class Linkbox : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val token = Regex("""(?:/f/|/file/|\?id=)(\w+)""").find(url)?.groupValues?.get(1)
+        val token = hoistedRegex1.find(url)?.groupValues?.get(1)
         val id = app.get("$mainUrl/api/file/share_out_list/?sortField=utime&sortAsc=0&pageNo=1&pageSize=50&shareToken=$token").parsedSafe<Responses>()?.data?.itemId
         app.get("$mainUrl/api/file/detail?itemId=$id", referer = url)
             .parsedSafe<Responses>()?.data?.itemInfo?.resolutionList?.map { link ->

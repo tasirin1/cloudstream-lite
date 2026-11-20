@@ -19,6 +19,11 @@ import dev.whyoleg.cryptography.algorithms.MD5
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("case\\s*0x[0-9a-f]+:(?![^;]*=partKey)\\s*\\w+\\s*=\\s*(\\w+)\\s*,\\s*\\w+\\s*=\\s*(\\w+);")
+
+
 class Megacloud : Rabbitstream() {
     override val name = "Megacloud"
     override val mainUrl = "https://megacloud.tv"
@@ -57,7 +62,7 @@ class Megacloud : Rabbitstream() {
                 ?.removePrefix("0x") ?: throw ErrorLoadingException("Failed to match the key")
         }
 
-        val regex = Regex("case\\s*0x[0-9a-f]+:(?![^;]*=partKey)\\s*\\w+\\s*=\\s*(\\w+)\\s*,\\s*\\w+\\s*=\\s*(\\w+);")
+        val regex = hoistedRegex1
         val indexPairs = regex.findAll(script).toList().map { match ->
             val matchKey1 = matchingKey(match.groupValues[1])
             val matchKey2 = matchingKey(match.groupValues[2])

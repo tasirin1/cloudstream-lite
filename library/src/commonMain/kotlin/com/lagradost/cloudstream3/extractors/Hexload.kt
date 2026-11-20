@@ -10,12 +10,17 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""(\w+):\s*['"](\w+)['"]""")
+
+
 class Hexload: ExtractorApi() {
     override val name: String = "Hexload"
     override val mainUrl: String = "https://hexload.com"
     override val requiresReferer: Boolean = false
 
-    private val jsDictEntryRegex = Regex("""(\w+):\s*['"](\w+)['"]""")
+    private val jsDictEntryRegex = hoistedRegex1
 
     override suspend fun getUrl(
         url: String,

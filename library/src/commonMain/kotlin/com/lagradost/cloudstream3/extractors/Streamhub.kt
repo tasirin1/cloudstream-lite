@@ -9,6 +9,12 @@ import com.lagradost.cloudstream3.utils.JsUnpacker
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("eval((.|\\n)*?)</script>")
+private val hoistedRegex2 = Regex("sources:\\[\\{src:\"(.*?)\"")
+
+
 open class Streamhub : ExtractorApi() {
     override var mainUrl = "https://streamhub.to"
     override var name = "Streamhub"
@@ -20,9 +26,9 @@ open class Streamhub : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         val response = app.get(url).text
-        Regex("eval((.|\\n)*?)</script>").find(response)?.groupValues?.get(1)?.let { jsEval ->
+        hoistedRegex1.find(response)?.groupValues?.get(1)?.let { jsEval ->
             JsUnpacker("eval$jsEval").unpack()?.let { unPacked ->
-                Regex("sources:\\[\\{src:\"(.*?)\"").find(unPacked)?.groupValues?.get(1)?.let { link ->
+                hoistedRegex2.find(unPacked)?.groupValues?.get(1)?.let { link ->
                     return listOf(
                         newExtractorLink(
                             source = this.name,

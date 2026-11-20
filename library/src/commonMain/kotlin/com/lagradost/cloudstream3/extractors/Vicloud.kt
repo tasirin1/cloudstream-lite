@@ -11,6 +11,11 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("\"apiQuery\":\"(.*?)\"")
+
+
 open class Vicloud : ExtractorApi() {
     override val name = "Vicloud"
     override val mainUrl = "https://vicloud.sbs"
@@ -22,7 +27,7 @@ open class Vicloud : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit,
     ) {
-        val id = Regex("\"apiQuery\":\"(.*?)\"").find(app.get(url).text)?.groupValues?.getOrNull(1)
+        val id = hoistedRegex1.find(app.get(url).text)?.groupValues?.getOrNull(1)
         app.get(
             "$mainUrl/api/?$id=&_=$unixTimeMS",
             headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
