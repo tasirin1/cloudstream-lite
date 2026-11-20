@@ -232,6 +232,10 @@ class GeneratorPlayer : FullScreenPlayer() {
     private val nextMeta: Any? get() = viewModel.state.generatorState?.nextMeta
 
     private var isPlayerActive: AtomicBoolean = AtomicBoolean(false)
+
+    // Audit-14 #56: in-flight large-icon fetch for the player
+    // notification (see getCurrentLargeIcon).
+    private var largeIconJob: kotlinx.coroutines.Job? = null
     private var isNextEpisode: Boolean = false // this is used to reset the watch time
 
     private var preferredAutoSelectSubtitles: String? = null // null means do nothing, "" means none
@@ -406,7 +410,14 @@ class GeneratorPlayer : FullScreenPlayer() {
                     player: Player,
                     callback: PlayerNotificationManager.BitmapCallback
                 ): Bitmap? {
-                    ioSafe {
+                    // Audit-14 #56: Media3 calls this on every
+                    // notification refresh, and each call spawned
+                    // its own detached polling loop (up to 10
+                    // preview decodes) — overlapping calls raced
+                    // the same callback. One fetch at a time; the
+                    // in-flight one delivers.
+                    if (largeIconJob?.isActive == true) return null
+                    largeIconJob = ioSafe {
                         val url = when (val meta = currentMeta) {
                             is ResultEpisode -> {
                                 meta.poster
