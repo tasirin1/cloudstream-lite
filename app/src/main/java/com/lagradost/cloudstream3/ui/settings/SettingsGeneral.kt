@@ -265,8 +265,4 @@ class SettingsGeneral {
             }
         }
     }
-
-    private val pathPicker = getChooseFolderLauncher { uri, path ->
-        pickDownloadPath(uri, path)
-    }
 }
