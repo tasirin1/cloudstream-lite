@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.cmap
 import com.lagradost.cloudstream3.plugins.PLUGIN_VERSION_NOT_SET
+import android.content.Context
 import com.lagradost.cloudstream3.plugins.PluginData
 import com.lagradost.cloudstream3.plugins.PluginManager
 import com.lagradost.cloudstream3.plugins.PluginManager.deletePlugin
@@ -204,6 +205,8 @@ object AndroidRepositoryManager : RepositoryManager {
         file: File,
         backupFile: File?,
         previousAnchor: String?,
+        context: Context? = null,
+        data: PluginData? = null,
     ) {
         try {
             file.delete()
@@ -222,6 +225,21 @@ object AndroidRepositoryManager : RepositoryManager {
         } catch (_: Exception) {
             // Best effort only: the caller still reports the
             // failed update either way.
+        }
+        // Audit-7 #5: the previously installed plugin was
+        // unloaded before the swap, so restoring its file alone
+        // left it missing for the rest of the session (until an
+        // app restart). Reload the restored file so the working
+        // plugin is actually back. Only when there WAS a backup
+        // — a failed first install has nothing to reload.
+        if (context != null && data != null &&
+            backupFile != null && file.exists()
+        ) {
+            try {
+                PluginManager.loadPlugin(context, file, data)
+            } catch (_: Exception) {
+                // Best effort, same as the restore above.
+            }
         }
     }
 
@@ -341,20 +359,21 @@ object AndroidRepositoryManager : RepositoryManager {
             PluginManager.storePluginHash(file.absolutePath, anchorHash)
         }
 
+        val pluginData = PluginData(
+            internalName = source.internalName,
+            url = source.pluginUrl,
+            isOnline = true,
+            filePath = file.absolutePath,
+            version = PLUGIN_VERSION_NOT_SET
+        )
         val result = try {
             PluginManager.loadPlugin(
                 context = context,
                 file = file,
-                data = PluginData(
-                    internalName = source.internalName,
-                    url = source.pluginUrl,
-                    isOnline = true,
-                    filePath = file.absolutePath,
-                    version = PLUGIN_VERSION_NOT_SET
-                )
+                data = pluginData
             )
         } catch (e: Exception) {
-            rollbackPluginUpdate(file, backupFile, previousAnchor)
+            rollbackPluginUpdate(file, backupFile, previousAnchor, context, pluginData)
             throw e
         }
         if (!result) {
@@ -362,7 +381,7 @@ object AndroidRepositoryManager : RepositoryManager {
             // working file and its anchor back before reporting
             // the failure, instead of leaving the broken file in
             // place to fail at every startup with the plugin gone.
-            rollbackPluginUpdate(file, backupFile, previousAnchor)
+            rollbackPluginUpdate(file, backupFile, previousAnchor, context, pluginData)
             throw ErrorLoadingException("Unable to load plugin ${source.internalName}")
         }
         backupFile?.delete()
