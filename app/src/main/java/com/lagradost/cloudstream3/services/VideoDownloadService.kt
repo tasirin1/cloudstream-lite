@@ -34,13 +34,22 @@ class VideoDownloadService : Service() {
 
                 downloadScope.launch {
                     VideoDownloadManager.downloadEvent.invoke(Pair(id, state))
+                    // Audit-4 #3: stop only after the command has
+                    // actually been delivered. Audit-3 #34 called
+                    // stopSelf() synchronously below, and onDestroy
+                    // cancels downloadScope — so on a busy device the
+                    // command could be cancelled before it ever ran
+                    // and the pause/resume/stop was lost silently.
+                    // stopSelf(startId) also keeps a newer command
+                    // from being killed by an older one's completion.
+                    stopSelf(startId)
                 }
+                return START_NOT_STICKY
             }
         }
 
-        // Audit-3 #34: this service only relays one command per
-        // start; without stopSelf it stayed alive doing nothing
-        // after every notification action.
+        // No command to relay: do not linger. (Audit-3 #34's
+        // stopSelf, kept for the no-command case only.)
         stopSelf()
         return START_NOT_STICKY
     }
