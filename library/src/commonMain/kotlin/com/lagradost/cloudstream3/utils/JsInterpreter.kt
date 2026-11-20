@@ -1384,10 +1384,13 @@ private class JsInterpreter(
             "/" -> toNumber(l) / toNumber(r)
             "%" -> toNumber(l) % toNumber(r)
             "**" -> toNumber(l).pow(toNumber(r))
-            "<" -> toNumber(l) < toNumber(r)
-            "<=" -> toNumber(l) <= toNumber(r)
-            ">" -> toNumber(l) > toNumber(r)
-            ">=" -> toNumber(l) >= toNumber(r)
+            // Audit-16 #6: in JS two strings compare
+            // lexicographically ("10" < "9" is true);
+            // only mixed/non-string operands go numeric.
+            "<" -> if (l is String && r is String) l < r else toNumber(l) < toNumber(r)
+            "<=" -> if (l is String && r is String) l <= r else toNumber(l) <= toNumber(r)
+            ">" -> if (l is String && r is String) l > r else toNumber(l) > toNumber(r)
+            ">=" -> if (l is String && r is String) l >= r else toNumber(l) >= toNumber(r)
             "==" -> looseEq(l, r)
             "!=" -> !looseEq(l, r)
             "===" -> strictEq(l, r)
