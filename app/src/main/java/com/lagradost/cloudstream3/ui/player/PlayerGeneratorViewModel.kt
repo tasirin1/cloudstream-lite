@@ -25,6 +25,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.collections.immutable.toPersistentSet
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -310,6 +311,12 @@ class PlayerGeneratorViewModel : ViewModel() {
                         )
                     }
                 }
+            } catch (t: CancellationException) {
+                // Audit-13 #22: preload is cancelled on every
+                // episode switch by design (loadLinks cancels
+                // preloadJob) — the Throwable catch logged a
+                // fake "ApiError" stack trace every time.
+                throw t
             } catch (t: Throwable) {
                 logError(t)
             } finally {

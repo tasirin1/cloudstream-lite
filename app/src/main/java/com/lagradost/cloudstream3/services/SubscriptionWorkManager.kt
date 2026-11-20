@@ -25,6 +25,7 @@ import com.lagradost.cloudstream3.utils.UIHelper.colorFromAttribute
 import com.lagradost.cloudstream3.utils.downloader.DownloadUtils.getImageBitmapFromUrl
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 
 const val SUBSCRIPTION_CHANNEL_ID = "cloudstream3.subscriptions"
 const val SUBSCRIPTION_WORK_NAME = "work_subscription"
@@ -123,9 +124,10 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
             }
 
             val max = subscriptions.size
-            var progress = 0
+            // Audit-13 #14: atomic — incremented from parallel amap children.
+            val progress = java.util.concurrent.atomic.AtomicInteger(0)
 
-            updateProgress(max, progress, true)
+            updateProgress(max, 0, true)
 
             // We need all plugins loaded.
             PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_loadAllOnlinePlugins(context)
@@ -207,14 +209,27 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
                         notificationManager.notify(id, updateNotification)
                     }
 
-                    // You can probably get some issues here since this is async but it does not matter much.
-                    updateProgress(max, ++progress, false)
+                    // Audit-13 #14: atomic increment — the old
+                    // ++progress raced between the parallel amap
+                    // children and lost counts.
+                    updateProgress(max, progress.incrementAndGet(), false)
+                } catch (t: CancellationException) {
+                    // Audit-13 #13: a stopped worker is not a
+                    // per-subscription failure — rethrow so the
+                    // amap scope actually cancels instead of
+                    // logging a fake error per item and carrying
+                    // on with the remaining subscriptions.
+                    throw t
                 } catch (t: Throwable) {
                     logError(t)
                 }
             }
 
             return Result.success()
+        } catch (t: CancellationException) {
+            // Audit-13 #13: do not convert a WorkManager stop
+            // into Result.success() + a fake error log.
+            throw t
         } catch (t: Throwable) {
             logError(t)
             // ye, while this is not correct, but because gods know why android just crashes
