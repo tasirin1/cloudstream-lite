@@ -1412,8 +1412,11 @@ open class ResultFragmentPhone : BaseFragment<FragmentResultSwipeBinding>(
     override fun onPause() {
         playerHostView?.releaseKeyEventListener()
         super.onPause()
+        // Audit-3 #25: this used to ADD the gesture listener again
+        // (onResume already adds it), stacking one registration per
+        // pause/resume cycle until onDestroyView.
         PanelsChildGestureRegionObserver.Provider.get()
-            .addGestureRegionsUpdateListener(gestureRegionsListener)
+            .removeGestureRegionsUpdateListener(gestureRegionsListener)
     }
 
     private fun setRecommendations(rec: List<SearchResponse>?, validApiName: String?) {
