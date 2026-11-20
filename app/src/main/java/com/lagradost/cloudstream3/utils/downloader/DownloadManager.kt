@@ -1869,6 +1869,12 @@ object VideoDownloadManager {
                 logError(e)
             } finally {
                 isFailed = !isCompleted
+                // Audit-3 #32: a completed download no longer needs
+                // its resume package; leaving it behind accumulated
+                // one stale entry per finished download forever.
+                if (isCompleted) {
+                    context.removeKey(KEY_RESUME_PACKAGES, id.toString())
+                }
                 _currentDownloads.update { downloads ->
                     downloads - id
                 }
