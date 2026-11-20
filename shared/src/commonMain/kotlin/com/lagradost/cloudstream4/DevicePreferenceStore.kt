@@ -47,8 +47,8 @@ class UpdatePreferences(preferences: PreferenceStore) {
     // Audit-13 #29/#30: apkInstaller ("apk_installer_key") and
     // showAppUpdates ("auto_update") removed with their dead
     // settings UI — nothing read either key.
-    // Node id for this update
-    val skipUpdate = preferences.getString("skip_update_key", "")
+    // Audit-14 #42: skipUpdate ("skip_update_key") removed the
+    // same way — no reader existed anywhere.
 }
 
 class SecurityPreferences(preferences: PreferenceStore) {
