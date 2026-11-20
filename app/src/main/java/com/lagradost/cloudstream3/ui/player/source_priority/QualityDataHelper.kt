@@ -12,7 +12,6 @@ import com.lagradost.cloudstream3.utils.txt
 import com.lagradost.cloudstream3.utils.DataStoreHelper.currentAccount
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
-import java.util.EnumMap
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.also
 import kotlin.math.abs
@@ -65,19 +64,26 @@ object QualityDataHelper {
     // sorting, the priority dialog) and download worker threads
     // (DownloadManager sorts links with these), and a plain
     // HashMap mutated during a resize can corrupt or spin.
-    val sourcePriorityCache: ConcurrentHashMap<Int, ConcurrentHashMap<String, Int>> =
+    // Audit-9 #6: the outer cache key includes the account —
+    // the DataStore keys below are account-scoped, but the
+    // caches used to be keyed by profile only, so an in-process
+    // account switch kept serving the previous account's
+    // priorities for the rest of the process lifetime.
+    private fun priorityCacheKey(profile: Int) = "$currentAccount/$profile"
+
+    val sourcePriorityCache: ConcurrentHashMap<String, ConcurrentHashMap<String, Int>> =
         ConcurrentHashMap()
 
     fun getSourcePriority(profile: Int, name: String?): Int {
         if (name == null) return DEFAULT_SOURCE_PRIORITY
 
-        return sourcePriorityCache[profile]?.get(name) ?: (getKey<Int>(
+        return sourcePriorityCache[priorityCacheKey(profile)]?.get(name) ?: (getKey<Int>(
             "$currentAccount/$VIDEO_SOURCE_PRIORITY/$profile",
             name,
             DEFAULT_SOURCE_PRIORITY
         ) ?: DEFAULT_SOURCE_PRIORITY).also {
-            sourcePriorityCache.getOrPut(profile) { ConcurrentHashMap() }
-            sourcePriorityCache[profile]?.set(name, it)
+            sourcePriorityCache.getOrPut(priorityCacheKey(profile)) { ConcurrentHashMap() }
+            sourcePriorityCache[priorityCacheKey(profile)]?.set(name, it)
         }
     }
 
@@ -97,7 +103,7 @@ object QualityDataHelper {
             setKey(folder, name, priority)
         }
 
-        sourcePriorityCache[profile]?.set(name, priority)
+        sourcePriorityCache[priorityCacheKey(profile)]?.set(name, priority)
     }
 
     fun setProfileName(profile: Int, name: String?) {
@@ -116,16 +122,16 @@ object QualityDataHelper {
 
     // Map profile and quality to priority (inner map also
     // concurrent — Audit-8 #9, see sourcePriorityCache above)
-    val qualityPriorityCache: ConcurrentHashMap<Int, ConcurrentHashMap<Qualities, Int>> =
+    val qualityPriorityCache: ConcurrentHashMap<String, ConcurrentHashMap<Qualities, Int>> =
         ConcurrentHashMap()
     fun getQualityPriority(profile: Int, quality: Qualities): Int {
-        return qualityPriorityCache[profile]?.get(quality) ?: (getKey<Int>(
+        return qualityPriorityCache[priorityCacheKey(profile)]?.get(quality) ?: (getKey<Int>(
             "$currentAccount/$VIDEO_QUALITY_PRIORITY/$profile",
             quality.value.toString(),
             quality.defaultPriority
         )?.also {
-            qualityPriorityCache.getOrPut(profile) { ConcurrentHashMap() }
-            qualityPriorityCache[profile]?.set(quality, it)
+            qualityPriorityCache.getOrPut(priorityCacheKey(profile)) { ConcurrentHashMap() }
+            qualityPriorityCache[priorityCacheKey(profile)]?.set(quality, it)
         }) ?: quality.defaultPriority
     }
 
@@ -135,7 +141,7 @@ object QualityDataHelper {
             quality.value.toString(),
             priority
         )
-        qualityPriorityCache[profile]?.set(quality, priority)
+        qualityPriorityCache[priorityCacheKey(profile)]?.set(quality, priority)
     }
 
     fun <T> setProfileSetting(profile: Int, setting: ProfileSettings<T>, value: T) {
