@@ -121,7 +121,21 @@ object APIHolder {
                 api.init()
             }
         }
-        apiMap = null
+        // Audit-11 #5: under apisLock like every other write.
+        synchronized(apisLock) { apiMap = null }
+    }
+
+    /**
+     * Audit-11 #5: wholesale rebuild of the provider list.
+     * MainActivity used to assign `apis` (and null `apiMap`)
+     * directly, bypassing apisLock — the same lost-update
+     * class Audit-10 #3 fixed inside add/removePluginMapping.
+     */
+    fun resetApis(newApis: List<MainAPI>) {
+        synchronized(apisLock) {
+            apis = AtomicList(newApis)
+            apiMap = null
+        }
     }
 
     /** String extension function to Capitalize first char of string.*/

@@ -791,10 +791,12 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
                             }
                         }
                         // it.hashCode() is not enough to make sure they are distinct
-                        apis = allProviders.distinctBy {
+                        // Audit-11 #5: through the locked rebuild
+                        // entry point instead of assigning the
+                        // field directly.
+                        APIHolder.resetApis(allProviders.distinctBy {
                             it.lang + it.name + it.mainUrl + it::class.qualifiedName
-                        }
-                        APIHolder.apiMap = null
+                        })
                     } catch (e: Exception) {
                         logError(e)
                     }
@@ -1612,7 +1614,8 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
         ioSafe {
             initAll()
             // No duplicates (which can happen by registerMainAPI)
-            apis = allProviders.distinctBy { it }
+            // Audit-11 #5: locked rebuild, see above.
+            APIHolder.resetApis(allProviders.distinctBy { it })
         }
 
         //  val navView: BottomNavigationView = findViewById(R.id.nav_view)
