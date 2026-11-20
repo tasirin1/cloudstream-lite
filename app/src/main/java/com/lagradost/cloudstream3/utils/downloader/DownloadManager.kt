@@ -1218,6 +1218,26 @@ object VideoDownloadManager {
 
 
     /** download a file that consist of a single stream of data*/
+    // Audit-14 #51: the external-deletion watcher existed as
+    // two identical copies (plain-file and HLS downloads) —
+    // one shared implementation now; fixes apply to both.
+    private fun CoroutineScope.launchFileChecker(
+        exists: () -> Boolean,
+        fileMutex: Mutex,
+        metadata: DownloadMetaData,
+    ) = launch(Dispatchers.IO) {
+        while (isActive) {
+            if (exists()) {
+                delay(5000)
+                continue
+            }
+            fileMutex.withLock {
+                metadata.type = DownloadType.IsStopped
+            }
+            break
+        }
+    }
+
     suspend fun downloadThing(
         context: Context,
         link: IDownloadableMinimum,
@@ -1366,18 +1386,7 @@ object VideoDownloadManager {
             val pendingData: HashMap<Long, LazyStreamDownloadResponse> =
                 hashMapOf()
 
-            val fileChecker = launch(Dispatchers.IO) {
-                while (isActive) {
-                    if (stream.exists) {
-                        delay(5000)
-                        continue
-                    }
-                    fileMutex.withLock {
-                        metadata.type = DownloadType.IsStopped
-                    }
-                    break
-                }
-            }
+            val fileChecker = launchFileChecker({ stream.exists }, fileMutex, metadata)
 
             val jobs = (0 until parallelConnections).map {
                 launch(Dispatchers.IO) {
@@ -1730,18 +1739,7 @@ object VideoDownloadManager {
             val fileMutex = Mutex()
             val pendingData: HashMap<Int, ByteArray> = hashMapOf()
 
-            val fileChecker = launch(Dispatchers.IO) {
-                while (isActive) {
-                    if (stream.exists) {
-                        delay(5000)
-                        continue
-                    }
-                    fileMutex.withLock {
-                        metadata.type = DownloadType.IsStopped
-                    }
-                    break
-                }
-            }
+            val fileChecker = launchFileChecker({ stream.exists }, fileMutex, metadata)
 
             // see @downloadexplanation for explanation of this download strategy,
             // this keeps all jobs working at all times,
