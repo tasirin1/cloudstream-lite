@@ -1062,8 +1062,14 @@ private class JsFunction(
     val closure: Scope,
 )
 
-private class Scope(val parent: Scope? = null) {
+private class Scope(val parent: Scope? = null, val isFunctionRoot: Boolean = false) {
     val vars = mutableMapOf<String, Any?>()
+
+    // Audit-19 #2: the scope `var` declarations belong to —
+    // the nearest function (or global) scope, not the
+    // innermost block.
+    fun functionScope(): Scope =
+        if (isFunctionRoot || parent == null) this else parent.functionScope()
 
     fun get(name: String): Any? {
         if (vars.containsKey(name)) return vars[name]
@@ -1126,7 +1132,7 @@ private class JsInterpreter(
     private val maxInstructions: Long = JS_DEFAULT_MAX_INSTRUCTIONS,
     private val scope: CoroutineScope? = null,
 ) {
-    private val globalScope = Scope()
+    private val globalScope = Scope(isFunctionRoot = true)
 
     // Execution budget, reset at the start of every top-level eval() call.
     private var instructionCount = 0L
@@ -1313,7 +1319,15 @@ private class JsInterpreter(
         checkBudget()
         return when (node) {
             is VarDecl -> {
-                for ((name, init) in node.decls) scope.define(name, init?.let { evalExpr(it, scope) })
+                // Audit-19 #2: JS `var` is function-scoped —
+                // a declaration inside a block or loop used to
+                // vanish with the block's child scope. Define
+                // in the function scope; the initializer still
+                // evaluates in the current scope. (This
+                // interpreter parses let/const to the same
+                // node; they share the treatment.)
+                val target = scope.functionScope()
+                for ((name, init) in node.decls) target.define(name, init?.let { evalExpr(it, scope) })
                 Unit
             }
             is ExprStmt -> evalExpr(node.expr, scope)
@@ -1848,7 +1862,7 @@ private class JsInterpreter(
     private fun callAny(callee: Any?, args: List<Any?>, thisVal: Any?): Any? = when (callee) {
         is NativeFn -> callee.fn(args)
         is JsFunction -> {
-            val fnScope = Scope(callee.closure)
+            val fnScope = Scope(callee.closure, isFunctionRoot = true)
             fnScope.define("this", thisVal)
             fnScope.define("arguments", JsList(args.toMutableList()))
             callee.params.forEachIndexed { i, p -> fnScope.define(p, args.getOrElse(i) { Unit }) }
