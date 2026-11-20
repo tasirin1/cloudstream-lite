@@ -76,11 +76,18 @@ abstract class AuthRepo(open val api: AuthAPI) {
     }
 
     suspend fun logout(from: AuthUser) {
-        val currentAccounts = AccountManager.accounts(idPrefix)
-        val (newAccounts, oldAccounts) = currentAccounts.partition { it.user.id != from.id }
-        if (newAccounts.size < currentAccounts.size) {
-            AccountManager.updateAccounts(idPrefix, newAccounts.toTypedArray())
-            AccountManager.updateAccountsId(idPrefix, 0)
+        // Audit-10 #4: the read-modify-write runs under the
+        // shared write lock so a concurrent refresh/login cannot
+        // resurrect the removed account from a stale array. The
+        // token invalidation (network) stays outside the lock.
+        val oldAccounts = synchronized(AccountManager.accountsWriteLock) {
+            val currentAccounts = AccountManager.accounts(idPrefix)
+            val (newAccounts, removed) = currentAccounts.partition { it.user.id != from.id }
+            if (newAccounts.size < currentAccounts.size) {
+                AccountManager.updateAccounts(idPrefix, newAccounts.toTypedArray())
+                AccountManager.updateAccountsId(idPrefix, 0)
+            }
+            removed
         }
 
         for (oldAccount in oldAccounts) {
@@ -95,20 +102,30 @@ abstract class AuthRepo(open val api: AuthAPI) {
     }
 
     fun refreshUser(newAuth: AuthData) {
-        val currentAccounts = AccountManager.accounts(idPrefix)
-        val newAccounts = currentAccounts.map {
-            if (it.user.id == newAuth.user.id) {
-                newAuth
-            } else {
-                it
-            }
-        }.toTypedArray()
-        AccountManager.updateAccounts(idPrefix, newAccounts)
+        // Audit-10 #4: same write lock as logout/setupLogin.
+        synchronized(AccountManager.accountsWriteLock) {
+            val currentAccounts = AccountManager.accounts(idPrefix)
+            val newAccounts = currentAccounts.map {
+                if (it.user.id == newAuth.user.id) {
+                    newAuth
+                } else {
+                    it
+                }
+            }.toTypedArray()
+            AccountManager.updateAccounts(idPrefix, newAccounts)
+        }
     }
 
-    fun authData(): AuthData? = synchronized(AccountManager.cachedAccountIds) {
-        AccountManager.cachedAccountIds[idPrefix]?.let { id ->
-            AccountManager.cachedAccounts[idPrefix]?.firstOrNull { data -> data.user.id == id }
+    // Audit-10 #5: this used to synchronize on cachedAccountIds
+    // while READING cachedAccounts, whose writers lock
+    // cachedAccounts itself — no mutual exclusion with them.
+    // Lock both maps, in the same order everywhere (accounts
+    // first); no other site nests the two locks.
+    fun authData(): AuthData? = synchronized(AccountManager.cachedAccounts) {
+        synchronized(AccountManager.cachedAccountIds) {
+            AccountManager.cachedAccountIds[idPrefix]?.let { id ->
+                AccountManager.cachedAccounts[idPrefix]?.firstOrNull { data -> data.user.id == id }
+            }
         }
     }
 
@@ -141,14 +158,18 @@ abstract class AuthRepo(open val api: AuthAPI) {
             user = user,
         )
 
-        val currentAccounts = AccountManager.accounts(idPrefix)
-        if (currentAccounts.any { it.user.id == newAccount.user.id }) {
-            throw ErrorLoadingException("Already logged into this account")
-        }
+        // Audit-10 #4: the duplicate check and the append must
+        // be atomic against logout/refresh writes.
+        synchronized(AccountManager.accountsWriteLock) {
+            val currentAccounts = AccountManager.accounts(idPrefix)
+            if (currentAccounts.any { it.user.id == newAccount.user.id }) {
+                throw ErrorLoadingException("Already logged into this account")
+            }
 
-        val newAccounts = currentAccounts + newAccount
-        AccountManager.updateAccounts(idPrefix, newAccounts)
-        AccountManager.updateAccountsId(idPrefix, user.id)
+            val newAccounts = currentAccounts + newAccount
+            AccountManager.updateAccounts(idPrefix, newAccounts)
+            AccountManager.updateAccountsId(idPrefix, user.id)
+        }
         if (this is SyncRepo) {
             requireLibraryRefresh = true
         }

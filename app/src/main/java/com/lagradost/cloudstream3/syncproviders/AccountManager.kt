@@ -37,6 +37,14 @@ abstract class AccountManager {
         val cachedAccounts: MutableMap<String, Array<AuthData>> = mutableMapOf()
         val cachedAccountIds: MutableMap<String, Int> = mutableMapOf()
 
+        // Audit-10 #4: serializes whole read-modify-write cycles
+        // of the account arrays in AuthRepo (logout / refreshUser
+        // / setupLogin). Without it, a token refresh racing a
+        // logout wrote its stale array back and resurrected the
+        // logged-out account (and a fresh login could be dropped
+        // the same way).
+        val accountsWriteLock = Any()
+
         const val ACCOUNT_TOKEN = "auth_tokens"
         const val ACCOUNT_IDS = "auth_ids"
         private const val ENCRYPTED_PREFIX = "enc:v1:"
