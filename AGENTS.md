@@ -1,10 +1,10 @@
 # Panduan pengelolaan repo (untuk AI)
 
 > ⚠ **ATURAN NO. 1 — INI FORK, BUKAN REPO UPSTREAM.**
-> Repo ini adalah fork milik owner: `tasirin1/tasirin-cloudstream`,
+> Repo ini adalah fork milik owner: `tasirin1/cloudstream-lite`,
 > branch aktif **`master`** (bukan `main`). Upstream-nya
 > `recloudstream/cloudstream` (branch `master`). Push HANYA ke fork
-> (`origin` = `tasirin1/tasirin-cloudstream`); JANGAN push ke upstream,
+> (`origin` = `tasirin1/cloudstream-lite`); JANGAN push ke upstream,
 > JANGAN force-push, dan JANGAN menyinkronkan upstream tanpa perintah
 > owner — sinkronisasi butuh penggabungan hati-hati, bukan
 > rebase/reset buta.
