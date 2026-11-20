@@ -479,7 +479,11 @@ class CS3IPlayer : IPlayer {
 
     private fun Tracks.Group.getFormats(): List<Pair<Format, Int>> {
         return (0 until this.mediaTrackGroup.length).mapNotNull { i ->
-            if (this.isSupported)
+            // Audit-14 #23: isSupported is the GROUP-level flag
+            // (true only when every track is supported), so one
+            // exotic-codec track hid the whole group from track
+            // selection. Ask per track.
+            if (this.isTrackSupported(i))
                 this.mediaTrackGroup.getFormat(i) to i
             else null
         }
