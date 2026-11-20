@@ -66,7 +66,14 @@ class LibraryViewModel : ViewModel() {
         private set
 
     fun switchList(name: String) {
-        currentSyncApi = availableSyncApis[availableApiNames.indexOf(name)]
+        // Audit-5 #15: look the name up in ONE snapshot of the
+        // API list. The old code indexed availableSyncApis with
+        // an indexOf() computed over a separately rebuilt name
+        // list — an unknown name gave -1 (IndexOutOfBounds crash)
+        // and any drift between the two live-backed lists
+        // selected the wrong API. Unknown name now keeps the
+        // current API.
+        currentSyncApi = availableSyncApis.firstOrNull { it.name == name } ?: currentSyncApi
         _currentApiName.postValue(currentSyncApi?.name)
         reloadPages(true)
     }
