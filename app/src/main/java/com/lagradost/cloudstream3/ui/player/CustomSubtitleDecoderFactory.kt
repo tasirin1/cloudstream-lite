@@ -293,7 +293,12 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
         return subtitleParser
     }
 
-    val currentSubtitleCues = mutableListOf<SubtitleCue>()
+    // Audit-5 #16: CopyOnWriteArrayList — parse() appends on the
+    // decoder thread while the UI thread copies the list for the
+    // sync-subs dialog; a plain ArrayList could throw
+    // ConcurrentModificationException there. Cue counts are small,
+    // so the copy-on-write cost is irrelevant.
+    val currentSubtitleCues = java.util.concurrent.CopyOnWriteArrayList<SubtitleCue>()
 
 
     override fun parse(
