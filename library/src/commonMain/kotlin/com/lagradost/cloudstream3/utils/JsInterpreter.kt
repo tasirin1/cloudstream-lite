@@ -853,6 +853,27 @@ private fun toUint32(v: Any?): Long {
     return (((n % 4294967296.0) + 4294967296.0) % 4294967296.0).toLong()
 }
 
+// Audit-16 #8: Double.toLong() saturates at 2^63, so
+// String(1e21) printed Long.MAX_VALUE's digits. JS prints
+// the full digits below 1e21 and exponential form from
+// 1e21 up; expand/convert Kotlin's scientific form there.
+private fun integralDoubleToJsString(v: Double): String {
+    if (abs(v) < 9.223372036854776e18) return v.toLong().toString()
+    val raw = v.toString()
+    val ePos = raw.indexOf('E')
+    if (ePos == -1) return raw
+    val exp = raw.substring(ePos + 1).toInt()
+    if (abs(v) >= 1e21) {
+        var mantissa = raw.substring(0, ePos)
+        if (mantissa.endsWith(".0")) mantissa = mantissa.dropLast(2)
+        return mantissa + "e+" + exp
+    }
+    val digits = raw.substring(0, ePos).replace(".", "")
+        .replace("-", "").trimEnd('0')
+    val sign = if (v < 0) "-" else ""
+    return sign + digits.padEnd(exp + 1, '0')
+}
+
 private fun parseFloatPrefix(s: String): Double {
     var i = 0
     while (i < s.length && s[i].isWhitespace()) i++
@@ -944,7 +965,7 @@ private fun toJsString(v: Any?): String = when (v) {
     null -> "null"
     is Unit -> "undefined"
     is Boolean -> v.toString()
-    is Double -> if (v == floor(v) && !v.isInfinite()) v.toLong().toString() else v.toString()
+    is Double -> if (v == floor(v) && !v.isInfinite()) integralDoubleToJsString(v) else v.toString()
     is String -> v
     is JsList -> v.elements.joinToString(",") { joinElement(it) }
     is JsObject -> "[object Object]"
