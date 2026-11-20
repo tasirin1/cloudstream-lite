@@ -555,6 +555,13 @@ object VideoDownloadManager {
         private var lastDownloadedBytes: Long = 0,
         private val createNotificationCallback: (CreateNotificationMetadata) -> Unit,
 
+        // Audit-13 #6: @Volatile like every neighbouring flag
+        // (Audit-4 #10 missed this one) — the pause-wait loops
+        // read ONLY this flag, written from the service thread
+        // via the event listener with no lock, so without a
+        // happens-before edge a Resume could formally never be
+        // seen and the download would sit "paused" forever.
+        @Volatile
         private var internalType: DownloadType = DownloadType.IsPending,
         val isHLS : Boolean,
         // how many segments that we have downloaded
