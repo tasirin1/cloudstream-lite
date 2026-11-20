@@ -65,6 +65,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.io.File
 import java.io.InputStreamReader
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 // Different keys for local and not since local can be removed at any time without app knowing, hence the local are getting rebuilt on every app start
 const val PLUGINS_KEY = "PLUGINS_KEY"
@@ -1022,6 +1024,39 @@ object PluginManager {
         return downloadPlugin(activity, pluginUrl, pluginHash, internalName, file, loadPlugin)
     }
 
+    // Audit-8 #2: restore the parked .bak + the previous anchor
+    // and reload the old plugin — the legacy-path counterpart of
+    // rollbackPluginUpdate on the Compose path (Audit-6 #9 /
+    // Audit-7 #5), which this path never had.
+    private suspend fun rollbackLegacyPluginUpdate(
+        activity: Context,
+        file: File,
+        backupFile: File?,
+        previousAnchor: String?,
+        data: PluginData,
+    ) {
+        try {
+            file.delete()
+            if (backupFile != null && backupFile.exists()) {
+                Files.move(
+                    backupFile.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+            if (previousAnchor != null) {
+                storePluginHash(file.absolutePath, previousAnchor)
+            } else {
+                removePluginHash(file.absolutePath)
+            }
+            if (file.exists()) {
+                loadPlugin(activity, file, data)
+            }
+        } catch (e: Exception) {
+            logError(e)
+        }
+    }
+
     suspend fun downloadPlugin(
         activity: Activity,
         pluginUrl: String,
@@ -1030,6 +1065,38 @@ object PluginManager {
         file: File,
         loadPlugin: Boolean,
     ): Boolean {
+        // Audit-8 #2: park the installed file as .bak BEFORE
+        // downloadPluginToFile replaces it in place, and remember
+        // its anchor. Until now a verified-but-unloadable update
+        // (newer plugin API, corrupt inner manifest, missing
+        // class) destroyed the working plugin permanently on
+        // this path — the Compose path got this safety net in
+        // Audit-6 #9, the legacy path never did.
+        val backupFile = file.parentFile?.let { File(it, file.name + ".bak") }
+        val previousAnchor = storedPluginHash(file.absolutePath)
+        var parked = false
+        if (backupFile != null && file.exists()) {
+            parked = try {
+                Files.move(
+                    file.toPath(),
+                    backupFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+                true
+            } catch (e: Exception) {
+                logError(e)
+                false
+            }
+        }
+        // Built up here (was: after the download) so the rollback
+        // above can reload with it; newFile IS file on success.
+        val data = PluginData(
+            internalName,
+            pluginUrl,
+            true,
+            file.absolutePath,
+            PLUGIN_VERSION_NOT_SET
+        )
         try {
             Log.d(TAG, "Downloading plugin: $pluginUrl to ${file.absolutePath}")
             // Audit-7 #25: normalize the manifest hash ONCE here
@@ -1058,7 +1125,14 @@ object PluginManager {
                 }
             }
             // The plugin file needs to be salted with the repository url hash as to allow multiple repositories with the same internal plugin names
-            val newFile = downloadPluginToFile(activity, pluginUrl, file, normalizedHash) ?: return false
+            val newFile = downloadPluginToFile(activity, pluginUrl, file, normalizedHash) ?: run {
+                // Audit-8 #2: the download failed after the
+                // installed file was parked — put it back.
+                if (parked) {
+                    rollbackLegacyPluginUpdate(activity, file, backupFile, previousAnchor, data)
+                }
+                return false
+            }
 
             // Fork fix (audit #9): anchor for the load-time check.
             if (normalizedHash != null) {
@@ -1074,26 +1148,40 @@ object PluginManager {
                 removePluginHash(newFile.absolutePath)
             }
 
-            val data = PluginData(
-                internalName,
-                pluginUrl,
-                true,
-                newFile.absolutePath,
-                PLUGIN_VERSION_NOT_SET
-            )
-
             return if (loadPlugin) {
                 unloadPlugin(file.absolutePath)
-                loadPlugin(
+                val loaded = loadPlugin(
                     activity,
                     newFile,
                     data
                 )
+                if (loaded) {
+                    backupFile?.delete()
+                    true
+                } else {
+                    // Audit-8 #2: verified but unloadable — the
+                    // working plugin comes back instead of being
+                    // destroyed.
+                    if (parked) {
+                        rollbackLegacyPluginUpdate(
+                            activity,
+                            file,
+                            backupFile,
+                            previousAnchor,
+                            data
+                        )
+                    }
+                    false
+                }
             } else {
+                backupFile?.delete()
                 setPluginData(data)
                 true
             }
         } catch (e: Exception) {
+            if (parked) {
+                rollbackLegacyPluginUpdate(activity, file, backupFile, previousAnchor, data)
+            }
             logError(e)
             return false
         }
