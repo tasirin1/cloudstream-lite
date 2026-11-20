@@ -497,7 +497,13 @@ private class Mp4PreviewGenerator(override var params: ImageParams) : IPreviewGe
     }
 
     // also check out https://github.com/wseemann/FFmpegMediaMetadataRetriever
-    private val retriever: MediaMetadataRetriever = MediaMetadataRetriever()
+    // Audit-5 #5: there is deliberately no shared retriever field
+    // anymore. Audit-4 #13 released the shared instance from
+    // release() while a load job could still be blocked inside a
+    // native frame grab on it (job cancellation is cooperative and
+    // cannot interrupt the native call) — a native
+    // use-after-release. Each load job now owns its retriever and
+    // releases it in its own finally, like the M3U8 generator.
 
     private fun clear(keepCache: Boolean) {
         if (keepCache) return
@@ -518,8 +524,13 @@ private class Mp4PreviewGenerator(override var params: ImageParams) : IPreviewGe
         currentJob = ioSafe {
             Log.i(TAG, "Loading with url = $url headers = $headers")
             clear(true)
-            retriever.setDataSource(url, headers)
-            start(this)
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(url, headers)
+                start(this, retriever)
+            } finally {
+                runCatching { retriever.release() }
+            }
         }
     }
 
@@ -528,26 +539,30 @@ private class Mp4PreviewGenerator(override var params: ImageParams) : IPreviewGe
         currentJob = ioSafe {
             Log.i(TAG, "Loading with uri = $uri")
             clear(keepCache)
-            retriever.setDataSource(context, uri)
-            start(this)
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, uri)
+                start(this, retriever)
+            } finally {
+                runCatching { retriever.release() }
+            }
         }
     }
 
     override fun release() {
         currentJob?.cancel()
         clear(false)
-        // Audit-4 #13: the shared retriever was never released.
-        // release() is terminal for a generator (the outer
-        // PreviewGenerator discards it), so this cannot strand a
-        // later load.
-        runCatching { retriever.release() }
+        // Audit-5 #5: the retriever is owned by the load job and
+        // released in its finally — cancelling here is enough;
+        // releasing a shared instance from this thread raced the
+        // job's native calls.
     }
 
     override var durationMs: Long = 0L
 
     @Throws
     @WorkerThread
-    private fun start(scope: CoroutineScope) {
+    private fun start(scope: CoroutineScope, retriever: MediaMetadataRetriever) {
         Log.i(TAG, "Started loading preview")
 
         val durationMs =
