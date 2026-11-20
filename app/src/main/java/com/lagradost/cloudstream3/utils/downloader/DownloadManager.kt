@@ -461,18 +461,13 @@ object VideoDownloadManager {
             }
 
             val notification = builder.build()
+            // Audit-14 #49: the callback is the single posting
+            // path — every caller passes the companion
+            // displayNotification, which posts with the same
+            // tag/id. This function ALSO posted directly below,
+            // so every update cost two Binder calls and the
+            // second post overwrote the first.
             notificationCallback(ep.id, notification)
-            with(NotificationManagerCompat.from(context)) {
-                // notificationId is a unique int for each notification that you must define
-                if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    return null
-                }
-                notify(DOWNLOAD_NOTIFICATION_TAG, ep.id, notification)
-            }
             return notification
         } catch (e: Exception) {
             logError(e)
@@ -873,8 +868,18 @@ object VideoDownloadManager {
         )
 
         private fun checkNotification() {
-            if (lastUpdatedMs + UPDATE_RATE_MS > System.currentTimeMillis()) return
-            notify()
+            // Audit-14 #50: the gate used to read lastUpdatedMs
+            // OUTSIDE counterLock while notify() stamped it
+            // inside, so parallel addBytes callers all passed
+            // the gate before any of them stamped. Run the
+            // check and the notify under the same lock
+            // (notify's own synchronized block is reentrant);
+            // the stamp stays inside notify(), where the
+            // bytes/sec dt is computed from it.
+            synchronized(counterLock) {
+                if (lastUpdatedMs + UPDATE_RATE_MS > System.currentTimeMillis()) return
+                notify()
+            }
         }
 
 
