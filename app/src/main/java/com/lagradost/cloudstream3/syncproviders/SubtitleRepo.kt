@@ -27,7 +27,13 @@ class SubtitleRepo(override val api: SubtitleAPI) : AuthRepo(api) {
             // Audit-13 #27: the profile that produced this
             // entry — resource links are bought with that
             // profile's provider token.
-            val account: String
+            val account: String,
+            // Audit-14 #35: the provider USER that produced
+            // this entry. Audit-13 #27 scoped by app profile,
+            // but two provider accounts can share one profile:
+            // after logging out user X and in as user Y, the
+            // cache kept serving X's quota-bound links to Y.
+            val userKey: String?
         )
 
         // maybe make this a generic struct? right now there is a lot of boilerplate
@@ -48,11 +54,13 @@ class SubtitleRepo(override val api: SubtitleAPI) : AuthRepo(api) {
         // using them after A logged out). Scope both caches
         // by the active account.
         val account = currentAccount
+        // Audit-14 #35: identify the provider user as well.
+        val userKey = authData()?.user?.let { "${it.id}:${it.name}" }
         val cached = resourceCache.withLock {
             var found: SubtitleResource? = null
             for (item in resourceCache) {
                 // 20 min save
-                if (item.account == account && item.query == data && (unixTime - item.unixTime) < 60 * 20) {
+                if (item.account == account && item.userKey == userKey && item.query == data && (unixTime - item.unixTime) < 60 * 20) {
                     found = item.response
                     break
                 }
@@ -63,7 +71,7 @@ class SubtitleRepo(override val api: SubtitleAPI) : AuthRepo(api) {
 
         val returnValue = api.resource(freshAuth(), data)
         resourceCache.withLock {
-            val add = SavedResourceResponse(unixTime, returnValue, data, account)
+            val add = SavedResourceResponse(unixTime, returnValue, data, account, userKey)
             if (resourceCache.size > CACHE_SIZE) {
                 resourceCache[resourceCacheIndex] = add // rolling cache
                 resourceCacheIndex = (resourceCacheIndex + 1) % CACHE_SIZE
