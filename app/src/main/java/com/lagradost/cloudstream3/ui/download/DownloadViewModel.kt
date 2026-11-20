@@ -194,6 +194,20 @@ class DownloadViewModel : ViewModel() {
     ) {
         val settingsManager = context.getSharedPrefs()
         ioSafe {
+            // Audit-6 #5: the same execution-time re-check the
+            // episode version got in Audit-5 #11 — the header
+            // version was missed. The caller's "not downloading"
+            // verdict predates a slow calculateDownloadStats, and
+            // this block runs later; a series whose download
+            // started in between would lose its header key here
+            // and vanish from the Downloads screen for good
+            // (header keys are written once, at download start).
+            if (DownloadQueueService.isRunning ||
+                downloadInstances.value.isNotEmpty() ||
+                DownloadQueueManager.queue.value.isNotEmpty()
+            ) {
+                return@ioSafe
+            }
            // Do not remove headers used by resume watching
             val resumeWatchingIds =
                 getAllResumeStateIds()?.mapNotNull { id ->
