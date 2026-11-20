@@ -93,8 +93,15 @@ object DownloadQueueManager {
             // read and merged — wiping the WHOLE folder raced
             // with a download starting in the meantime, whose
             // freshly written resume key vanished with the rest.
-            preResumeIds.forEach { id ->
-                removeKey(KEY_RESUME_IN_QUEUE, id.toString())
+            // Audit-11 #1: this loop used to remove ALL
+            // pre-resume ids anyway — including downloads that
+            // are RUNNING right now (filtered out of the merge
+            // above precisely because they are running). Their
+            // key is their only auto-resume registration: with
+            // it gone, a process death before completion lost
+            // the download forever. Remove only merged ids.
+            resumeQueue.forEach { wrapper ->
+                removeKey(KEY_RESUME_IN_QUEUE, wrapper.id.toString())
             }
 
             // Make sure the download buttons display a pending status
