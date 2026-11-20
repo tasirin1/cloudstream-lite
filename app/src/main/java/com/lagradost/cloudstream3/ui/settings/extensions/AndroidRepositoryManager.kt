@@ -201,7 +201,10 @@ object AndroidRepositoryManager : RepositoryManager {
      * restores the anchor that belongs to it (or drops the new
      * anchor when the old file had none).
      */
-    private fun rollbackPluginUpdate(
+    // Suspend because the Audit-7 #5 reload calls the suspend
+    // PluginManager.loadPlugin; both call sites are in the
+    // suspend downloadPlugin below.
+    private suspend fun rollbackPluginUpdate(
         file: File,
         backupFile: File?,
         previousAnchor: String?,

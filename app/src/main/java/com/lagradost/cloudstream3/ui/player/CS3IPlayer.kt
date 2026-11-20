@@ -144,6 +144,13 @@ class CS3IPlayer : IPlayer {
     private var idleResumeListener: Player.Listener? = null
     private var isPlaying = false
     private var exoPlayer: ExoPlayer? = null
+        set(value) {
+            // If the old value is not null then the player has not been properly released.
+            debugAssert(
+                { field != null && value != null },
+                { "Previous player instance should be released!" })
+            field = value
+        }
 
     // Audit-7 #9: the DRM session manager built for the current
     // DASH load. It holds native MediaDrm sessions (very scarce
@@ -156,13 +163,6 @@ class CS3IPlayer : IPlayer {
         drmSessionManager?.release()
         drmSessionManager = manager
     }
-        set(value) {
-            // If the old value is not null then the player has not been properly released.
-            debugAssert(
-                { field != null && value != null },
-                { "Previous player instance should be released!" })
-            field = value
-        }
 
     var cacheSize = 0L
     var simpleCacheSize = 0L
