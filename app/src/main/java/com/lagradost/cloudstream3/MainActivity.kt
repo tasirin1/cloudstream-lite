@@ -1866,7 +1866,6 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
             requestRW()
             if (checkWrite()) return
         }
-        //CastButtonFactory.setUpMediaRouteButton(this, media_route_button)
 
         // THIS IS CURRENTLY REMOVED BECAUSE HIGHER VERS OF ANDROID NEEDS A NOTIFICATION
         //if (!VideoDownloadManager.isMyServiceRunning(this, VideoDownloadKeepAliveService::class.java)) {
