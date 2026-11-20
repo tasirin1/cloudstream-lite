@@ -89,6 +89,25 @@ object SettingsGeneralScreen : SearchableSettings {
         var isBatteryShown by remember { mutableStateOf(false) }
         val context = LocalContext.current
 
+        // Audit-12 #3: the jsdelivr proxy's real store is the
+        // DataStore — RepositoryManager and the startup
+        // auto-detect read/write it there — but the switch
+        // below binds a default-SharedPreferences preference,
+        // so it wrote a store nothing reads (dead in both
+        // directions). The legacy fragment bridged the two
+        // stores on open; do the same here: pull the real
+        // value into the switch once per screen entry, and
+        // push changes back in the switch's onValueChanged.
+        remember {
+            val real = CloudStreamApp.getKey<Boolean>(
+                context.getString(R.string.jsdelivr_proxy_key), false
+            ) ?: false
+            if (settings.general.jsdelivrProxy.get() != real) {
+                settings.general.jsdelivrProxy.set(real)
+            }
+            Unit
+        }
+
         if (isBatteryShown) {
             ActionDialog(
                 icon = painterResource(R.drawable.battery_alert_24px),
@@ -237,7 +256,16 @@ object SettingsGeneralScreen : SearchableSettings {
                         title = stringResource(R.string.jsdelivr_proxy),
                         subtitle = stringResource(R.string.jsdelivr_proxy_summary),
                         icon = painterResource(R.drawable.wifi_proxy_24px),
-                        preference = settings.general.jsdelivrProxy
+                        preference = settings.general.jsdelivrProxy,
+                        // Audit-12 #3: write through to the
+                        // DataStore the consumers actually read.
+                        onValueChanged = { newValue ->
+                            CloudStreamApp.setKey(
+                                context.getString(R.string.jsdelivr_proxy_key),
+                                newValue
+                            )
+                            true
+                        }
                     )
                 )
             ),
