@@ -775,8 +775,15 @@ object VideoDownloadManager {
 
         fun setWrittenSegment(segmentIndex: Int) {
             hlsWrittenProgress = segmentIndex + 1
-            // in case of abort we need to save every written progress
-            updateFileInfo()
+            // Audit-3 #6: persisting rewrites the whole prefs file,
+            // so doing it for every segment made HLS downloads write
+            // the same XML hundreds of times. Every 10 segments is
+            // enough: close() and every state transition still call
+            // updateFileInfo(), so an abrupt kill loses at most the
+            // last few segments of resume progress.
+            if (hlsWrittenProgress % 10 == 0) {
+                updateFileInfo()
+            }
         }
     }
 
