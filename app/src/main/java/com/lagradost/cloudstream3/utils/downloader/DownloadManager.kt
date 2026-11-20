@@ -1594,6 +1594,27 @@ object VideoDownloadManager {
                 metadata.hlsWrittenProgress = 0
             }
 
+            // Audit-6 #4: entries WITHOUT a fingerprint (written
+            // by <= v4.9.14, or the process died before the first
+            // persist) skip the check above, and nothing else
+            // validated the checkpoint against this playlist: a
+            // startAt beyond the segment count made the segment
+            // iterator empty and hlsWrittenProgress == startAt
+            // pass the final completeness check, declaring a
+            // stale file from a longer, different playlist done.
+            // A checkpoint that cannot belong to this playlist
+            // restarts the download, fingerprint or not.
+            if (startAt > items.size) {
+                fileStream?.closeQuietly()
+                stream = setupStream(baseFile, name, folder, extension, false)
+                fileStream = stream.open()
+                startAt = 0
+                metadata.setResumeLength(0)
+                metadata.setHlsCheckpoint(0, 0)
+                metadata.hlsProgress = 0
+                metadata.hlsWrittenProgress = 0
+            }
+
             metadata.hlsTotal = items.size
             metadata.type = DownloadType.IsDownloading
 
