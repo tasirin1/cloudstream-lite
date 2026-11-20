@@ -165,13 +165,17 @@ object RepositoryManager {
                     val url = response.headers["Location"] ?: return@safeAsync null
                     if (url.startsWith("https://py.md/404")) return@safeAsync null
                     if (url.removeSuffix("/") == "https://py.md") return@safeAsync null
-                    return@safeAsync url
+                    // Audit-4 #7: the redirect target becomes the
+                    // stored repository URL; it skipped the HTTPS
+                    // upgrade the direct-URL branch applies.
+                    return@safeAsync upgradeToHttps(url)
                 } else {
                     val response = app.get("https://cutt.ly/${fixedUrl}", allowRedirects = false)
                     val url = response.headers["Location"] ?: return@safeAsync null
                     if (url.startsWith("https://cutt.ly/404")) return@safeAsync null
                     if (url.removeSuffix("/") == "https://cutt.ly") return@safeAsync null
-                    return@safeAsync url
+                    // Audit-4 #7: same upgrade as the py.md branch.
+                    return@safeAsync upgradeToHttps(url)
                 }
             }
         } else null
