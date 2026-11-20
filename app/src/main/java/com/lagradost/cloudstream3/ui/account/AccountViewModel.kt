@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.context
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.removeKeys
 import com.lagradost.cloudstream3.MainActivity
+import com.lagradost.cloudstream3.syncproviders.AccountManager
 import com.lagradost.cloudstream3.ui.account.AccountHelper.showPinInputDialog
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import com.lagradost.cloudstream3.utils.DataStoreHelper.getAccounts
@@ -71,6 +72,10 @@ class AccountViewModel : ViewModel() {
         context: Context
     ) {
         removeKeys(account.keyIndex.toString())
+        // Audit-10 #2: purge the profile's provider credentials
+        // too (see AccountViewModel2) — they live outside the
+        // "<index>/" namespace.
+        AccountManager.removeAccountData(account.keyIndex)
 
         val currentAccounts = getAccounts(context).toMutableList()
 

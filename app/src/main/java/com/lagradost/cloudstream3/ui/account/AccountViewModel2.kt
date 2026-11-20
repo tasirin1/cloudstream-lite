@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.removeKeys
 import com.lagradost.cloudstream3.MainActivity
+import com.lagradost.cloudstream3.syncproviders.AccountManager
 import com.lagradost.cloudstream3.utils.DataStoreHelper
 import com.lagradost.cloudstream4.state.ActionHandler
 import com.lagradost.cloudstream4.state.DefaultStateContainer
@@ -96,6 +97,11 @@ class AccountViewModel2(
 
             is AccountAction.DeleteAccount -> {
                 removeKeys(action.accountKeyIndex.toString())
+                // Audit-10 #2: the profile's provider credentials
+                // live outside the "<index>/" namespace — purge
+                // them too, or the next profile reusing this
+                // index inherits the logins.
+                AccountManager.removeAccountData(action.accountKeyIndex)
 
                 /** If we remove the logged in account,
                  * then we switch to the default account */

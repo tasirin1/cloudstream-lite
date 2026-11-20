@@ -1,6 +1,7 @@
 package com.lagradost.cloudstream3.syncproviders
 
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.removeKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.syncproviders.providers.Addic7ed
@@ -161,6 +162,25 @@ abstract class AccountManager {
             setKey(ACCOUNT_IDS, "${prefix}/${DataStoreHelper.currentAccount}", id)
             synchronized(cachedAccountIds) {
                 cachedAccountIds[prefix] = id
+            }
+        }
+
+        /**
+         * Audit-10 #2: purge one profile's stored provider
+         * credentials. Profile deletion only removed the
+         * "<index>/" DataStore namespace, leaving the tokens and
+         * selected ids under auth_tokens/auth_ids behind — and
+         * since a new profile reuses a freed index (max+1), it
+         * silently inherited the deleted profile's logins.
+         */
+        fun removeAccountData(accountIndex: Int) {
+            val context = CloudStreamApp.context ?: return
+            for (api in allApis) {
+                val prefix = api.idPrefix
+                context.getSharedPrefs().edit {
+                    remove("${ACCOUNT_TOKEN}/${prefix}/${accountIndex}")
+                }
+                removeKey(ACCOUNT_IDS, "${prefix}/${accountIndex}")
             }
         }
 
