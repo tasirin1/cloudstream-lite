@@ -375,13 +375,20 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
                 totalImages = hsl.allTsLinks.size
 
                 // we cant init directly as it is no guarantee of in order
-                prefixSum = Array(hsl.allTsLinks.size + 1) { 0.0 }
+                // Audit-4 #28 (follow-up): compute into a local
+                // array and publish prefixSum + images together
+                // under the lock — assigning prefixSum here in the
+                // open let getPreviewImage pair a new (possibly
+                // shorter) prefixSum with the previous playlist's
+                // images and index out of bounds.
+                val newPrefixSum = Array(hsl.allTsLinks.size + 1) { 0.0 }
                 var runningSum = 0.0
                 for (i in hsl.allTsLinks.indices) {
                     runningSum += (hsl.allTsLinks[i].time ?: 0.0)
-                    prefixSum[i + 1] = runningSum * durationInv
+                    newPrefixSum[i + 1] = runningSum * durationInv
                 }
                 synchronized(imagesLock) {
+                    prefixSum = newPrefixSum
                     images = Array(hsl.size) { null }
                     loadedImages = 0
                 }
