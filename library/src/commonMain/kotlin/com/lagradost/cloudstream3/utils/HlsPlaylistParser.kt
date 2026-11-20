@@ -1203,8 +1203,13 @@ object HlsPlaylistParser {
             return SchemeData(
                 uuid = C.WIDEVINE_UUID,
                 mimeType = MimeTypes.VIDEO_MP4,
+                // Audit-17 #1: substring(commaIndex) fed
+                // the leading comma itself to the strict
+                // Base64 decoder — every data-URI DRM
+                // payload threw. The payload starts AFTER
+                // the comma.
                 data = if (commaIndex == -1) ByteArray(0)
-                else base64DecodeArray(urlString.substring(commaIndex))
+                else base64DecodeArray(urlString.substring(commaIndex + 1))
             )
         } else if (KEYFORMAT_WIDEVINE_PSSH_JSON == keyFormat) {
             return SchemeData(
@@ -1218,7 +1223,7 @@ object HlsPlaylistParser {
             val commaIndex = urlString.indexOf(',')
             val data: ByteArray =
                 if (commaIndex == -1) ByteArray(0)
-                else base64DecodeArray(urlString.substring(commaIndex))
+                else base64DecodeArray(urlString.substring(commaIndex + 1))
             val psshData: ByteArray =
                 PsshAtomUtil.buildPsshAtom(
                     systemId = C.PLAYREADY_UUID,
