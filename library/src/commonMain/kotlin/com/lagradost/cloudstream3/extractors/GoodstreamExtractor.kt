@@ -27,12 +27,15 @@ class GoodstreamExtractor : ExtractorApi() {
         app.get(url).document.select("script").map { script ->
             if (script.data().contains(hoistedRegex1)) {
                 val urlRegex = hoistedRegex2
-                urlRegex.find(script.data())?.groupValues?.get(1).let { link ->
+                // Audit-5 #43: ?.let — the plain .let ran even
+                // when the regex found nothing, and link!! then
+                // threw on a format change.
+                urlRegex.find(script.data())?.groupValues?.get(1)?.let { link ->
                     callback.invoke(
                         newExtractorLink(
                             name,
                             name,
-                            link!!,
+                            link,
                         ) {
                             this.referer = mainUrl
                         }

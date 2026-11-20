@@ -31,16 +31,22 @@ open class YourUpload : ExtractorApi() {
                         "{${data.replace("file", "\"file\"").replace("'", "\"")}}"
                     )
 
-                    sources.add(
-                        newExtractorLink(
-                            source = name,
-                            name = name,
-                            url = link!!.file,
-                        ) {
-                            this.referer = url
-                            this.quality = getQualityFromName(quality)
-                        }
-                    )
+                    // Audit-5 #44: tryParseJson over a fragile
+                    // string-rebuilt JSON is nullable — link!!
+                    // threw whenever the reconstruction failed to
+                    // parse. Skip the source instead.
+                    link?.file?.let { file ->
+                        sources.add(
+                            newExtractorLink(
+                                source = name,
+                                name = name,
+                                url = file,
+                            ) {
+                                this.referer = url
+                                this.quality = getQualityFromName(quality)
+                            }
+                        )
+                    }
                 }
             }
         }
