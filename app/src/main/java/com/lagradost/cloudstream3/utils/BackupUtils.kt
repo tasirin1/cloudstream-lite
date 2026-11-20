@@ -283,6 +283,16 @@ object BackupUtils {
             // looked like a valid backup (and a later restore
             // picking the newest file would fail parsing it while
             // the user believed the backup existed). Remove it.
+            //
+            // Audit-7 #22: close the streams FIRST. The delete
+            // used to run while the PrintWriter was still open
+            // (it is closed in the finally below) — on SAF /
+            // MediaStore targets deleting an open file can fail
+            // silently, and the close afterwards flushed the
+            // writer's remaining buffer into the file that was
+            // supposed to be gone.
+            printStream?.closeQuietly()
+            fileStream?.closeQuietly()
             try {
                 streamData?.delete()
             } catch (_: Exception) {
