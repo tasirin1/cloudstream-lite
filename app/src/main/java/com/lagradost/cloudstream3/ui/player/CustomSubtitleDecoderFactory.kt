@@ -207,15 +207,27 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
     // toasting for every chunk of a broken file.
     private var parseFailureReported = false
 
+    // Audit-5 #17: charset detected for this decoder's file,
+    // cached after the first chunk (see getStr).
+    private var detectedEncodingName: String? = null
+
     private fun getStr(byteArray: ByteArray): Pair<String, Charset> {
         val encoding = try {
-            val encoding = overrideEncoding ?: run {
+            val encoding = overrideEncoding ?: detectedEncodingName ?: run {
                 val detector = UniversalDetector()
 
                 detector.handleData(byteArray, 0, byteArray.size)
                 detector.dataEnd()
 
                 detector.detectedCharset // "windows-1256"
+            }.also { detected ->
+                // Audit-5 #17: detection used to run fresh on
+                // every chunk, and chunk boundaries could flip
+                // the verdict mid-file (one encoding on this
+                // chunk, another on the next) — a stretch of
+                // mojibake lines. Detect once per file and reuse;
+                // a user override still wins (checked first).
+                if (detected != null) detectedEncodingName = detected
             }
 
             Log.i(
@@ -396,6 +408,7 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
 
     override fun reset() {
         currentSubtitleCues.clear()
+        detectedEncodingName = null
         super.reset()
     }
 }
