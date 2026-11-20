@@ -21,6 +21,8 @@ open class Embedgram : ExtractorApi() {
     ) {
         val document = app.get(url, referer = referer).document
         val link = document.select("video source:last-child").attr("src")
+        // Audit-7 #45: blank link published as a source.
+        if (link.isBlank()) return
         val quality = document.select("video source:last-child").attr("title")
         callback.invoke(
             newExtractorLink(

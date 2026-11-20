@@ -37,7 +37,10 @@ open class Moviehab : ExtractorApi() {
                 url
             ).forEach(callback)
 
-            hoistedRegex1.find(res.text)?.groupValues?.get(1).let {sub ->
+            // Audit-7 #45: ?.let — a missing match used to
+            // still run the block with null and publish
+            // "$mainUrl/null" as the subtitle URL.
+            hoistedRegex1.find(res.text)?.groupValues?.getOrNull(1)?.let {sub ->
                 subtitleCallback.invoke(
                     newSubtitleFile(
                         it.select("track").attr("label"),

@@ -36,7 +36,9 @@ open class CloudMailRu : ExtractorApi() {
         val vidIdEnc   = base64Encode(vidId)
         val videoReq   = app.get(url, headers=headers).text
         val regex      = hoistedRegex1
-        val videoMatch = regex.find(videoReq)?.groupValues?.get(1).toString()
+        // Audit-7 #45: a missing match became the literal
+        // string "null" as the video host.
+        val videoMatch = regex.find(videoReq)?.groupValues?.getOrNull(1) ?: return
         val videoUrl   = "$videoMatch/0p/$vidIdEnc.m3u8?double_encode=1"
 //        Log.d("kraptor_${this.name}","videoMatch = $videoMatch hani base64 = $vidIdEnc vidurl = $videoUrl")
 

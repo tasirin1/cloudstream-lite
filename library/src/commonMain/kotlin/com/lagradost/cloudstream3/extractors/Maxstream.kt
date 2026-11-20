@@ -19,7 +19,8 @@ open class Maxstream : ExtractorApi() {
         val response = app.get(url).text
         val jstounpack = hoistedRegex1.find(response)?.groups?.get(1)?.value
         val unpacjed = JsUnpacker(jstounpack).unpack()
-        val extractedUrl = unpacjed?.let { hoistedRegex2.find(it) }?.groups?.get(1)?.value.toString()
+        // Audit-7 #45: missing match -> "null" URL published.
+        val extractedUrl = unpacjed?.let { hoistedRegex2.find(it) }?.groups?.get(1)?.value ?: return null
 
         M3u8Helper.generateM3u8(
             name,

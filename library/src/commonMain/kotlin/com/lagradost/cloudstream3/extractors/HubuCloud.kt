@@ -20,6 +20,9 @@ open class HubuCloud: ExtractorApi() {
         val doc = app.get(url).document
 
         val streamUrl = doc.select("source").attr("src")
+        // Audit-7 #45: an absent source element yields an
+        // empty URL, which was published as a playable link.
+        if (streamUrl.isBlank()) return
         callback.invoke(newExtractorLink(source = name, name = name, url = streamUrl))
     }
 }

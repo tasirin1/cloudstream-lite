@@ -75,17 +75,21 @@ open class VidStack : ExtractorApi() {
             }
         }
 
-        callback.invoke(
-            newExtractorLink(
-                source = this.name,
-                name = this.name,
-                url = m3u8,
-                type = ExtractorLinkType.M3U8
-            ) {
-                this.referer = url
-                this.quality = Qualities.Unknown.value
-            }
-        )
+        // Audit-7 #45: an unmatched m3u8 fell back to "" and
+        // was still published as a playable link.
+        if (m3u8.isNotBlank()) {
+            callback.invoke(
+                newExtractorLink(
+                    source = this.name,
+                    name = this.name,
+                    url = m3u8,
+                    type = ExtractorLinkType.M3U8
+                ) {
+                    this.referer = url
+                    this.quality = Qualities.Unknown.value
+                }
+            )
+        }
     }
 
     private fun getBaseUrl(url: String): String {
