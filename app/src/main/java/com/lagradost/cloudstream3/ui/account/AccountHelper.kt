@@ -80,8 +80,19 @@ object AccountHelper {
             val dialogClickListener = DialogInterface.OnClickListener { _, which ->
                 when (which) {
                     DialogInterface.BUTTON_POSITIVE -> {
-                        accountDeleteCallback.invoke(account)
-                        dialog?.dismissSafe()
+                        // Audit-10 #1: same PIN gate as the apply
+                        // path below — deleting a locked account
+                        // used to need only this confirm tap.
+                        if (account.lockPin != null) {
+                            showPinInputDialog(context, account.lockPin, false) { pin ->
+                                if (pin == null) return@showPinInputDialog
+                                accountDeleteCallback.invoke(account)
+                                dialog?.dismissSafe()
+                            }
+                        } else {
+                            accountDeleteCallback.invoke(account)
+                            dialog?.dismissSafe()
+                        }
                     }
 
                     DialogInterface.BUTTON_NEGATIVE -> {

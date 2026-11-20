@@ -246,18 +246,35 @@ object AccountScreen {
             }
 
             WaitForDialogType.DeleteAccount -> {
-                ActionDialog(
-                    title = stringResource(R.string.delete),
-                    text = stringResource(R.string.delete_message, account.name),
-                    confirm = {
-                        onAction(AccountAction.DeleteAccount(account.keyIndex))
-                        onAction(AccountAction.EditAccount(null))
-                        onDismissRequest()
-                    },
-                    dismiss = onDismissRequest,
-                    confirmText = stringResource(R.string.delete),
-                    dismissText = stringResource(R.string.cancel)
-                )
+                // Audit-10 #1: deleting a PIN-locked account asked
+                // only for a generic confirm tap, while SAVING from
+                // the same dialog is PIN-gated — and the dialog is
+                // reachable pre-login via long-press. Require the
+                // PIN first; entering it is the confirmation.
+                if (account.lockPin != null) {
+                    EnterPinDialog(
+                        expected = account.lockPin,
+                        onDismissRequest = onDismissRequest,
+                        onCorrect = {
+                            onAction(AccountAction.DeleteAccount(account.keyIndex))
+                            onAction(AccountAction.EditAccount(null))
+                            onDismissRequest()
+                        }
+                    )
+                } else {
+                    ActionDialog(
+                        title = stringResource(R.string.delete),
+                        text = stringResource(R.string.delete_message, account.name),
+                        confirm = {
+                            onAction(AccountAction.DeleteAccount(account.keyIndex))
+                            onAction(AccountAction.EditAccount(null))
+                            onDismissRequest()
+                        },
+                        dismiss = onDismissRequest,
+                        confirmText = stringResource(R.string.delete),
+                        dismissText = stringResource(R.string.cancel)
+                    )
+                }
             }
 
             WaitForDialogType.NewProfilePicture -> {
