@@ -111,6 +111,18 @@ object ApkUpdater {
         }
         writeStream.flush()
 
+        // Audit-6 #28: only EXCEEDING the declared length was
+        // checked. A stream that ends early (cut-off chunked
+        // response, server closing mid-file) completed as
+        // "success" whenever there was no digest to catch it —
+        // and the partial file was then installed in place of
+        // the working plugin.
+        if (length != null && transferred < length) {
+            throw IOException(
+                "Plugin download incomplete ($transferred of $length bytes)"
+            )
+        }
+
         // Audit-4 #5: same fail-closed policy as the KDoc above;
         // a throwing digest() aborts the transfer.
         val check = md?.digest()
