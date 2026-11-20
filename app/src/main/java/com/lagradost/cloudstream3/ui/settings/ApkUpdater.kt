@@ -68,6 +68,17 @@ object ApkUpdater {
             throw DigestException("Unsupported digest algorithm: ${digest.algorithm}")
         }
 
+        // Audit-6 #7: a digest with a collision-broken algorithm
+        // (MD5, SHA-1) is not verification — anyone can forge a
+        // matching file. Fail closed, per the policy in the KDoc
+        // above, instead of stamping the transfer "verified".
+        if (digest != null &&
+            (digest.algorithm.equals("MD5", ignoreCase = true) ||
+                digest.algorithm.equals("SHA-1", ignoreCase = true))
+        ) {
+            throw DigestException("Weak digest algorithm: ${digest.algorithm}")
+        }
+
         val context = currentCoroutineContext()
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         var read: Int

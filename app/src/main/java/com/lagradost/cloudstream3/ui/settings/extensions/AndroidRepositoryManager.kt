@@ -209,7 +209,14 @@ object AndroidRepositoryManager : RepositoryManager {
         // already does. Kept in the "sha256-<hex>" format that
         // RepositoryManager.sha256 produces and loadPlugin compares.
         val anchorHash = source.digest
-            ?.takeIf { it.algorithm.equals("sha256", ignoreCase = true) }
+            // Audit-6 #7: compare spelling-insensitively — the
+            // standard name is "SHA-256" since DigestPair.parse
+            // normalizes, and this used to miss every spelling
+            // but the exact "sha256".
+            ?.takeIf {
+                it.algorithm.replace("-", "")
+                    .equals("sha256", ignoreCase = true)
+            }
             ?.let { pair -> "sha256-" + pair.digest.joinToString("") { "%02x".format(it) } }
 
         /**

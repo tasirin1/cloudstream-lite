@@ -27,7 +27,24 @@ data class DigestPair(
             // Audit-4 #5: tolerate sloppy whitespace around the
             // algorithm name or hex ("sha256 : ...") instead of
             // rejecting every plugin of that repository.
-            val digestAlgorithm = split.getOrNull(0)?.trim() ?: return null
+            val rawAlgorithm = split.getOrNull(0)?.trim() ?: return null
+            // Audit-6 #7: normalize the spelling to the standard
+            // MessageDigest name. Repositories write the same
+            // algorithm as "sha256", "SHA-256" or "SHA256"; the
+            // raw string used to flow through, so the load-time
+            // anchor check (which compares against "sha256")
+            // silently stored NO anchor for the "SHA-256"
+            // spelling — the download verified, the stored
+            // integrity check never happened.
+            val digestAlgorithm = when (
+                rawAlgorithm.replace("-", "").replace("_", "").lowercase()
+            ) {
+                "sha256" -> "SHA-256"
+                "sha512" -> "SHA-512"
+                "sha1" -> "SHA-1"
+                "md5" -> "MD5"
+                else -> rawAlgorithm
+            }
             val digestByteArray = safe { split.getOrNull(1)?.trim()?.hexToByteArray() } ?: return null
 
             return DigestPair(digestAlgorithm, digestByteArray)
