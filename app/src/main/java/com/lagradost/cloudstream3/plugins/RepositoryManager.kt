@@ -129,6 +129,21 @@ object RepositoryManager {
         return "https://cdn.jsdelivr.net/gh/$user/$repo@$rest"
     }
 
+    /**
+     * Audit-4 #6: Audit-3 #11 upgraded only the repository entry
+     * URL, but the manifest's plugin-list URLs and the plugin file
+     * URLs inside the list were still used as-is — over plain HTTP
+     * a network attacker can forge the list and its hashes
+     * together, so every URL in that chain is upgraded as well.
+     */
+    fun upgradeToHttps(url: String): String {
+        return if (url.startsWith("http://")) {
+            "https://" + url.removePrefix("http://")
+        } else {
+            url
+        }
+    }
+
     suspend fun parseRepoUrl(url: String): String? {
         val fixedUrl = url.trim()
         return if (fixedUrl.contains("^https?://".toRegex())) {
@@ -136,11 +151,7 @@ object RepositoryManager {
             // the hashes used to verify plugins; over plain HTTP a
             // network attacker can forge both together, so repo
             // URLs are upgraded to HTTPS.
-            if (fixedUrl.startsWith("http://")) {
-                "https://" + fixedUrl.removePrefix("http://")
-            } else {
-                fixedUrl
-            }
+            upgradeToHttps(fixedUrl)
         } else if (fixedUrl.contains("^(cloudstreamrepo://)|(https://cs\\.repo/\\??)".toRegex())) {
             fixedUrl.replace("^(cloudstreamrepo://)|(https://cs\\.repo/\\??)".toRegex(), "").let {
                 return@let if (!it.contains("^https?://".toRegex()))
@@ -177,7 +188,14 @@ object RepositoryManager {
     private suspend fun parsePlugins(pluginUrls: String): List<SitePlugin> {
         // Take manifestVersion and such into account later
         return try {
-            app.get(convertRawGitUrl(pluginUrls), cacheTime = 15, cacheUnit = TimeUnit.MINUTES)
+            // Audit-4 #6: the plugin-list URL comes from inside the
+            // repository manifest and was not covered by the
+            // Audit-3 #11 entry-URL upgrade.
+            app.get(
+                convertRawGitUrl(upgradeToHttps(pluginUrls)),
+                cacheTime = 15,
+                cacheUnit = TimeUnit.MINUTES
+            )
                 .parsed<Array<SitePlugin>>().toList()
         } catch (t: Throwable) {
             logError(t)
@@ -192,7 +210,10 @@ object RepositoryManager {
         val repo = parseRepository(repositoryData.url) ?: return null
         val list = repo.pluginLists.amap { url ->
             parsePlugins(url).map {
-                PluginWrapper(repo, repositoryData, it)
+                // Audit-4 #6: upgrade the plugin file URL itself;
+                // it is fetched later by the download paths, which
+                // use it verbatim.
+                PluginWrapper(repo, repositoryData, it.copy(url = upgradeToHttps(it.url)))
             }
         }.flatten()
         return list

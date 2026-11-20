@@ -19,6 +19,7 @@ import com.lagradost.cloudstream3.plugins.RepositoryManager.addRepository
 import com.lagradost.cloudstream3.plugins.RepositoryManager.convertRawGitUrl
 import com.lagradost.cloudstream3.plugins.RepositoryManager.parseRepoUrl
 import com.lagradost.cloudstream3.plugins.RepositoryManager.removeRepository
+import com.lagradost.cloudstream3.plugins.RepositoryManager.upgradeToHttps
 import com.lagradost.cloudstream3.plugins.SitePlugin
 import com.lagradost.cloudstream3.ui.settings.ApkUpdater
 import com.lagradost.cloudstream3.ui.settings.ApkUpdater.isFileDigest
@@ -105,7 +106,10 @@ object AndroidRepositoryManager : RepositoryManager {
             val plugins = parsedRepository.pluginLists.cmap { url ->
                 /** This should really be a list of size ~ 1 */
                 app.get(
-                    url = convertRawGitUrl(url),
+                    // Audit-4 #6: plugin-list URLs from inside the
+                    // manifest get the same HTTPS upgrade as the
+                    // repository entry URL (Audit-3 #11).
+                    url = convertRawGitUrl(upgradeToHttps(url)),
                     cacheTime = 15,
                     cacheUnit = TimeUnit.MINUTES
                 ).parsed<Array<SitePlugin>>()
@@ -139,7 +143,9 @@ object AndroidRepositoryManager : RepositoryManager {
                         source = PluginDownloadSource(
                             size = plugin.fileSize,
                             repositoryUrl = url,
-                            pluginUrl = plugin.url,
+                            // Audit-4 #6: the plugin file URL is
+                            // fetched verbatim at download time.
+                            pluginUrl = upgradeToHttps(plugin.url),
                             internalName = plugin.internalName,
                             digest = plugin.fileHash?.let { hash ->
                                 // Audit-3 #2: a hash the repo DID
