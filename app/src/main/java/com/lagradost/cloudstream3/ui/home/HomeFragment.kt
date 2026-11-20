@@ -416,7 +416,21 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
                 // kept the "cancelled" filter.
                 val originalHomeTypes = DataStoreHelper.homePreference
 
+                // Audit-14 #29: Back / outside-tap dismissed
+                // the sheet without ever reaching the Cancel
+                // button, so the "cancelled" filter stayed
+                // applied. Route every dismissal through a
+                // listener that rolls back when the exit was a
+                // cancel (button, Back, or outside tap).
+                var homeDialogCancelled = false
+                dialog.setOnDismissListener {
+                    if (homeDialogCancelled) {
+                        DataStoreHelper.homePreference = originalHomeTypes
+                    }
+                }
+
                 binding.cancelBtt.setOnClickListener {
+                    homeDialogCancelled = true
                     DataStoreHelper.homePreference = originalHomeTypes
                     dialog.dismissSafe()
                 }
