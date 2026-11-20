@@ -148,10 +148,18 @@ class SubtitleResource {
     ) {
         val source = app.get(url).okhttpResponse.body.source()
         val zip = downloadFile(source)
-        val realFiles = unzip(zip)
-        zip.deleteRecursively()
-        realFiles.forEach { (name, subtitleFile) ->
-            addFile(subtitleFile, nameGenerator(name, subtitleFile))
+        // Audit-7 #15: the downloaded archive was only deleted
+        // on the success path — every unzip failure (corrupt
+        // archive, extraction cap, full disk) left up to
+        // MAX_SUBTITLE_ARCHIVE_BYTES of garbage behind until
+        // the whole app process ended.
+        try {
+            val realFiles = unzip(zip)
+            realFiles.forEach { (name, subtitleFile) ->
+                addFile(subtitleFile, nameGenerator(name, subtitleFile))
+            }
+        } finally {
+            zip.deleteRecursively()
         }
     }
 }
