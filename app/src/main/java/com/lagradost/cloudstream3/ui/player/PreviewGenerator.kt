@@ -338,9 +338,20 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
     override var durationMs: Long = 0L
 
     private var currentJob: Job? = null
+
+    // Audit-7 #14: generation of the latest load() call. A
+    // superseded job checks this before publishing — cancelling
+    // alone was not enough, because the publish block after
+    // hslLazy() never looked at isActive, and load() cleared
+    // state BEFORE cancelling the old job, leaving a window
+    // where the stale job wrote into the fresh state.
+    @Volatile
+    private var loadGeneration: Int = 0
+
     fun load(url: String, headers: Map<String, String>) {
-        clear()
         currentJob?.cancel()
+        clear()
+        val generation = ++loadGeneration
         currentJob = ioSafe {
             withContext(Dispatchers.IO) {
                 Log.i(TAG, "Loading with url = $url headers = $headers")
@@ -363,6 +374,12 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
                     selectBest = false,
                     requireAudio = false,
                 )
+
+                // Audit-7 #14: a newer load() superseded this
+                // job while the playlist was being fetched —
+                // publish nothing, the state belongs to the new
+                // episode now.
+                if (generation != loadGeneration) return@withContext
 
                 // no support for encryption atm
                 if (hsl.isEncrypted) {
