@@ -219,7 +219,7 @@ internal fun evalJsInternal(
 }
 
 private enum class TT {
-    NUMBER, STRING, IDENT, PLUS, MINUS, STAR, SLASH, PERCENT, POW, EQ, EQEQ, EQEQEQ,
+    NUMBER, STRING, TEMPLATE, IDENT, PLUS, MINUS, STAR, SLASH, PERCENT, POW, EQ, EQEQ, EQEQEQ,
     NEQ, NEQEQ, LT, LTEQ, GT, GTEQ, AND, OR, NOT, AMP, PIPE, CARET, TILDE,
     LSHIFT, RSHIFT, URSHIFT, PLUSEQ, MINUSEQ, STAREQ, SLASHEQ, PERCENTEQ, POWEQ,
     ANDEQ, OREQ, CARETEQ, LSHIFTEQ, RSHIFTEQ, URSHIFTEQ,
@@ -291,12 +291,8 @@ private class Lexer(private val src: String) {
         val start = pos++
         val sb = StringBuilder()
         if (quote == '`') {
-            // template literal. We flatten it to a plain string (no interpolation yet)
-            while (pos < src.length && src[pos] != '`') {
-                if (src[pos] == '\\') appendEscape(sb)
-                else sb.append(src[pos++])
-            }
-            if (pos < src.length) pos++ // consume closing `
+            readTemplate(start)
+            return
         } else {
             while (pos < src.length && src[pos] != quote) {
                 if (src[pos] == '\\') appendEscape(sb)
@@ -332,6 +328,77 @@ private class Lexer(private val src: String) {
             '0' -> { sb.append('\u0000'); pos += 2 }
             else -> { sb.append(unescape(c)); pos += 2 }
         }
+    }
+
+    // Audit-19 #5: template literals now interpolate
+    // ${...}. Literal parts are escape-decoded as before;
+    // each expression's source is carried in the token
+    // between U+0001/U+0002 markers for the parser to
+    // sub-parse (those control chars cannot appear in
+    // real script source unescaped).
+    private fun readTemplate(start: Int) {
+        val sb = StringBuilder()
+        while (pos < src.length && src[pos] != '`') {
+            when {
+                src[pos] == '\\' -> appendEscape(sb)
+                src[pos] == '$' && pos + 1 < src.length && src[pos + 1] == '{' -> {
+                    val close = findCloseBrace(pos + 2)
+                    sb.append('\u0001')
+                    sb.append(src.substring(pos + 2, close))
+                    sb.append('\u0002')
+                    pos = if (close < src.length) close + 1 else src.length
+                }
+                else -> sb.append(src[pos++])
+            }
+        }
+        if (pos < src.length) pos++ // consume closing `
+        tokens.add(Token(TT.TEMPLATE, sb.toString(), start))
+    }
+
+    private fun findCloseBrace(from: Int): Int {
+        var depth = 1
+        var i = from
+        while (i < src.length) {
+            when (src[i]) {
+                '{' -> depth++
+                '}' -> {
+                    depth--
+                    if (depth == 0) return i
+                }
+                '"', '\'' -> i = skipQuoted(i)
+                '`' -> i = skipTemplateEnd(i)
+                '\\' -> i++
+            }
+            i++
+        }
+        return src.length
+    }
+
+    private fun skipQuoted(i: Int): Int {
+        val q = src[i]
+        var j = i + 1
+        while (j < src.length) {
+            if (src[j] == '\\') {
+                j += 2
+                continue
+            }
+            if (src[j] == q) return j
+            j++
+        }
+        return src.length
+    }
+
+    private fun skipTemplateEnd(i: Int): Int {
+        var j = i + 1
+        while (j < src.length) {
+            when (src[j]) {
+                '\\' -> j++
+                '`' -> return j
+                '$' -> if (j + 1 < src.length && src[j + 1] == '{') j = findCloseBrace(j + 2)
+            }
+            j++
+        }
+        return src.length
     }
 
     private fun unescape(c: Char): Char = when (c) {
@@ -400,6 +467,8 @@ private class Lexer(private val src: String) {
 private sealed class Node
 private data class NumLit(val v: Double) : Node()
 private data class StrLit(val v: String) : Node()
+
+private data class TemplateExpr(val parts: List<Node>) : Node()
 private data class BoolLit(val v: Boolean) : Node()
 private object NullLit : Node()
 private object UndefinedLit : Node()
@@ -430,6 +499,38 @@ private data class TryCatch(val body: List<Node>, val catchParam: String?, val c
 private data class ThrowStmt(val expr: Node) : Node()
 
 private class Parser(private val lex: Lexer) {
+
+    // Audit-19 #5: split a template token's raw text into
+    // literal and expression parts; each expression source
+    // is parsed by a fresh Parser over its own Lexer. An
+    // unparseable interpolation degrades to an empty string
+    // instead of failing the whole script.
+    private fun parseTemplate(raw: String): Node {
+        val parts = mutableListOf<Node>()
+        var i = 0
+        while (i < raw.length) {
+            val open = raw.indexOf('\u0001', i)
+            if (open == -1) {
+                parts.add(StrLit(raw.substring(i)))
+                break
+            }
+            if (open > i) parts.add(StrLit(raw.substring(i, open)))
+            val close = raw.indexOf('\u0002', open)
+            val exprSrc =
+                if (close == -1) raw.substring(open + 1)
+                else raw.substring(open + 1, close)
+            val exprNode = try {
+                val stmts = Parser(Lexer(exprSrc)).parseProgram()
+                (stmts.singleOrNull() as? ExprStmt)?.expr ?: StrLit("")
+            } catch (e: Exception) {
+                StrLit("")
+            }
+            parts.add(exprNode)
+            if (close == -1) break
+            i = close + 1
+        }
+        return TemplateExpr(parts)
+    }
 
     fun parseProgram(): List<Node> {
         val stmts = mutableListOf<Node>()
@@ -769,6 +870,7 @@ private class Parser(private val lex: Lexer) {
                 NumLit(value)
             }
             TT.STRING -> { lex.consume(); StrLit(tok.raw) }
+            TT.TEMPLATE -> { lex.consume(); parseTemplate(tok.raw) }
             TT.LPAREN -> {
                 lex.consume()
                 val expr = parseSeq()
@@ -1417,6 +1519,7 @@ private class JsInterpreter(
     private fun evalExpr(node: Node, scope: Scope): Any? = when (node) {
         is NumLit -> node.v
         is StrLit -> node.v
+        is TemplateExpr -> node.parts.joinToString("") { toJsString(evalExpr(it, scope)) }
         is BoolLit -> node.v
         NullLit -> null
         UndefinedLit -> Unit
