@@ -78,27 +78,13 @@ object SettingsUpdatesScreen : SearchableSettings {
         }
 
         return persistentListOf(
-            Preference.PreferenceGroup(
-                title = stringResource(R.string.pref_category_app_updates),
-                preferenceItems = persistentListOf(
-                    Preference.PreferenceItem.ListPreference(
-                        title = stringResource(R.string.apk_installer_settings),
-                        subtitle = stringResource(R.string.apk_installer_settings_des),
-                        icon = painterResource(R.drawable.mobile_wrench_24px),
-                        entries = integerArrayResource(R.array.apk_installer_values).zip(
-                            stringArrayResource(R.array.apk_installer_pref)
-                        ).toMap(),
-                        preference = settings.updates.apkInstaller
-                    ),
-
-                    Preference.PreferenceItem.SwitchPreference(
-                        title = stringResource(R.string.updates_settings),
-                        subtitle = stringResource(R.string.updates_settings_des),
-                        icon = painterResource(R.drawable.notifications_active_24px),
-                        preference = settings.updates.showAppUpdates
-                    )
-                )
-            ),
+            // Audit-13 #29/#30: the whole "app updates" group is
+            // gone — both of its preferences were dead. The APK
+            // installer choice lost its only consumer when the
+            // PackageInstaller chain was removed (Audit-5 #33),
+            // and the App updates switch's key was never read
+            // (runAutoUpdate is inert in this fork). Settings
+            // that silently do nothing are worse than no setting.
             Preference.PreferenceGroup(
                 title = stringResource(R.string.pref_category_backup),
                 preferenceItems = persistentListOf(
