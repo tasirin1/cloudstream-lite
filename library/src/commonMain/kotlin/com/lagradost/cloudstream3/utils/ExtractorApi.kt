@@ -45,6 +45,7 @@ import com.lagradost.cloudstream3.extractors.Dhtpre
 import com.lagradost.cloudstream3.extractors.Dokicloud
 import com.lagradost.cloudstream3.extractors.DoodCxExtractor
 import com.lagradost.cloudstream3.extractors.DoodLaExtractor
+import com.lagradost.cloudstream3.extractors.DoodLiExtractor
 import com.lagradost.cloudstream3.extractors.DoodPmExtractor
 import com.lagradost.cloudstream3.extractors.DoodShExtractor
 import com.lagradost.cloudstream3.extractors.DoodSoExtractor
@@ -1120,6 +1121,9 @@ val extractorApis: AtomicMutableList<ExtractorApi> = atomicListOf(
     D000dCom(),
     DoodstreamCom(),
     DoodWsExtractor(),
+    // Audit-3 #43: DoodLiExtractor existed but was never
+    // registered, so dood.li links silently found no extractor.
+    DoodLiExtractor(),
     DoodShExtractor(),
     DoodWatchExtractor(),
     DoodWfExtractor(),
