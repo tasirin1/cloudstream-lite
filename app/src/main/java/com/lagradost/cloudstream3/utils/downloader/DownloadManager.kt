@@ -20,7 +20,6 @@ import androidx.core.app.PendingIntentCompat
 import androidx.core.net.toUri
 import androidx.preference.PreferenceManager
 import com.lagradost.cloudstream3.APIHolder.getApiFromNameNull
-import com.lagradost.cloudstream3.BuildConfig
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CommonActivity.showToast
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.removeKey
@@ -822,10 +821,12 @@ object VideoDownloadManager {
                     downloadStatusEvent(id to type)
                 }
             } catch (t: Throwable) {
+                // Audit-4 #42: this used to rethrow on DEBUG
+                // builds, crashing the download loop mid-download
+                // for any notification-path failure — the exact
+                // thing the "should not crash" comment above says
+                // must not happen. Log only, on every build type.
                 logError(t)
-                if (BuildConfig.DEBUG) {
-                    throw t
-                }
             }
         }
 
