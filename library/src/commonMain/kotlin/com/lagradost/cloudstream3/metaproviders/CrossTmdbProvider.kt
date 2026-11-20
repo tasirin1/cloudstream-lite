@@ -12,6 +12,7 @@ import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.amap
 import com.lagradost.cloudstream3.mvvm.logError
+import kotlinx.coroutines.CancellationException
 import com.lagradost.cloudstream3.toNewSearchResponseList
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
@@ -53,6 +54,14 @@ class CrossTmdbProvider : TmdbProvider() {
                 getApiFromNameNull(apiName)?.let {
                     try {
                         it.loadLinks(data, isCasting, subtitleCallback, callback)
+                    } catch (e: CancellationException) {
+                        // Audit-12 #10: cancellation is not a
+                        // per-provider failure — rethrow it
+                        // instead of logging a fake error and
+                        // letting the fan-out keep working for a
+                        // dead screen (same class as Audit-10
+                        // #7/#13/#14).
+                        throw e
                     } catch (e: Exception) {
                         logError(e)
                     }
@@ -105,6 +114,9 @@ class CrossTmdbProvider : TmdbProvider() {
                                 }
                             }
                             null
+                        } catch (e: CancellationException) {
+                            // Audit-12 #10: see loadLinks above.
+                            throw e
                         } catch (e: Exception) {
                             logError(e)
                             null
