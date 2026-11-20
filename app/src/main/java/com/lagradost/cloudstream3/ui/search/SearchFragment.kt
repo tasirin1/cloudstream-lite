@@ -524,12 +524,15 @@ class SearchFragment : BaseFragment<FragmentSearchBinding>(
             when (it) {
                 is Resource.Success -> {
                     it.value.let { data ->
-                        val list = data.list
-                        if (list.isNotEmpty()) {
-                            (binding.searchAutofitResults.adapter as? SearchAdapter)?.submitList(
-                                list
-                            )
-                        }
+                        // Audit-13 #11: submit unconditionally,
+                        // like QuickSearchFragment — the isNotEmpty
+                        // guard left the PREVIOUS query's posters
+                        // on screen when a (simple-mode) search
+                        // returned nothing, presented as if they
+                        // matched the new query.
+                        (binding.searchAutofitResults.adapter as? SearchAdapter)?.submitList(
+                            data.list
+                        )
                     }
                     searchExitIcon?.alpha = 1f
                     binding.searchLoadingBar.alpha = 0f
