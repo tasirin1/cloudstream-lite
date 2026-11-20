@@ -1308,8 +1308,13 @@ class GeneratorPlayer : FullScreenPlayer() {
                 var subtitleGroupIndex = subtitleGroupIndexStart
 
                 val subtitleOptionIndexStart =
+                    // Audit-14 #46: indexOfFirst returns -1 (not
+                    // null) when the active subtitle's suffix is
+                    // not in the group, so the old ?: 0 never
+                    // fired and -1 reached setSelection /
+                    // setItemChecked.
                     subtitlesGrouped[currentSelectedSubtitles?.originalName]?.indexOfFirst { it.nameSuffix == currentSelectedSubtitles?.nameSuffix }
-                        ?: 0
+                        ?.takeIf { it != -1 } ?: 0
                 var subtitleOptionIndex = subtitleOptionIndexStart
 
                 subsArrayAdapter.addAll(subtitles)
