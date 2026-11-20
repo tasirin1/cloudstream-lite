@@ -17,10 +17,13 @@ object LiveHelper {
             return
         }
 
-        // Prevent duplicates
-        if (liveManagers.contains(player)) {
-            return
-        }
+        // Audit-15 #19: the duplicate check used to sit
+        // OUTSIDE the synchronized block below — two
+        // concurrent registrations for one player both
+        // passed it, both added listeners, and the second
+        // put orphaned the first listener forever
+        // (WeakHashMap is not thread-safe). The check now
+        // happens inside the lock at registration time.
 
         val liveManager = LiveManager(player)
         val listener = object : Player.Listener {
@@ -51,12 +54,23 @@ object LiveHelper {
 
                 // Seek back to the optimal live spot
                 if (timeAheadOfLive > 100) {
-                    player.seekTo(newPosition.positionMs - timeAheadOfLive)
+                    // Audit-15 #20: a discontinuity near
+                    // position 0 with a large ahead-estimate
+                    // produced a negative target — some
+                    // sources throw IllegalSeekPositionException
+                    // instead of clamping.
+                    player.seekTo(
+                        (newPosition.positionMs - timeAheadOfLive).coerceAtLeast(0)
+                    )
                 }
             }
         }
 
         synchronized(liveManagers) {
+            // Prevent duplicates (inside the lock, see above)
+            if (liveManagers.contains(player)) {
+                return
+            }
             player.addListener(listener)
             liveManagers[player] = liveManager to listener
         }
@@ -68,11 +82,7 @@ object LiveHelper {
             return
         }
 
-        // Prevent duplicates
-        if (!liveManagers.contains(player)) {
-            return
-        }
-
+        // Audit-15 #19: check-and-remove under the same lock.
         synchronized(liveManagers) {
             liveManagers[player]?.let { (_, listener) ->
                 player.removeListener(listener)
@@ -81,5 +91,6 @@ object LiveHelper {
         }
     }
 
-    fun getLiveManager(player: Player?) = liveManagers[player]?.first
+    fun getLiveManager(player: Player?) =
+        synchronized(liveManagers) { liveManagers[player]?.first }
 }
