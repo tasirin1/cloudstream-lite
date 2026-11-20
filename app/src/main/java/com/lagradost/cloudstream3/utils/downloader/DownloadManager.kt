@@ -558,6 +558,21 @@ object VideoDownloadManager {
         // this is used for copy with metadata on how much we have downloaded for setKey
         private var downloadFileInfoTemplate: DownloadedFileInfo? = null
     ) : Closeable {
+        // Audit-4 #1: the HLS resume checkpoint pairs the written
+        // segment count with the exact file length at that count.
+        // The pair is only ever replaced as a whole (from inside the
+        // download write lock, or when a download starts), so a
+        // persisted pair always describes a real prefix of the file.
+        // The old count-only extraInfo could not detect the extra
+        // segments an abrupt kill leaves in the file tail, and resume
+        // appended duplicates of them.
+        @Volatile
+        private var hlsCheckpoint: Pair<Int, Long> = Pair(0, 0L)
+
+        fun setHlsCheckpoint(index: Int, bytes: Long) {
+            hlsCheckpoint = Pair(index, bytes)
+        }
+
         fun setResumeLength(length: Long) {
             bytesDownloaded = length
             bytesWritten = length
@@ -638,7 +653,12 @@ object VideoDownloadManager {
                     template.copy(
                         linkHash = linkHash,
                         totalBytes = totalBytesValue,
-                        extraInfo = if (isHLS) hlsWrittenProgress.toString() else null
+                        extraInfo = if (isHLS) {
+                            // Audit-4 #1: persist the (segment count,
+                            // file byte length) checkpoint pair.
+                            val checkpoint = hlsCheckpoint
+                            "${checkpoint.first}:${checkpoint.second}"
+                        } else null
                     )
                 )
             }
@@ -775,12 +795,19 @@ object VideoDownloadManager {
 
         fun setWrittenSegment(segmentIndex: Int) {
             hlsWrittenProgress = segmentIndex + 1
+            // Audit-4 #1: bytesWritten was already updated by
+            // addBytesWritten just before this call (both write paths),
+            // so this pair always describes the file's current prefix.
+            hlsCheckpoint = Pair(hlsWrittenProgress, bytesWritten)
             // Audit-3 #6: persisting rewrites the whole prefs file,
             // so doing it for every segment made HLS downloads write
             // the same XML hundreds of times. Every 10 segments is
             // enough: close() and every state transition still call
             // updateFileInfo(), so an abrupt kill loses at most the
-            // last few segments of resume progress.
+            // last few segments of resume progress — and since
+            // Audit-4 #1 the resume side verifies the file length
+            // against the persisted checkpoint before appending, so
+            // the segments past it can no longer be duplicated.
             if (hlsWrittenProgress % 10 == 0) {
                 updateFileInfo()
             }
@@ -1298,6 +1325,7 @@ object VideoDownloadManager {
         folder: String,
         parentId: Int?,
         startIndex: Int?,
+        startBytes: Long?,
         createNotificationCallback: (CreateNotificationMetadata) -> Unit,
         parallelConnections: Int = 3
     ): DownloadStatus = withContext(Dispatchers.IO) {
@@ -1321,14 +1349,28 @@ object VideoDownloadManager {
             if (baseFile == null) return@withContext DOWNLOAD_BAD_CONFIG
 
             val displayName = getDisplayName(name, extension)
-            val stream =
+            var stream =
                 setupStream(baseFile, name, folder, extension, startAt > 0)
 
-            if (!stream.resume) startAt = 0
+            if (!stream.resume) {
+                startAt = 0
+            } else if (startBytes == null || stream.startAt != startBytes) {
+                // Audit-4 #1: the file length does not match the
+                // persisted (segment count, byte length) checkpoint —
+                // an abrupt kill left extra segments in the tail, or
+                // this is a legacy count-only entry. The excess tail
+                // cannot be located or trusted, so restart this file
+                // from zero instead of appending duplicate segments
+                // after it. Clean pauses/stops persist the exact final
+                // checkpoint in close(), so they still resume fully.
+                stream = setupStream(baseFile, name, folder, extension, false)
+                startAt = 0
+            }
             fileStream = stream.open()
 
             // push the metadata
             metadata.setResumeLength(stream.startAt)
+            metadata.setHlsCheckpoint(startAt, stream.startAt)
             metadata.hlsProgress = startAt
             metadata.hlsWrittenProgress = startAt
             metadata.type = DownloadType.IsPending
@@ -1557,13 +1599,20 @@ object VideoDownloadManager {
         try {
             when (link.type) {
                 ExtractorLinkType.M3U8 -> {
-                    val startIndex = if (tryResume) {
+                    // Audit-4 #1: extraInfo stores the resume checkpoint
+                    // as "<segment count>:<file byte length>". Legacy
+                    // entries hold only the count; their byte length is
+                    // null, which makes downloadHLS restart that one
+                    // partial file instead of trusting its tail.
+                    val savedInfo = if (tryResume) {
                         context.getKey<DownloadedFileInfo>(
                             KEY_DOWNLOAD_INFO,
                             ep.id.toString(),
                             null
-                        )?.extraInfo?.toIntOrNull()
+                        )?.extraInfo
                     } else null
+                    val startIndex = savedInfo?.substringBefore(':')?.toIntOrNull()
+                    val startBytes = savedInfo?.substringAfter(':', "")?.toLongOrNull()
 
                     return downloadHLS(
                         context,
@@ -1572,6 +1621,7 @@ object VideoDownloadManager {
                         folder ?: "",
                         ep.id,
                         startIndex,
+                        startBytes,
                         callback, parallelConnections = maxConcurrentConnections(context)
                     )
                 }
