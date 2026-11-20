@@ -1332,7 +1332,12 @@ private class JsInterpreter(
                             try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
                         }
                         is JsList -> for (i in obj.elements.indices) {
-                            inner.define(node.decl, i.toDouble())
+                            // Audit-17 #5: JS binds for-in
+                            // keys as STRINGS, even for arrays
+                            // (the object branch above already
+                            // did); a Double key made
+                            // k === "0" never true.
+                            inner.define(node.decl, i.toString())
                             try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
                         }
                         else -> {}
@@ -1622,7 +1627,17 @@ private class JsInterpreter(
                 else obj.elements.sortWith { a, b -> toNumber(callAny(fn, listOf(a, b), null)).toInt() }
                 obj
             }
-            "includes" -> nativeFn("includes") { args -> obj.elements.any { looseEq(it, args.getOrNull(0)) } }
+            // Audit-17 #6: includes uses SameValueZero in
+            // JS (strict equality, except NaN matches NaN) —
+            // looseEq made [1].includes("1") true and
+            // [NaN].includes(NaN) false.
+            "includes" -> nativeFn("includes") { args ->
+                val target = args.getOrNull(0)
+                obj.elements.any {
+                    strictEq(it, target) ||
+                        (it is Double && target is Double && it.isNaN() && target.isNaN())
+                }
+            }
             "toString" -> nativeFn("toString") { _ -> obj.elements.joinToString(",") { joinElement(it) } }
             "flat" -> nativeFn("flat") { _ ->
                 val result = JsList()
