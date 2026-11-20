@@ -1569,7 +1569,13 @@ private class JsInterpreter(
                 val from = args.getOrNull(0); val to = toJsString(args.getOrNull(1))
                 obj.replace(toJsString(from), to)
             }
-            "indexOf" -> nativeFn("indexOf") { args -> obj.indexOf(toJsString(args.getOrNull(0))).toDouble() }
+            "indexOf" -> nativeFn("indexOf") { args ->
+                // Audit-15 #27 (string sibling): the position
+                // argument was ignored here too.
+                val rawStart = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
+                val start = if (rawStart < 0) 0 else minOf(rawStart, obj.length)
+                obj.indexOf(toJsString(args.getOrNull(0)), start).toDouble()
+            }
             "lastIndexOf" -> nativeFn("lastIndexOf") { args -> obj.lastIndexOf(toJsString(args.getOrNull(0))).toDouble() }
             "includes" -> nativeFn("includes") { args -> obj.contains(toJsString(args.getOrNull(0))) }
             "startsWith" -> nativeFn("startsWith") { args -> obj.startsWith(toJsString(args.getOrNull(0))) }
