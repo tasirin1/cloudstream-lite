@@ -55,13 +55,10 @@
         <package android:name="live.mehiz.mpvkt.preview" />
         <package android:name="com.brouken.player" />
         <package android:name="dev.anilbeesetti.nextplayer" />
-        <package android:name="com.instantbits.cast.webvideo" />
         <package android:name="com.gianlu.aria2android" />
         <package android:name="org.xbmc.kodi" />
         
         <!-- Torrent clients -->
-        <package android:name="org.proninyaroslav.libretorrent" />
-        <package android:name="com.biglybt.android.client" />
     </queries>
 
     <!-- Fixes android tv fuckery -->
