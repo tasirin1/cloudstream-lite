@@ -2189,7 +2189,9 @@ class CS3IPlayer : IPlayer {
 
     @SuppressLint("UnsafeOptInUsageError")
     @MainThread
-    private fun loadOnlinePlayer(context: Context, link: ExtractorLink, retry: Boolean = false) {
+    // Audit-14 #64: the retry parameter was never read by
+    // the body and never passed by either caller — removed.
+    private fun loadOnlinePlayer(context: Context, link: ExtractorLink) {
         Log.i(TAG, "loadOnlinePlayer $link")
         try {
             val mime = when (link.type) {
