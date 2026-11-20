@@ -114,7 +114,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
         }
         val position = libraryViewModel.currentPage.value ?: 0
         val pages = (libraryViewModel.pages.value as? Resource.Success)?.value ?: return
-        val hasItems = pages[position].items.isNotEmpty()
+        // Audit-3 #17: currentPage and pages are independent LiveData;
+        // after switching to an account with fewer pages the position
+        // can be out of bounds for one emission.
+        val hasItems = pages.getOrNull(position)?.items?.isNotEmpty() ?: false
         val isPhone = isLayout(PHONE)
 
         binding.libraryRandom.isVisible = isPhone && hasItems
@@ -390,7 +393,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
                             val randomClickListener = View.OnClickListener {
                                 val position = libraryViewModel.currentPage.value ?: 0
                                 val syncIdName = libraryViewModel.currentSyncApi?.syncIdName ?: return@OnClickListener
-                                pages[position].items.randomOrNull()?.let { item ->
+                                pages.getOrNull(position)?.items?.randomOrNull()?.let { item ->
                                     loadLibraryItem(syncIdName, item.syncId, item)
                                 }
                             }
