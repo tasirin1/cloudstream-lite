@@ -128,6 +128,12 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
             setForeground(foregroundInfo)
 
             val subscriptions = getAllSubscriptions()
+            // Audit-15 #3: remember which profile the snapshot
+            // belongs to — the write-back keys are prefixed
+            // with the LIVE currentAccount, so a mid-run
+            // profile switch would land profile A's data in
+            // profile B's namespace.
+            val accountAtStart = DataStoreHelper.currentAccount
 
             if (subscriptions.isEmpty()) {
                 WorkManager.getInstance(context).cancelWorkById(this.id)
@@ -177,6 +183,13 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
                             savedData.lastSeenEpisodeCount[DubStatus.None] ?: Int.MIN_VALUE
                         val shouldUpdate = latestEpisode > latestSeenEpisode
                         shouldUpdate to latestEpisode
+                    }
+
+                    // Audit-15 #3: profile switched mid-run —
+                    // do not write this profile's results into
+                    // the new profile's namespace.
+                    if (DataStoreHelper.currentAccount != accountAtStart) {
+                        return@amap null
                     }
 
                     DataStoreHelper.updateSubscribedData(
