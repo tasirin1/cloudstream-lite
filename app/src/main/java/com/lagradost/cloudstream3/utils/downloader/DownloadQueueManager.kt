@@ -72,8 +72,9 @@ object DownloadQueueManager {
                 return@startQueue
             }
 
+            val preResumeIds = getPreResumeIds()
             val resumeQueue =
-                getPreResumeIds().filterNot {
+                preResumeIds.filterNot {
                     VideoDownloadManager.currentDownloads.value.contains(it)
                 }
                     .mapNotNull { id ->
@@ -86,8 +87,14 @@ object DownloadQueueManager {
                 (resumeQueue + localQueue).distinctBy { it.id }.toTypedArray()
             }
 
-            // Once added to the queue they can be safely removed
-            removeKeys(KEY_RESUME_IN_QUEUE)
+            // Once added to the queue they can be safely removed.
+            // Audit-7 #21: remove only the ids that were actually
+            // read and merged — wiping the WHOLE folder raced
+            // with a download starting in the meantime, whose
+            // freshly written resume key vanished with the rest.
+            preResumeIds.forEach { id ->
+                removeKey(KEY_RESUME_IN_QUEUE, id.toString())
+            }
 
             // Make sure the download buttons display a pending status
             newQueue.forEach { obj ->
