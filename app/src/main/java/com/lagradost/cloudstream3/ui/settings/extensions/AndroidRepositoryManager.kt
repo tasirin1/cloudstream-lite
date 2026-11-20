@@ -214,6 +214,13 @@ object AndroidRepositoryManager : RepositoryManager {
 
         val tempFile = File.createTempFile(file.name, ".tmp", context.cacheDir)
 
+        // Audit-4 #32: a failed transfer (network error, digest
+        // mismatch, the Audit-4 #8 size ceiling) used to leave
+        // the .tmp file behind in the cache dir. The body keeps
+        // its indentation; the finally removes the temp file
+        // unless the move below consumed it.
+        var tempMoved = false
+        try {
         tempFile.outputStream().use { writeStream ->
             app.get(convertRawGitUrl(source.pluginUrl)).body.use { body ->
                 val readStream = body.byteStream()
@@ -246,6 +253,11 @@ object AndroidRepositoryManager : RepositoryManager {
                 file.toPath(),
                 StandardCopyOption.REPLACE_EXISTING
             )
+        }
+        tempMoved = true
+        } finally {
+            // Audit-4 #32: see tempMoved above.
+            if (!tempMoved) tempFile.delete()
         }
 
         // Audit-3 #1: anchor BEFORE load, like the legacy path

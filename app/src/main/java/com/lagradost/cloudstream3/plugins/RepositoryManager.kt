@@ -252,6 +252,14 @@ object RepositoryManager {
             // Prevent corrupting the plugin file if the operation fails
             val tempFile = File.createTempFile(file.name, ".tmp", context.cacheDir)
 
+            // Audit-4 #32: every failure below (network error,
+            // the Audit-4 #8 size ceiling, a hash mismatch) used
+            // to leave the .tmp file behind in the cache dir,
+            // leaking a partial plugin per failed attempt. The
+            // body keeps its indentation; the finally removes the
+            // temp file unless the move consumed it.
+            var tempMoved = false
+            try {
             val body = app.get(convertRawGitUrl(pluginUrl)).okhttpResponse.body
 
             // Audit-4 #8: bounded copy — the declared content
@@ -305,8 +313,13 @@ object RepositoryManager {
                     StandardCopyOption.REPLACE_EXISTING
                 )
             }
+            tempMoved = true
 
             file
+            } finally {
+                // Audit-4 #32: see tempMoved above.
+                if (!tempMoved) tempFile.delete()
+            }
         }
     }
 
