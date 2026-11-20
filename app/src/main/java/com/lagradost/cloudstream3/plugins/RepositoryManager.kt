@@ -104,6 +104,44 @@ object RepositoryManager {
     // the cache dir until the device storage is full.
     const val MAX_PLUGIN_FILE_SIZE_BYTES: Long = 100_000_000L
 
+    // Audit-5 #12: hard ceiling for a repository manifest or
+    // plugin-list JSON body. parsed<>() materializes the whole
+    // body before any cap applies, so the Audit-4 #30 entry cap
+    // could not stop a single huge string field (or a small gzip
+    // body expanding hugely) from OOMing the STB during plugin
+    // refresh. Real manifests/lists are kilobytes.
+    const val MAX_REPOSITORY_JSON_BYTES: Long = 10_000_000L
+
+    /**
+     * Audit-5 #12: reads a response body as text, returning null
+     * if it exceeds [maxBytes] — the bounded counterpart of
+     * parsed<>() for repository JSON. The Content-Length is
+     * checked first, but the stream is also counted as it is
+     * read (chunked/gzip responses may not declare a length).
+     */
+    fun readTextBounded(
+        response: com.lagradost.nicehttp.NiceResponse,
+        maxBytes: Long = MAX_REPOSITORY_JSON_BYTES
+    ): String? {
+        val body = response.body
+        try {
+            if (body.contentLength() > maxBytes) return null
+            val out = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(16 * 1024)
+            body.byteStream().use { stream ->
+                while (true) {
+                    val read = stream.read(buffer)
+                    if (read < 0) break
+                    if (out.size() + read > maxBytes) return null
+                    out.write(buffer, 0, read)
+                }
+            }
+            return out.toString(Charsets.UTF_8.name())
+        } finally {
+            body.close()
+        }
+    }
+
     // Audit-4 #30: cap on entries per plugin list. The Compose
     // path already caps pluginLists at 10, but neither path
     // capped the entries INSIDE one list — a malicious or
@@ -206,8 +244,11 @@ object RepositoryManager {
     suspend fun parseRepository(url: String): Repository? {
         return safeAsync {
             // Take manifestVersion and such into account later
-            app.get(convertRawGitUrl(url), cacheTime = 15, cacheUnit = TimeUnit.MINUTES)
-                .parsedSafe<Repository>()
+            // Audit-5 #12: bounded body, then parse the text.
+            val text = readTextBounded(
+                app.get(convertRawGitUrl(url), cacheTime = 15, cacheUnit = TimeUnit.MINUTES)
+            )
+            text?.let { com.lagradost.cloudstream3.utils.AppUtils.tryParseJson<Repository>(it) }
         }
     }
 
@@ -217,13 +258,18 @@ object RepositoryManager {
             // Audit-4 #6: the plugin-list URL comes from inside the
             // repository manifest and was not covered by the
             // Audit-3 #11 entry-URL upgrade.
-            app.get(
-                convertRawGitUrl(upgradeToHttps(pluginUrls)),
-                cacheTime = 15,
-                cacheUnit = TimeUnit.MINUTES
-            )
+            // Audit-5 #12: bounded body, then parse the text.
+            val text = readTextBounded(
+                app.get(
+                    convertRawGitUrl(upgradeToHttps(pluginUrls)),
+                    cacheTime = 15,
+                    cacheUnit = TimeUnit.MINUTES
+                )
+            ) ?: return emptyList()
+            com.lagradost.cloudstream3.utils.AppUtils.tryParseJson<Array<SitePlugin>>(text)
                 // Audit-4 #30: see MAX_PLUGINS_PER_LIST.
-                .parsed<Array<SitePlugin>>().take(MAX_PLUGINS_PER_LIST).toList()
+                ?.take(MAX_PLUGINS_PER_LIST)?.toList()
+                ?: emptyList()
         } catch (t: Throwable) {
             logError(t)
             emptyList()

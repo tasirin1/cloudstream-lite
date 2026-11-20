@@ -80,11 +80,18 @@ object AndroidRepositoryManager : RepositoryManager {
                 throw ErrorLoadingException(activity.getString(R.string.error_invalid_url))
             }
 
-            val parsedRepository = app.get(
-                url = convertRawGitUrl(url),
-                cacheTime = 15,
-                cacheUnit = TimeUnit.MINUTES
-            ).parsed<com.lagradost.cloudstream3.plugins.Repository>()
+            // Audit-5 #12: bounded body, then parse the text
+            // (RepositoryManager.readTextBounded).
+            val parsedRepository = com.lagradost.cloudstream3.utils.AppUtils.parseJson(
+                com.lagradost.cloudstream3.plugins.RepositoryManager.readTextBounded(
+                    app.get(
+                        url = convertRawGitUrl(url),
+                        cacheTime = 15,
+                        cacheUnit = TimeUnit.MINUTES
+                    )
+                ) ?: throw ErrorLoadingException("Repository manifest too large"),
+                com.lagradost.cloudstream3.plugins.Repository::class
+            )
 
             /**
              * No sane repository should be able to DDoS the app when navigating to settings, so
@@ -106,14 +113,20 @@ object AndroidRepositoryManager : RepositoryManager {
 
             val plugins = parsedRepository.pluginLists.cmap { url ->
                 /** This should really be a list of size ~ 1 */
-                app.get(
-                    // Audit-4 #6: plugin-list URLs from inside the
-                    // manifest get the same HTTPS upgrade as the
-                    // repository entry URL (Audit-3 #11).
-                    url = convertRawGitUrl(upgradeToHttps(url)),
-                    cacheTime = 15,
-                    cacheUnit = TimeUnit.MINUTES
-                ).parsed<Array<SitePlugin>>()
+                // Audit-5 #12: bounded body, then parse the text.
+                com.lagradost.cloudstream3.utils.AppUtils.parseJson(
+                    com.lagradost.cloudstream3.plugins.RepositoryManager.readTextBounded(
+                        app.get(
+                            // Audit-4 #6: plugin-list URLs from inside the
+                            // manifest get the same HTTPS upgrade as the
+                            // repository entry URL (Audit-3 #11).
+                            url = convertRawGitUrl(upgradeToHttps(url)),
+                            cacheTime = 15,
+                            cacheUnit = TimeUnit.MINUTES
+                        )
+                    ) ?: throw ErrorLoadingException("Plugin list too large"),
+                    Array<SitePlugin>::class
+                )
                     // Audit-4 #30: cap entries per list, see
                     // RepositoryManager.MAX_PLUGINS_PER_LIST.
                     .take(MAX_PLUGINS_PER_LIST)
