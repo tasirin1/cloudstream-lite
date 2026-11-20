@@ -281,7 +281,18 @@ object HlsPlaylistParser {
 
     object UrlUtil {
         fun resolveToUrl(baseUrl: String?, referenceUrl: String?): Url {
-            return Url(resolve(baseUrl, referenceUrl))
+            // Audit-16 #5: ktor's Url() throws a raw
+            // URLParserException (IllegalArgumentException)
+            // for malformed variant/rendition URIs (e.g. a
+            // non-numeric port) — convert it to the parser's
+            // declared ParserException contract.
+            return try {
+                Url(resolve(baseUrl, referenceUrl))
+            } catch (e: IllegalArgumentException) {
+                throw ParserException.createForMalformedManifest(
+                    "Malformed URL in playlist: $referenceUrl", e
+                )
+            }
         }
 
 
