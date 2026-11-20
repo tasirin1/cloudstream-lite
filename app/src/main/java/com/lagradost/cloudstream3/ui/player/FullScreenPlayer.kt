@@ -783,16 +783,21 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
                 act.getString(R.string.compressor_makeup_hint, compressor.makeupGain.toInt())
         }
 
-        // WhiteButton = selected/active, BlackButton = unselected — same as speed presets
-        fun syncEnableButtons() {
+        // Audit-14 #57: the two button styles resolve to the
+        // same two ColorStateLists every time — the sync
+        // functions below run on every slider tick and used to
+        // re-run obtainStyledAttributes per button per tick.
+        // Resolve each style once per dialog.
+        val compressorButtonStyleCache =
+            mutableMapOf<Int, Pair<android.content.res.ColorStateList?, android.content.res.ColorStateList?>>()
+
+        fun applyCompressorButtonStyle(
+            btn: com.google.android.material.button.MaterialButton,
+            active: Boolean
+        ) {
             val ctx = context ?: return
-            listOf(
-                binding.compressorEnableBtt to compressor.enabled,
-                binding.compressorDisableBtt to !compressor.enabled,
-            ).forEach { (btn, active) ->
-                // Apply the full WhiteButton or BlackButton style — backgroundTint only.
-                // Also update setTextColor so we don't get white text on white background.
-                val styleAttr = if (active) R.style.WhiteButton else R.style.BlackButton
+            val styleAttr = if (active) R.style.WhiteButton else R.style.BlackButton
+            val (bg, fg) = compressorButtonStyleCache.getOrPut(styleAttr) {
                 val ta = ctx.obtainStyledAttributes(
                     styleAttr,
                     intArrayOf(
@@ -800,9 +805,21 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
                         android.R.attr.textColor,
                     )
                 )
-                btn.backgroundTintList = ta.getColorStateList(0)
-                ta.getColorStateList(1)?.let { btn.setTextColor(it) }
+                val resolved = ta.getColorStateList(0) to ta.getColorStateList(1)
                 ta.recycle()
+                resolved
+            }
+            btn.backgroundTintList = bg
+            fg?.let { btn.setTextColor(it) }
+        }
+
+        // WhiteButton = selected/active, BlackButton = unselected — same as speed presets
+        fun syncEnableButtons() {
+            listOf(
+                binding.compressorEnableBtt to compressor.enabled,
+                binding.compressorDisableBtt to !compressor.enabled,
+            ).forEach { (btn, active) ->
+                applyCompressorButtonStyle(btn, active)
             }
             updateCurrentLabel()
         }
@@ -816,19 +833,8 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         )
 
         fun syncPresetButtons(active: com.google.android.material.button.MaterialButton?) {
-            val ctx = context ?: return
             allPresets.forEach { btn ->
-                val isActive = btn == active
-                val ta = ctx.obtainStyledAttributes(
-                    if (isActive) R.style.WhiteButton else R.style.BlackButton,
-                    intArrayOf(
-                        com.google.android.material.R.attr.backgroundTint,
-                        android.R.attr.textColor,
-                    )
-                )
-                btn.backgroundTintList = ta.getColorStateList(0)
-                ta.getColorStateList(1)?.let { btn.setTextColor(it) }
-                ta.recycle()
+                applyCompressorButtonStyle(btn, btn == active)
             }
         }
 
