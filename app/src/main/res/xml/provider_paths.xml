@@ -1,18 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Audit-6 #29: this provider used to expose the ENTIRE
+     external storage plus the full internal files/cache roots,
+     while its only use is sharing one generated .m3u8 playlist
+     (OpenInAppAction). Any code running in the app process —
+     including a careless plugin — could mint a grantable URI
+     for any shared-storage file (local plugins, backups,
+     downloads) and hand it to another app. Only the dedicated
+     playlist folder is exposed now. -->
 <paths>
-    <external-path
-            name="external"
-            path="." />
-    <external-files-path
-            name="external_files"
-            path="." />
     <cache-path
             name="cache"
-            path="." />
-    <external-cache-path
-            name="external_cache"
-            path="." />
-    <files-path
-            name="files"
-            path="." />
+            path="shared/" />
 </paths>

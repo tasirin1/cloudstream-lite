@@ -47,7 +47,11 @@ fun makeTempM3U8Intent(
         addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
     }
 
-    val outputFile = File.createTempFile("mirrorlist", ".m3u8", context.cacheDir)
+    // Audit-6 #29: generated playlists live in a dedicated
+    // subfolder — it is the only directory the FileProvider
+    // exposes (see res/xml/provider_paths.xml).
+    val sharedDir = File(context.cacheDir, "shared").apply { mkdirs() }
+    val outputFile = File.createTempFile("mirrorlist", ".m3u8", sharedDir)
     var text = "#EXTM3U\n#EXT-X-VERSION:3"
 
     result.links.forEach { link ->
