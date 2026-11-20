@@ -2677,16 +2677,6 @@ public final class com/lagradost/cloudstream3/extractors/Gdriveplayerus : com/la
 	public fun getMainUrl ()Ljava/lang/String;
 }
 
-public class com/lagradost/cloudstream3/extractors/GenericM3U8 : com/lagradost/cloudstream3/utils/ExtractorApi {
-	public fun <init> ()V
-	public fun getMainUrl ()Ljava/lang/String;
-	public fun getName ()Ljava/lang/String;
-	public fun getRequiresReferer ()Z
-	public fun getUrl (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun setMainUrl (Ljava/lang/String;)V
-	public fun setName (Ljava/lang/String;)V
-}
-
 public final class com/lagradost/cloudstream3/extractors/Geodailymotion : com/lagradost/cloudstream3/extractors/Dailymotion {
 	public fun <init> ()V
 	public fun getMainUrl ()Ljava/lang/String;
