@@ -96,8 +96,20 @@ class CustomSubripParser : SubtitleParser {
             val endTimeUs: Long
             val matcher = SUBRIP_TIMING_LINE.matcher(currentLine)
             if (matcher.matches()) {
-                startTimeUs = parseTimecode(matcher,  /* groupOffset= */1)
-                endTimeUs = parseTimecode(matcher,  /* groupOffset= */6)
+                // Audit-10 #18: the timecode groups are
+                // unbounded digit runs — a component with 19+
+                // digits matches the regex but overflows
+                // toLong() inside parseTimecode, and that
+                // exception used to abort the WHOLE subtitle
+                // file. Skip just this cue, like the invalid
+                // index/timing lines around here.
+                try {
+                    startTimeUs = parseTimecode(matcher,  /* groupOffset= */1)
+                    endTimeUs = parseTimecode(matcher,  /* groupOffset= */6)
+                } catch (_: NumberFormatException) {
+                    Log.w(TAG, "Skipping invalid timing: $currentLine")
+                    continue
+                }
             } else {
                 Log.w(TAG, "Skipping invalid timing: $currentLine")
                 continue
