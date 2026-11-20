@@ -255,10 +255,14 @@ class DownloadQueueService : Service() {
                     // never tracked in downloadInstances.
                     val downloadInstance = DownloadQueueManager.popQueue(context)
                     if (downloadInstance != null) {
-                        downloadInstance.startDownload()
+                        // Audit-16 #12: register BEFORE starting
+                        // — a stop pressed in the old gap found
+                        // no instance (already popped, not yet
+                        // tracked) and the download ran anyway.
                         _downloadInstances.update { instances ->
                             instances + downloadInstance
                         }
+                        downloadInstance.startDownload()
                     }
                 }
 
