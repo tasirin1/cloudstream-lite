@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.plugins.PluginManager
 import com.lagradost.cloudstream3.plugins.PluginManager.deletePlugin
 import com.lagradost.cloudstream3.plugins.PluginManager.getPluginPath
 import com.lagradost.cloudstream3.plugins.PluginManager.unloadPlugin
+import com.lagradost.cloudstream3.plugins.RepositoryManager.MAX_PLUGINS_PER_LIST
 import com.lagradost.cloudstream3.plugins.RepositoryManager.PREBUILT_REPOSITORIES
 import com.lagradost.cloudstream3.plugins.RepositoryManager.addRepository
 import com.lagradost.cloudstream3.plugins.RepositoryManager.convertRawGitUrl
@@ -113,6 +114,9 @@ object AndroidRepositoryManager : RepositoryManager {
                     cacheTime = 15,
                     cacheUnit = TimeUnit.MINUTES
                 ).parsed<Array<SitePlugin>>()
+                    // Audit-4 #30: cap entries per list, see
+                    // RepositoryManager.MAX_PLUGINS_PER_LIST.
+                    .take(MAX_PLUGINS_PER_LIST)
             }.flatMap { plugins ->
                 plugins.map { plugin ->
                     val file = getPluginPath(

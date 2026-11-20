@@ -103,6 +103,15 @@ object RepositoryManager {
     // compromised repository (or a MITM) from streaming data into
     // the cache dir until the device storage is full.
     const val MAX_PLUGIN_FILE_SIZE_BYTES: Long = 100_000_000L
+
+    // Audit-4 #30: cap on entries per plugin list. The Compose
+    // path already caps pluginLists at 10, but neither path
+    // capped the entries INSIDE one list — a malicious or
+    // compromised repository could serve a list with a huge
+    // number of entries and blow up memory on the STB while it
+    // is mapped/wrapped for display. Real repositories have at
+    // most a few hundred plugins.
+    const val MAX_PLUGINS_PER_LIST: Int = 1000
     val PREBUILT_REPOSITORIES: Array<RepositoryData> by lazy {
         getKey<Array<RepositoryData>>("PREBUILT_REPOSITORIES") ?: emptyArray()
     }
@@ -206,7 +215,8 @@ object RepositoryManager {
                 cacheTime = 15,
                 cacheUnit = TimeUnit.MINUTES
             )
-                .parsed<Array<SitePlugin>>().toList()
+                // Audit-4 #30: see MAX_PLUGINS_PER_LIST.
+                .parsed<Array<SitePlugin>>().take(MAX_PLUGINS_PER_LIST).toList()
         } catch (t: Throwable) {
             logError(t)
             emptyList()
