@@ -2076,6 +2076,12 @@ object VideoDownloadManager {
             return result
         } catch (e: Exception) {
             logError(e)
+            // Audit-19 #11: evict here too — the two null
+            // paths above already do, and this is the path a
+            // file deleted outside the app takes, so a stale
+            // success entry otherwise kept showing it as
+            // present until the TTL expired.
+            fileInfoCache.remove(id)
             return null
         }
     }
@@ -2553,6 +2559,14 @@ object VideoDownloadManager {
                 // 2. Makes it into the download format
                 // 3. Downloads it as a .vtt file
                 this.subtitleDownloadJob = ioSafe {
+                    // Audit-19 #12: a stop pressed during setup
+                    // can run before this job's handle was
+                    // visible to cancelDownload(), and nothing
+                    // here checked the flag — the job downloaded
+                    // subtitles back after the stop cleanup had
+                    // deleted them. Bail out on the flag, at
+                    // entry and before each file.
+                    if (isCancelled) return@ioSafe
                     try {
                         val downloadList = SubtitlesFragment.getDownloadSubsLanguageTagIETF()
 
@@ -2569,6 +2583,7 @@ object VideoDownloadManager {
                             ?.map { ExtractorSubtitleLink(it.name, it.url, "", it.headers) }
                             ?.take(3) // max subtitles download hardcoded (?_?)
                             ?.forEach { link ->
+                                if (isCancelled) return@ioSafe
                                 val fileName = getFileName(context, meta)
                                 downloadSubtitle(context, link, fileName, folder)
                             }
