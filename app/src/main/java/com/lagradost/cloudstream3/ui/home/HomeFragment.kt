@@ -443,7 +443,17 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
 
                         val name = getItem(position)
                         titleText?.text = name
-                        val providerApi = currentValidApis[position]
+                        // Audit-4 #47: was currentValidApis[position]
+                        // — the names adapter and the API list can
+                        // desync when plugins (un)load between
+                        // adapter creation and a rebind, crashing
+                        // getView. Degrade to a plain row instead.
+                        val providerApi = currentValidApis.getOrNull(position)
+                        if (providerApi == null) {
+                            pinIcon.visibility = View.GONE
+                            settingsIcon.visibility = View.GONE
+                            return view
+                        }
                         val isPinned =
                             pinnedphashset.contains(providerApi.name)
                         pinIcon.visibility = if (isPinned) View.VISIBLE else View.GONE
