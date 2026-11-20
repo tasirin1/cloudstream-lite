@@ -37,7 +37,18 @@ object AesHelper {
         val cipher = aesKey.cipher(padding = padding)
 
         return if (!encrypt) {
-            val plainBytes = cipher.decryptWithIv(iv, base64DecodeArray(parse.ct))
+            // Audit-8 #19: parse.ct is remote-controlled and was
+            // decoded unguarded — a non-base64 value threw
+            // IllegalArgumentException out of this function,
+            // breaking its own null-on-failure convention (every
+            // other failure path here returns null, and neither
+            // caller catches).
+            val ctBytes = try {
+                base64DecodeArray(parse.ct)
+            } catch (e: IllegalArgumentException) {
+                return null
+            }
+            val plainBytes = cipher.decryptWithIv(iv, ctBytes)
             plainBytes.decodeToString()
         } else {
             base64Encode(cipher.encryptWithIv(iv, parse.ct.encodeToByteArray()))
