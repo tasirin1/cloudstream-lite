@@ -45,7 +45,6 @@
     <string name="type_plan_to_watch">پلان بۆ سەیرکردن</string>
     <string name="type_re_watching">دووبارە سەیرکردنەوە</string>
     <string name="play_torrent_button">تۆرێنت ستریم بکە</string>
-    <string name="torrent_info">ئەم ڤیدیۆیە تۆرێنتە، ئەمەش مانای ئەوەیە کە دەتوانرێت شوێنپێی چالاکیی ڤیدیۆکەت بگرێت.\nپێش ئەوەی بەردەوام بیت دڵنیابە لە تۆرێنتینگ تێدەگەیت.</string>
     <string name="pick_source">سەرچاوەکان</string>
     <string name="pick_subtitle">ژێرنووسەکان</string>
     <string name="reload_error">دووبارە هەوڵبدە پەیوەندی…</string>

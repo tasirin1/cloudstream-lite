@@ -641,12 +641,9 @@
     <string name="backup_path_title">Vị trí thư mục sao lưu</string>
     <string name="custom">Tuỳ chỉnh</string>
     <string name="subs_edge_size">Kích thước cạnh</string>
-    <string name="torrent_info">Video này là Torrent, điều này có nghĩa là hoạt động video của bạn có thể được theo dõi.\nHãy đảm bảo rằng bạn hiểu về Torrent trước khi tiếp tục.</string>
     <string name="encoding_error">Lỗi mã hóa</string>
     <string name="software_decoding_desc">Giải mã phần mềm cho phép phát các tệp video không được thiết bị của bạn hỗ trợ, nhưng có thể gây ra phản hồi chậm hoặc phát lại không ổn định ở độ phân giải cao.</string>
     <string name="software_decoding">Giải mã phần mềm</string>
-    <string name="torrent_not_accepted">Khởi động lại ứng dụng và chấp nhận cửa sổ bật lên của Stream Torrent để tiếp tục.</string>
-    <string name="torrent_preferred_media">Kích hoạt torrent trong Cài đặt/Nguồn phim/Thể loại ưu tiên</string>
     <string name="player_load_one_subtitle_online">Tải phụ đề đầu tiên có sẵn</string>
     <string name="audio_singular">Âm thanh</string>
     <string name="podcast_singular">Podcast</string>

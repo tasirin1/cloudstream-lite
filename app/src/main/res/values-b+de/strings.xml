@@ -626,7 +626,6 @@
     <string name="show">Anzeigen</string>
     <string name="dont_show">Nicht anzeigen</string>
     <string name="subs_edge_size">Kantengröße</string>
-    <string name="torrent_info">Dieses Video ist ein Torrent, das bedeutet, dass Ihre Videoaktivitäten nachverfolgt werden könen.\nStellen Sie sicher, dass Sie die Grundlagen von Torrents verstehen, bevor Sie fortfahren.</string>
     <string name="audio_singular">Ton</string>
     <string name="sort_episodes_number_desc">Episode (Absteigend)</string>
     <string name="sort_episodes_rating_high_low">Bewertung (Höchste)</string>
@@ -635,9 +634,7 @@
     <string name="sort_episodes_number_asc">Episode (Steigend)</string>
     <string name="sort_episodes_date_oldest">Ausstrahlungsdatum (Erstes)</string>
     <string name="sort_button_date">Datum %s</string>
-    <string name="torrent_preferred_media">Torrent in Eintellungen/Anbieter/Bevorzugte Medien aktivieren</string>
     <string name="software_decoding_desc">Softwaredekodierung ermöglicht es dem Player, Videodateien abzuspielen, die von deinem Gerät nicht unterstützt werden, könnte jedoch bei hoher Auflösung zu ruckelnder oder instabiler Wiedergabe führen.</string>
-    <string name="torrent_not_accepted">App neu starten und Stream Torrent Pop-Up akzeptieren, um fortzufahren.</string>
     <string name="update_plugins">Plugins aktualisieren</string>
     <string name="plugins_updated_manually">%d Plugin(s) erfolgreich aktualisiert</string>
     <string name="update_plugins_manually">Plugins manuell aktualisieren</string>

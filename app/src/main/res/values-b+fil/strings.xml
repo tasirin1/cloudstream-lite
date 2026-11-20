@@ -14,7 +14,6 @@
     <string name="preview_seekbar_desc">Paganahin ang preview thumbnail sa seekbar</string>
     <string name="no_subtitles_loaded">Wala pang na-load na mga subtitle</string>
     <string name="confirm_before_exiting_title">Kumpirmahin bago lumabas</string>
-    <string name="torrent_not_accepted">I-restart ang app at tanggapin ang Stream Torrent pop-up upang magpatuloy.</string>
     <string name="software_decoding_desc">Binibigyang-daan ng software decoding ang player na mag-play ng mga video file na hindi sinusuportahan ng iyong telepono, ngunit maaaring magdulot ng laggy o hindi maayos na pag-playback sa mataas na resolution</string>
     <string name="backup_path_title">Lokasyon ng backup na folder</string>
     <string name="hide_player_control_names">Itago ang mga pangalan ng mga kontrol ng player</string>
@@ -33,7 +32,6 @@
     <string name="download_all_plugins_from_repo">Babala: Walang pananagutan ang CloudStream 3 sa paggamit ng mga extension ng third-party at hindi kami nagbibigay ng anumang suporta para sa kanila!</string>
     <string name="speech_recognition_unavailable">Hindi available ang speech recognition</string>
     <string name="result_open_in_browser">Buksan sa Browser</string>
-    <string name="torrent_info">Ang video na ito ay isang Torrent, nangangahulugan ito na ang iyong aktibidad sa video ay maaaring masubaybayan.\nTiyaking naiintindihan mo ang Torrenting bago magpatuloy.</string>
     <string name="downloads_delete_select">Piliin ang Mga Item na Tatanggalin</string>
     <string name="downloads_empty">Kasalukuyang walang mga dina-download.</string>
     <string name="offline_file">Available para mapanood offline</string>

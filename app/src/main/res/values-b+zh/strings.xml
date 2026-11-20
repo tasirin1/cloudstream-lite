@@ -638,7 +638,6 @@
     <string name="confirm_before_exiting_desc">退出 App 前弹窗确认</string>
     <string name="show">显示</string>
     <string name="dont_show">不显示</string>
-    <string name="torrent_info">这是个 Torrent 的视频，这意味着您的视频活动可以被追踪。\n请确认您了解 Torrenting 后，再继续。</string>
     <string name="backup_path_title">备份文件夹位置</string>
     <string name="subs_edge_size">边缘大小</string>
     <string name="audio_singular">音频</string>
@@ -646,8 +645,6 @@
     <string name="encoding_error">编码错误</string>
     <string name="unsupported_error">不受支持的错误</string>
     <string name="player_load_one_subtitle_online">加载第一个可用的字幕</string>
-    <string name="torrent_preferred_media">在设置/提供者/首选媒体处开启 torrent</string>
-    <string name="torrent_not_accepted">重启应用并接受在线播放 Torrent 弹窗以继续。</string>
     <string name="software_decoding">软件解码</string>
     <string name="software_decoding_desc">软件解码让播放器能够播放你的设备所不支持的视频文件，但可能导致播放高分辨率视频时的延迟或不稳定。</string>
     <string name="sort_episodes_number_desc">集数（降序）</string>

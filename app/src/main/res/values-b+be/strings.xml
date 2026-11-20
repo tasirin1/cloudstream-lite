@@ -54,7 +54,6 @@
     <string name="play_livestream_button">Прайграць трансляцыю</string>
     <string name="play_torrent_button">Трансліраваць Torrent</string>
     <string name="play_full_series_button">Прайграць серыял поўнасцю</string>
-    <string name="torrent_info">Гэта відэа — Torrent, гэта значыць, што ваша актыўнасць можа быць адсочана.\nУпэўніцеся, што вы ведаеце, як працуюць Torrent-файлы, перад працягам.</string>
     <string name="pick_source">Крыніцы</string>
     <string name="pick_subtitle">Субцітры</string>
     <string name="reload_error">Паспрабаваць перападлучыцца…</string>
@@ -663,8 +662,6 @@
     <string name="show">Паказваць</string>
     <string name="dont_show">Не паказваць</string>
     <string name="subs_edge_size">Памер краёў</string>
-    <string name="torrent_preferred_media">Уключыце Torrent у Наладах/Пастаўшчыкі/Прыярытэтнае медыя</string>
-    <string name="torrent_not_accepted">Перазапусціце праграму і прыміце ўсплывальнае акно «Трансліраваць Torrent», каб працягнуць.</string>
     <string name="software_decoding">Праграмная дэкадзіроўка</string>
     <string name="software_decoding_desc">Праграмная дэкадзіроўка дазваляе прайгравальніку паказваць відэафайлы, якія не падтрымліваюцца на вашай прыладзе, але можа выклікаць затрымкі або рабіць прайграванне нестабільным на высокіх раздзяляльнасцях.</string>
     <string name="volume_exceeded_100">Гучнасць перавысіла 100%</string>

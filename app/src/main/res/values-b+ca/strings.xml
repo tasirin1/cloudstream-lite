@@ -53,7 +53,6 @@
     <string name="play_trailer_button">Reprodueix tràiler</string>
     <string name="play_livestream_button">Reprodueix Livestream</string>
     <string name="play_torrent_button">Transmet Torrent</string>
-    <string name="torrent_info">Aquest vídeo és un Torrent, i implica que la vostra activitat pot ésser rastrejada\nAssegureu-vos d\'entendre com funcionen els Torrents abans de continuar.</string>
     <string name="pick_source">Fonts</string>
     <string name="pick_subtitle">Subtítols</string>
     <string name="reload_error">Torna a intentar la connexió…</string>

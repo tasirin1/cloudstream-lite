@@ -617,7 +617,6 @@
     <string name="hide_player_control_names">Masquer les noms des commandes du lecteur</string>
     <string name="device_pin_error_message">Impossible d’obtenir le code PIN de l’appareil, essayez l’authentification locale</string>
     <string name="pref_category_accounts">Comptes</string>
-    <string name="torrent_info">Cette vidéo est un torrent, ce qui signifie que votre activité vidéo peut être suivie.\nAssurez-vous de comprendre le fonctionnement des torrents avant de continuer.</string>
     <string name="dismiss">Ignorer</string>
     <string name="delete_message_series_section" formatted="true">Vous allez également supprimer définitivement tous les épisodes des séries suivantes :\n\n%s</string>
     <string name="delete_message_series_only" formatted="true">Êtes-vous sûr de vouloir supprimer définitivement tous les épisodes des séries suivantes ?\n\n%s</string>
@@ -632,8 +631,6 @@
     <string name="encoding_error">Erreur d\'encodage</string>
     <string name="software_decoding_desc">Le décodage logiciel permet au lecteur de lire des fichiers vidéo non pris en charge par votre appareil, mais peut entraîner une lecture lente ou instable en haute résolution.</string>
     <string name="software_decoding">Décodage logiciel</string>
-    <string name="torrent_preferred_media">Activer les torrents dans Paramètres/Sources/Média préféré</string>
-    <string name="torrent_not_accepted">Redémarrez l\'application et acceptez la fenêtre contextuelle Stream Torrent pour continuer.</string>
     <string name="player_load_one_subtitle_online">Charger le premier disponible</string>
     <string name="audio_singular">Audio</string>
     <string name="podcast_singular">Podcast</string>

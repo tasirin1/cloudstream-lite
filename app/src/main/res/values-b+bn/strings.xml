@@ -355,7 +355,6 @@
     <string name="begin_speaking">কথা বলা শুরু করুন…</string>
     <string name="download_queue">ডাউনলোড তালিকা</string>
     <string name="play_full_series_button">সম্পূর্ণ সিরিজ প্লে করুন</string>
-    <string name="torrent_info">এই ভিডিওটি একটি টরেন্ট, অর্থাৎ আপনার ভিডিও অ্যাক্টিভিটি ট্র্যাক করা সম্ভব।\nএগোনোর আগে টরেন্টিং সম্পর্কে ভালোভাবে বুঝে নিন।</string>
     <string name="downloads_delete_select">ডিলিট করার জন্য আইটেম সিলেক্ট করুন</string>
     <string name="downloads_empty">বর্তমানে কোনো ডাউনলোড নেই।</string>
     <string name="queue_empty_message">বর্তমানে কোনো ডাউনলোড অপেক্ষায় নেই।</string>
@@ -696,8 +695,6 @@
     <string name="show">দেখান</string>
     <string name="dont_show">দেখাবেন না</string>
     <string name="subs_edge_size">এজের আকার</string>
-    <string name="torrent_preferred_media">সেটিংস/প্রোভাইডার/পছন্দের মিডিয়া-তে গিয়ে টরেন্ট সক্রিয় করুন</string>
-    <string name="torrent_not_accepted">এগিয়ে যেতে অ্যাপটি রিস্টার্ট করুন এবং স্ট্রিম টরেন্ট পপ-আপ গ্রহণ করুন।</string>
     <string name="software_decoding">সফটওয়্যার ডিকোডিং</string>
     <string name="software_decoding_desc">সফটওয়্যার ডিকোডিংয়ের মাধ্যমে আপনার ডিভাইসে অসমর্থিত ভিডিও ফাইলগুলো প্লে করা সম্ভব, তবে উচ্চ রেজোলিউশনে প্লেব্যাক ল্যাগি বা অস্থিতিশীল হতে পারে।</string>
     <string name="volume_exceeded_100">ভলিউম ১০০% অতিক্রম করেছে</string>

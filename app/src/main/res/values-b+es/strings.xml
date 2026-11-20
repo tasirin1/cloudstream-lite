@@ -625,15 +625,12 @@
     <string name="confirm_before_exiting_title">Confirmar antes de salir</string>
     <string name="backup_path_title">Ubicación de la carpeta de respaldo</string>
     <string name="custom">Personalizada</string>
-    <string name="torrent_info">Este video está en una red de torrents, lo que significa que se puede rastrear su uso.\nAsegúrese de comprender las redes de torrents antes de continuar.</string>
     <string name="subs_edge_size">Tamaño del borde</string>
     <string name="podcast_singular">Podcast</string>
     <string name="audio_singular">Audio</string>
     <string name="encoding_error">Error de codificación</string>
     <string name="unsupported_error">Error no soportado</string>
     <string name="player_load_one_subtitle_online">Cargar primero disponible</string>
-    <string name="torrent_preferred_media">Habilitación torrent en Opciones/Proveedores/Medio preferido</string>
-    <string name="torrent_not_accepted">Reiniciar app y aceptar aparición de Stream Torrent para proceder.</string>
     <string name="software_decoding">Software de decodificado</string>
     <string name="software_decoding_desc">El software de decodificado permite que el reproductor reproduzca archivos de video no soportados por su dispositivo, lo cual podría causar una reproducción lenta o inestable en alta resolución.</string>
     <string name="player_notification_channel_description">La notificación del reproductor para controlar la reproducción en segundo plano</string>

@@ -612,14 +612,12 @@
     <string name="preview_seekbar_desc">Активирай миниатюра за преглед на лентата за търсене</string>
     <string name="custom">По избор</string>
     <string name="sort_release_date_old">Дата на издаване (от стара към нова)</string>
-    <string name="torrent_preferred_media">Активирай торент в Настройки/Доставчици/Предпочитани медии</string>
     <string name="plugins_updated_manually">Успешно актуализиран/и %d плъгин/а!</string>
     <string name="all_subtitles_italic">Направете всички субтитри наклонени</string>
     <string name="sort_episodes_date_oldest">Дата на излъчване (най-стара)</string>
     <string name="sort_button_date">Дата %s</string>
     <string name="no_plugins_updated_manually">Няма актуализирани плъгини.</string>
     <string name="delete_message_series_only" formatted="true">Are you sure you wСигурни ли сте, че искате трайно да изтриете всички епизоди от тази поредица?\n\n%s</string>
-    <string name="torrent_not_accepted">Рестартирайте приложението и приемете изскачащото съобщение за Stream Torrent, за да продължите.</string>
     <string name="software_decoding_desc">Софтуерното декодиране позволява на плейъра да възпроизвежда видео файлове, които не се поддържат от устройството ви, но може да причини забавяне или нестабилно възпроизвеждане при висока резолюция</string>
     <string name="player_notification_channel_name">Известия на плейъра</string>
     <string name="sort_episodes_number_desc">Епизод (низходящо)</string>
@@ -643,7 +641,6 @@
     <string name="biometric_prompt_description">След няколко неуспешни опита, прозорецът ще се затвори. Просто рестартирайте приложението, за да опитате отново.</string>
     <string name="biometric_warning">Вашите данни от CloudStream бяха архивирани. Въпреки че възможността за това е много малка, всички устройства могат да се държат по различен начин. В редките случаи, когато бъдете блокирани от достъпа до приложението, изчистете напълно данните на приложението и възстановете от архив. Извиняваме се за всяко неудобство, което може да възникне от това.</string>
     <string name="device_pin_error_message">Не може да се получи PIN кода на устройството, опитайте локално удостоверяване</string>
-    <string name="torrent_info">Това видео е торент, което означава, че вашата видео дейност може да бъде проследена.\nУверете се, че разбирате принципите на торентирането, преди да продължите.</string>
     <string name="pref_category_security">Сигурност</string>
     <string name="ok">Добре</string>
     <string name="app_unrestricted_toast">Използването на батерия от приложението вече е настроено като неограничено</string>

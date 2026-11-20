@@ -229,7 +229,6 @@
     <string name="benene_count_text">%d Benenes به توسعه دهندگان داده می‌شود</string>
     <string name="benene_count_text_none">بدون Benenes</string>
     <string name="chromecast_subtitles_settings">زیرنویس Chromecast</string>
-    <string name="torrent_info">این ویدیو یک تورنت است، این بدان معنی است که فعالیت ویدیویی شما قابل ردیابی است. \nقبل از ادامه، مطمئن شوید که تورنت را درک کرده اید.</string>
     <string name="picture_in_picture_des">پخش را در یک پخش کننده مینیاتوری در بالای برنامه های دیگر ادامه می دهد</string>
     <string name="error_invalid_data">داده نامعتبر</string>
     <string name="check_for_update">چک‌کردن به‌روزرسانی</string>
@@ -246,7 +245,6 @@
     <string name="all_languages_preference">تمام زبان‌ها</string>
     <string name="watch_quality_pref">کیفیت تماشای برگزیده (برای وای‌فای)</string>
     <string name="mobile_data">دیتای گوشی</string>
-    <string name="torrent_preferred_media">تورنت را در تنظیمات/ارائه‌دهنده/محتوا برگزیده فعال کنید</string>
     <string name="chromecast_subtitles_settings_des">تنظیمات زیرنویس‌های Chromecast</string>
     <string name="error_invalid_url">نشانی نامعتبر</string>
     <string name="category_provider_test">تست ارائه‌دهنده</string>

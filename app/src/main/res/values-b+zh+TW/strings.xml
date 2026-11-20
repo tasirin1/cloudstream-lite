@@ -639,14 +639,12 @@
     <string name="delete_message_series_only" formatted="true">您確定要永久刪除以下系列中的所有集數嗎？\n\n%s</string>
     <string name="pref_category_security">安全</string>
     <string name="no_subtitles_loaded">尚未載入字幕</string>
-    <string name="torrent_info">此影片是 Torrent，這意味著你的影片活動可以被追蹤。\n在繼續之前，請確保你瞭解 Torrenting。</string>
     <string name="subs_edge_size">subs_edge_size</string>
     <string name="audio_singular">音樂</string>
     <string name="encoding_error">編碼錯誤</string>
     <string name="unsupported_error">因為不支援造成錯誤</string>
     <string name="podcast_singular">播客</string>
     <string name="software_decoding">軟體解碼</string>
-    <string name="torrent_not_accepted">重開程式並「同意」線上播放 Torrent 視窗。</string>
     <string name="player_load_one_subtitle_online">載入第一個可用的</string>
     <string name="download_time_left_hour_min_sec_format" formatted="true">%1$d小時 %2$d分鐘 %3$d秒</string>
     <string name="download_time_left_min_sec_format" formatted="true">%1$d分鐘 %2$d秒</string>
@@ -740,7 +738,6 @@
     <string name="source_priority">來源優先順序</string>
     <string name="source_priority_help">決定影片來源的排列順序</string>
     <string name="no_account">帳戶不存在</string>
-    <string name="torrent_preferred_media">在「設定/影片來源/首選媒體」中啟用 Torrent下載</string>
     <string name="software_decoding_desc">軟體解碼使程式可以播放裝置不支援的影片，但可能導致播放高解析的影片時的延遲或不穩定。</string>
     <string name="volume_exceeded_100">音量已超過 100%</string>
     <string name="show_player_metadata_overlay">顯示播放器元資料遮罩層</string>

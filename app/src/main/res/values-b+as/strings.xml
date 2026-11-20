@@ -625,15 +625,12 @@
     <string name="confirm_before_exiting_title">উলাই যোৱা আগতে নিশ্চিত কৰক</string>
     <string name="backup_path_title">ব্যাকআপ ফ\'ল্ডাৰ স্থান</string>
     <string name="show">দেখুৱাওক</string>
-    <string name="torrent_info">এই ভিডিওটো টৰেন্ট। এই অৰ্থ হৈছে যে আপোনাৰ ভিডিও কাৰ্যকলাপ ট্ৰেক কৰা হ\'ব পাৰে।\nআগবঢ়িবলৈ আগতে টৰেণ্টিং বুজি পোৱা নিশ্চিত কৰক।</string>
     <string name="subs_edge_size">চুকৰ মাপ</string>
     <string name="player_load_one_subtitle_online">প্ৰথম উপলব্ধটো লোড কৰক</string>
     <string name="audio_singular">অডিঅ\'</string>
     <string name="podcast_singular">প’ডকাষ্ট</string>
     <string name="encoding_error">এনকোডিং ত্ৰুটি</string>
     <string name="unsupported_error">সমৰ্থিত ত্ৰুটি</string>
-    <string name="torrent_not_accepted">গ্ৰহণ কৰা হোৱা নাই টৰেণ্ট</string>
-    <string name="torrent_preferred_media">সংহতিসমূহ/প্ৰদানকাৰী/পছন্দৰ মাধ্যমত টৰেণ্ট সামৰ্থবান কৰক</string>
     <string name="software_decoding">চফ্টৱেৰ ডিকোডিং</string>
     <string name="software_decoding_desc">চফ্টৱেৰ ডিকোডিঙে প্লেয়াৰক আপোনাৰ ফোন দ্বাৰা সমৰ্থিত নোহোৱা ভিডিঅ\' ফাইলসমূহ চলাবলৈ সামৰ্থবান কৰে, কিন্তু উচ্চ ৰিজ\'লিউচনত লেগি বা অস্থিৰ প্লেবেকৰ সৃষ্টি কৰিব পাৰে</string>
 </resources>

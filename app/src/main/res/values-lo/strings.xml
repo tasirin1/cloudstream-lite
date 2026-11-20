@@ -55,7 +55,6 @@
     <string name="play_livestream_button">ຫຼິ້ນໄລຟ໌ສົດ</string>
     <string name="play_torrent_button">ສະຕຣີມ Torrent</string>
     <string name="play_full_series_button">ຫຼິ້ນຊີຣີທັງໝົດ</string>
-    <string name="torrent_info">ວິດີໂອນີ້ແມ່ນ Torrent, ຊຶ່ງໝາຍຄວາມວ່າການເຄື່ອນໄຫວຂອງທ່ານສາມາດຖືກຕິດຕາມໄດ້.\nກະລຸນາໝັ້ນໃຈວ່າທ່ານເຂົ້າໃຈກ່ຽວກັບ Torrent ກ່ອນທີ່ຈະດຳເນີນການຕໍ່.</string>
     <string name="pick_source">ແຫຼ່ງວິດີໂອ</string>
     <string name="pick_subtitle">ຄຳບັນຍາຍ (Subtitles)</string>
     <string name="reload_error">ລອງເຊື່ອມຕໍ່ໃໝ່…</string>
@@ -678,8 +677,6 @@
     <string name="show">ສະແດງ</string>
     <string name="dont_show">ບໍ່ສະແດງ</string>
     <string name="subs_edge_size">ຂະໜາດເສັ້ນຂອບ</string>
-    <string name="torrent_preferred_media">ເປີດໃຊ້ torrent ໃນ ຕັ້ງຄ່າ/ຜູ້ໃຫ້ບໍລິການ/ສື່ທີ່ມັກ</string>
-    <string name="torrent_not_accepted">ເລີ່ມແອັບໃໝ່ ແລະ ກົດຍອມຮັບ Stream Torrent ເພື່ອດຳເນີນການຕໍ່.</string>
     <string name="software_decoding">ການຖອດລະຫັດດ້ວຍຊອບແວ</string>
     <string name="software_decoding_desc">ການຖອດລະຫັດດ້ວຍຊອບແວຊ່ວຍໃຫ້ຫຼິ້ນໄຟລ໌ທີ່ອຸປະກອນບໍ່ຮອງຮັບໄດ້, ແຕ່ອາດເຮັດໃຫ້ກະຕຸກ ຫຼື ບໍ່ສະຖຽນໃນຄວາມລະອຽດສູງ.</string>
     <string name="volume_exceeded_100">ລະດັບສຽງເກີນ 100% ແລ້ວ</string>

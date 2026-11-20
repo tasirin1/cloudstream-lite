@@ -641,7 +641,6 @@
     <string name="backup_path_title">Local da pasta de backup</string>
     <string name="custom">Personalizado</string>
     <string name="subs_edge_size">Tamanho da borda</string>
-    <string name="torrent_info">Este vídeo é um Torrent, isso significa que sua atividade de vídeo pode ser rastreada.\nTenha certeza de entender o que é Torrent antes de continuar.</string>
     <string name="encoding_error">Erro de codificação</string>
     <string name="unsupported_error">Erro, formato não suportado</string>
     <string name="player_load_one_subtitle_online">Carregar primeiro disponível</string>
@@ -649,8 +648,6 @@
     <string name="podcast_singular">Podcast</string>
     <string name="software_decoding">Decodificação de software</string>
     <string name="software_decoding_desc">A decodificação por software permite que o reprodutor reproduza arquivos de vídeo não suportados pelo seu dispositivo, mas pode causar lentidão ou instabilidade na reprodução em alta resolução.</string>
-    <string name="torrent_preferred_media">Habilitar torrent em Configurações/Provedores/Mídia preferida</string>
-    <string name="torrent_not_accepted">Reinicie o aplicativo e aceite o pop-up do Stream Torrent para continuar.</string>
     <string name="sort_episodes_number_asc">Episódio (Ascendente)</string>
     <string name="sort_episodes_number_desc">Episódio (descendente)</string>
     <string name="sort_episodes_rating_high_low">Avaliação (mais alta)</string>

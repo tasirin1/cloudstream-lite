@@ -625,7 +625,6 @@
     <string name="dont_show">Не показывать</string>
     <string name="backup_path_title">Расположение резервных копий</string>
     <string name="custom">Пользовательский</string>
-    <string name="torrent_info">Это видео является торрентом, это значит, что вашу видеоактивность можно отследить.\nУбедитесь, что вы понимаете работу торрентов, прежде чем продолжить.</string>
     <string name="subs_edge_size">Размер границ</string>
     <string name="encoding_error">Ошибка кодировки</string>
     <string name="unsupported_error">Не поддерживается</string>
@@ -654,8 +653,6 @@
     <string name="player_notification_channel_name">Уведомления плеера</string>
     <string name="sort_episodes_date_oldest">Дата выпуска (Старейшие)</string>
     <string name="sort_episodes_rating_low_high">Оценка (Наинизшая)</string>
-    <string name="torrent_preferred_media">Включите торрент в Настройки/Поставщики/Предпочтительные медиа</string>
-    <string name="torrent_not_accepted">Перезапустите программу и примите сплывающее окно Stream Torrent, чтобы продолжить.</string>
     <string name="background_radius">Радиус фона</string>
     <string name="all_subtitles_bold">Сделать все субтитры жирными</string>
     <string name="all_subtitles_italic">Сделать все субтитры курсивом</string>

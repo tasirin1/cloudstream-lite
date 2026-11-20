@@ -621,7 +621,6 @@
     <string name="delete_message_series_only" formatted="true">Дали си сигурен дека сакаш трајно да ги избришеш сите епизоди во следните серии?\n\n%s</string>
     <string name="device_pin_expired_message">ПИН-кодот сега е истечен!</string>
     <string name="sort_release_date_new">Датум на издавање (најнови до најстари)</string>
-    <string name="torrent_info">Ова видео е Torrent, тоа значи дека твојата видео активност може да се следи.\nУвери се дека разбираш Torrenting пред да продолжиш.</string>
     <string name="downloads_delete_select">Одбери ставки за бришење</string>
     <string name="hide_player_control_names">Сокриј ги имињата на контролите на корисникот</string>
     <string name="delete_message_multiple" formatted="true">Дали си сигурен дека сакаш трајно да ги избришеш следните ставки?\n\n%s</string>
@@ -635,8 +634,6 @@
     <string name="encoding_error">Грешка при кодирање на преводот</string>
     <string name="unsupported_error">Неподдржана грешка</string>
     <string name="player_load_one_subtitle_online">Вчитај прво достапно</string>
-    <string name="torrent_not_accepted">Рестартирај ја апликацијата и прифати го Stream Torrent искачувачкиот прозорец за да продолжиш.</string>
-    <string name="torrent_preferred_media">Овозможи torrent во Поставки/Провајдери/Претпочитани медиуми</string>
     <string name="software_decoding_desc">Софтверското декодирање овозможува плеерот да воспоставува видео фајлови кои не се поддржани од вашиот уред, но може да предизвика застој или нестабилно репродуцирање при висока резолуција.</string>
     <string name="software_decoding">Софтверско декодирање</string>
     <string name="starting_plugin_update_manually">Започнување на процесот на ажурирање на приклучоци!</string>

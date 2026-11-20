@@ -512,7 +512,6 @@
     <string name="play_from_beginning_img_des">Atskaņot no sākuma</string>
     <string name="speech_recognition_unavailable">Runas atpazīšana nav pieejama</string>
     <string name="begin_speaking">Sāciet runāt…</string>
-    <string name="torrent_info">Šis video ir torrenta fails, kas nozīmē, ka jūsu video aktivitātes var izsekot.\nPirms turpināt, pārliecinieties, ka saprotat torrenta failu lietošanu.</string>
     <string name="downloads_delete_select">Atlasiet vienumus, ko dzēst</string>
     <string name="downloads_empty">Pašlaik nav pieejama neviena lejupielāde.</string>
     <string name="offline_file">Pieejams skatīšanai bezsaistē</string>
@@ -609,7 +608,6 @@
     <string name="open_local_video">Atvērt vietējo video</string>
     <string name="custom_media_singular">Multimedija</string>
     <string name="video_info">Multimediju informācija</string>
-    <string name="torrent_preferred_media">Iespējojiet torrentu Iestatījumi/Pakalpojumu sniedzēji/Vēlamie multimediji sadaļā</string>
     <string name="subscribe_tooltip">Paziņojums par jaunu epizodi</string>
     <string name="extra_brightness_settings">Papildu spilgtums</string>
     <string name="extra_brightness_key">Papildu spilgtums iespējots</string>

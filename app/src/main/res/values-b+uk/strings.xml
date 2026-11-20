@@ -625,15 +625,12 @@
     <string name="dont_show">Не показувати</string>
     <string name="backup_path_title">Розташування теки для резервних копій</string>
     <string name="custom">Власний</string>
-    <string name="torrent_info">Це відео – торрент, це означає, що ваша відеоактивність може відстежуватися.\nПереконайтеся, що розумієте, що таке торрент, перед тим як продовжити.</string>
     <string name="subs_edge_size">Розмір обведення</string>
     <string name="audio_singular">Аудіо</string>
     <string name="podcast_singular">Подкаст</string>
     <string name="unsupported_error">Непідтримувана помилка</string>
     <string name="encoding_error">Помилка кодування</string>
     <string name="player_load_one_subtitle_online">Завантажити перший доступний</string>
-    <string name="torrent_preferred_media">Увімкніть торент в Налаштування - &gt; Постачальники - &gt; Бажані медіа</string>
-    <string name="torrent_not_accepted">Перезапустіть застосунок та прийміть спливне вікно «Транслювати торрент», щоби продовжити.</string>
     <string name="software_decoding">Програмне декодування</string>
     <string name="software_decoding_desc">Програмне декодування дозволяє плеєру відтворювати відеофайли, які не підтримуються вашим пристроєм, але може спричинити затримки або нестабільне відтворення у високій роздільній здатності.</string>
     <string name="sort_episodes_date_newest">Датою виходу (найновіша)</string>

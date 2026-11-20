@@ -395,7 +395,6 @@
     <string name="downloads_delete_select">Vyberte položky na odstránenie</string>
     <string name="subtitle_offset_extra_hint_before_format">Použite to, ak sú uvedené titulky %d ms príliš neskoro</string>
     <string name="preferred_media_subtext">Čo chcete vidieť</string>
-    <string name="torrent_info">Toto video je Torrent, to znamená, že vaša video aktivita je možné sledovať.\nUistite sa, že ste pochopili Torrent pred pokračovaním.</string>
     <string name="offline_file">K dispozícii pre sledovanie offline</string>
     <string name="player_load_one_subtitle_online">Načítať prvé k dispozícii</string>
     <string name="player_load_subtitles">Načítať z súboru</string>

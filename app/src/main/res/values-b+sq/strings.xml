@@ -55,7 +55,6 @@
     <string name="play_livestream_button">Luaj Transmetimin Live</string>
     <string name="play_torrent_button">Transmeto Torrent</string>
     <string name="play_full_series_button">Luaj serinë e plotë</string>
-    <string name="torrent_info">Kjo video është një Torrent, kjo do të thotë që aktiviteti juaj i videos mund të gjurmohet.\nSigurohuni që kuptoni Torrent-in para se të vazhdoni.</string>
     <string name="pick_source">Burime</string>
     <string name="pick_subtitle">Titrat</string>
     <string name="reload_error">Ripovo lidhjen…</string>
@@ -670,8 +669,6 @@
     <string name="show">Shfaqe</string>
     <string name="dont_show">Mos e shfaq</string>
     <string name="subs_edge_size">Madhësia e konturit</string>
-    <string name="torrent_preferred_media">Aktivizo torrent-in në Cilësimet/Ofruesit/Media e preferuar</string>
-    <string name="torrent_not_accepted">Rifillo aplikacionin dhe prano dritaren “Stream Torrent” për të vazhduar.</string>
     <string name="software_decoding">Dekodim me softuer</string>
     <string name="software_decoding_desc">Dekodimi me softuer i lejon player-it të luajë video që nuk mbështeten nga pajisja juaj, por mund të shkaktojë vonesa ose paqëndrueshmëri në rezolucione të larta.</string>
     <string name="volume_exceeded_100">Volumi është mbi 100%</string>

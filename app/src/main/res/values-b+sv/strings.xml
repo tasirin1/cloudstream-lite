@@ -619,7 +619,6 @@
     <string name="device_pin_url_message">Besök <b>%s</b> på din smartphone eller dator och ange koden ovan</string>
     <string name="device_pin_error_message">Det går inte att hämta enhetens PIN-kod, prova lokal autentisering</string>
     <string name="no_subtitles_loaded">Inga undertexter laddade än</string>
-    <string name="torrent_info">Den här videon är en torrent, det betyder att din videoaktivitet kan spåras.\nFörsäkra dig om att du förstår Torrenting innan du fortsätter.</string>
     <string name="confirm_before_exiting_title">Bekräfta före stängning</string>
     <string name="show">Visa</string>
     <string name="backup_path_title">Säkerhetskopieringsmapp</string>
@@ -628,8 +627,6 @@
     <string name="audio_singular">Ljud</string>
     <string name="podcast_singular">Podcast</string>
     <string name="software_decoding">Mjukvaruavkodning</string>
-    <string name="torrent_not_accepted">Starta om appen och acceptera popup-fönstret för Stream Torrent för att fortsätta.</string>
-    <string name="torrent_preferred_media">Aktivera torrent i Inställningar/Leverantörer/Föredragen media</string>
     <string name="encoding_error">Avkodningsfel</string>
     <string name="player_load_one_subtitle_online">Ladda in första möjliga</string>
     <string name="dont_show">Visa inte</string>

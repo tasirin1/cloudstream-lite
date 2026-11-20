@@ -640,14 +640,11 @@
     <string name="confirm_before_exiting_desc">Uygulamadan çıkmadan önce iletişim kutusunu göster</string>
     <string name="dont_show">Gizle</string>
     <string name="subs_edge_size">Köşe Boyutu</string>
-    <string name="torrent_info">Bu video Torrent\'tir, bu video aktivitenizin takip edilebileceği anlamına gelir.\nDevam etmeden önce Torrentlemeyi iyi anladığınızdan emin olun.</string>
     <string name="unsupported_error">Desteklenmeyen hata</string>
     <string name="encoding_error">Kodlama hatası</string>
     <string name="player_load_one_subtitle_online">İlk kullanılabiliri yükle</string>
     <string name="audio_singular">Ses</string>
     <string name="podcast_singular">Podcast</string>
-    <string name="torrent_preferred_media">Ayarlar/Sağlayıcılar/Tercih edilen medya bölümünden torrenti etkinleştirin</string>
-    <string name="torrent_not_accepted">Uygulamayı yeniden başlatın ve devam etmek için Stream Torrent açılır penceresini kabul edin.</string>
     <string name="software_decoding">Yazılımsal çözücü</string>
     <string name="software_decoding_desc">Yazılımsal kod çözücü, oynatıcının cihazınız tarafından desteklenmeyen video dosyalarını oynatmasını sağlar, ancak yüksek çözünürlükte gecikmeli veya dengesiz oynatmaya neden olabilir.</string>
     <string name="sort_episodes_number_asc">Bölüm (Artan)</string>

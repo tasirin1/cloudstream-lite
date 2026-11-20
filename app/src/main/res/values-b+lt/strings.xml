@@ -256,7 +256,6 @@
     <string name="begin_speaking">Pradėkite kalbėti…</string>
     <string name="type_dropped">Nežiūrimas</string>
     <string name="play_full_series_button">Paleisti visą seriją</string>
-    <string name="torrent_info">Šis įrašas yra Torrent\'e, tai reiškia, kad tavo įrašo veikla gali būti sekama. Įsitikinkite, kad suprantate Torrenting prieš tęsiant.</string>
     <string name="reload_error">Atkurti ryšį…</string>
     <string name="downloads_delete_select">Pasirinkite elementus, kuriuos norite pašalinti</string>
     <string name="downloads_empty">Šiuo metu atsisiuntimų nėra.</string>

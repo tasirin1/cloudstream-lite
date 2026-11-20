@@ -548,7 +548,6 @@
     <string name="jsdelivr_proxy_summary">jsDelivrを使用して生のGitHub URLのブロックを回避します。アップデートが数日遅れる可能性があります。</string>
     <string name="speech_recognition_unavailable">音声認識は利用できません</string>
     <string name="begin_speaking">話し始めてください…</string>
-    <string name="torrent_info">このビデオはトレントのため、ビデオの活動が追跡される可能性があります。\n続行する前にトレントについて理解してください。</string>
     <string name="watch_quality_pref_data">優先視聴品質 (モバイルデータ)</string>
     <string name="limit_title">ビデオプレーヤーのタイトル最大文字数</string>
     <string name="video_disk_description">ストレージが少ないデバイス（Android TVなど）で高く設定すると問題が発生します。</string>
@@ -641,8 +640,6 @@
     <string name="device_pin_error_message">デバイスPINコードを取得できません。ローカル認証を試してください</string>
     <string name="sort_release_date_old">公開日 (古い順)</string>
     <string name="hide_player_control_names">プレーヤーのコントロール名を非表示</string>
-    <string name="torrent_preferred_media">設定/プロバイダ/優先メディアでトレントを有効にする</string>
-    <string name="torrent_not_accepted">アプリを再起動し、ポップアップに同意して続行します。</string>
     <string name="software_decoding">ソフトウェアデコーディング</string>
     <string name="software_decoding_desc">ソフトウェアデコーディングにより、機器でサポートされていないビデオファイルを再生できますが、高解像度で遅延や不安定な再生を引き起こす可能性があります。</string>
     <string name="plugins_updated_manually">%d 個のプラグインを更新しました</string>

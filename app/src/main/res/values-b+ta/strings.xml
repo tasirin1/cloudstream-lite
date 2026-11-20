@@ -602,7 +602,6 @@
     <string name="resume_remaining" formatted="true">%s\n மீதமுள்ள</string>
     <string name="batch_download_nothing_to_download_format" formatted="true">அனைத்து %s ஏற்கனவே பதிவிறக்கம் செய்யப்பட்டுள்ளன</string>
     <string name="single_plugin_disabled" formatted="true">%s (முடக்கப்பட்டவை)</string>
-    <string name="torrent_info">இந்த வீடியோ ஒரு நீரோடை, இதன் பொருள் உங்கள் வீடியோ செயல்பாட்டைக் கண்காணிக்க முடியும்.\n தொடர்வதற்கு முன் நீரோட்டத்தை நீங்கள் புரிந்துகொண்டுள்ளீர்கள் என்பதை உறுதிப்படுத்திக் கொள்ளுங்கள்.</string>
     <string name="delete_plugin">சொருகி நீக்கு</string>
     <string name="preview_seekbar_desc">சீக்பரில் முன்னோட்ட சிறுபடத்தை இயக்கவும்</string>
     <string name="device_pin_counter_text">குறியீடு %1$dm %2$ds இல் காலாவதியாகிறது</string>
@@ -643,8 +642,6 @@
     <string name="sort_button_episode">பாகம் %s</string>
     <string name="sort_button_rating">மதிப்பீடு %s</string>
     <string name="sort_button_date">தேதி %s</string>
-    <string name="torrent_preferred_media">அமைப்புகள்/வழங்குநர்கள்/விருப்பமான ஊடகங்களில் டொரெண்டை இயக்கவும்</string>
-    <string name="torrent_not_accepted">பயன்பாட்டை மறுதொடக்கம் செய்து, தொடர ச்ட்ரீம் டொரண்ட் பாப்-அப் ஏற்றுக்கொள்ளுங்கள்.</string>
     <string name="software_decoding">மென்பொருள் டிகோடிங்</string>
     <string name="software_decoding_desc">மென்பொருள் டிகோடிங் உங்கள் சாதனத்தால் ஆதரிக்கப்படாத வீடியோ கோப்புகளை பிளேயருக்கு இயக்க உதவுகிறது, ஆனால் உயர் தெளிவுத்திறனில் பின்னடைவு அல்லது நிலையற்ற பிளேபேக்கை ஏற்படுத்தலாம்.</string>
     <string name="volume_exceeded_100">தொகுதி 100% ஐ தாண்டியுள்ளது</string>

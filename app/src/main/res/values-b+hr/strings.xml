@@ -644,12 +644,9 @@
     <string name="unsupported_error">Nepodržana pogreška</string>
     <string name="software_decoding">Dekodiranje softvera</string>
     <string name="software_decoding_desc">Softversko dekodiranje omogućuje playeru reprodukciju video datoteka koje tvoj mobitel ne podržava, ali može uzrokovati kašnjenja ili nestabilnu reprodukciju pri visokoj rezoluciji.</string>
-    <string name="torrent_info">Ovaj je video Torrent, što znači da se tvoja video aktivnost može pratiti.\nInformiraj se o korištenju Torrenta prije nego što nastaviš.</string>
-    <string name="torrent_not_accepted">Ponovno pokrenite aplikaciju i prihvatite skočni prozor Stream Torrent za nastavak.</string>
     <string name="player_load_one_subtitle_online">Učitaj prvi dostupni</string>
     <string name="audio_singular">Audio</string>
     <string name="podcast_singular">Podcast</string>
-    <string name="torrent_preferred_media">Aktiviraj torrent u Postavke/Pružatelji usluge/Preferirani mediji</string>
     <string name="sort_episodes_number_asc">Epizoda (Uzlazno)</string>
     <string name="sort_episodes_number_desc">Epizoda (Silazno)</string>
     <string name="sort_episodes_rating_high_low">Ocjena (Najviša)</string>

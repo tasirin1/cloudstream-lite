@@ -529,7 +529,6 @@
     <string name="play_from_beginning_img_des">נגן מההתחלה</string>
     <string name="speech_recognition_unavailable">זיהוי דיבור לא זמין</string>
     <string name="begin_speaking">התחל לדבר…</string>
-    <string name="torrent_info">וידיאו זה הוא טורנט, זה אומר שניתן לעקוב אחרי פעילות הוידיאו שלך.\nנא וודא שהינך מבין טורנטים לפני המשך.</string>
     <string name="downloads_delete_select">בחר פריטים למחוק</string>
     <string name="downloads_empty">אין הורדות כרגע.</string>
     <string name="offline_file">זמין לצפיה אופליין</string>
@@ -633,8 +632,6 @@
     <string name="encoding_error">שגיאת קידוד</string>
     <string name="unsupported_error">שגיאה לא נתמכת</string>
     <string name="player_load_one_subtitle_online">טען את הראשונה הזמינה</string>
-    <string name="torrent_preferred_media">הפעל טורנט בהגדרות/ספקים/מדיה מועדפת</string>
-    <string name="torrent_not_accepted">הפעל מחדש את האפליקציה ואשר את החלון הקופץ של שידור טורנט כדי להמשיך.</string>
     <string name="software_decoding">פענוח בתוכנה</string>
     <string name="software_decoding_desc">פענוח בתוכנה מאפשר לנגן להפעיל קובצי וידאו שהמכשיר שלך אינו תומך בהם, אך עלול לגרום לניגון מקוטע או לא יציב ברזולוציה גבוהה.</string>
     <string name="sort_episodes_number_asc">פרק (סדר עולה)</string>

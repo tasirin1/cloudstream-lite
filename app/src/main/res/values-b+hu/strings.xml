@@ -562,7 +562,6 @@
     <string name="auto_rotate_video_desc">Az automatikus videó orientáció alapján való képernyő elforgatás bekapcsolása</string>
     <string name="open_local_video">Helyi videó megnyitása</string>
     <string name="repo_copy_label">Tárhely név és URL</string>
-    <string name="torrent_info">Ez a videó egy Torrent, ami azt jelenti, hogy a videótevékenységed nyomon követhető.\nGyőződj meg róla, hogy megérted a torrentezés működését, mielőtt folytatnád.</string>
     <string name="episode_upcoming_format" formatted="true">Hamarosan érkezik a(z) %s</string>
     <string name="toast_copied">Másolva!</string>
     <string name="next_season_episode_format" formatted="true">A(z) %1$d. évad %2$d. epizódja megjelenik ekkor</string>

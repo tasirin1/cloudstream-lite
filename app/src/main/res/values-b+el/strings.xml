@@ -635,15 +635,12 @@
     <string name="confirm_before_exiting_desc">Εμφάνιση διαλόγου πριν την έξοδο από την εφαρμογή</string>
     <string name="dont_show">Μην εμφανίσεις</string>
     <string name="custom">Προσαρμοργή</string>
-    <string name="torrent_not_accepted">Επανεκκινήστε την εφαρμογή και δεχτείτε το αναδυόμενο Stream Torrent για να συνεχίσετε.</string>
     <string name="software_decoding">Λογισμικό αποκωδικοποίησης</string>
-    <string name="torrent_preferred_media">Ενεργοποίησε torrent στις Ρυθμίσεις/Providers/Preferred media</string>
     <string name="software_decoding_desc">Η αποκωδικοποίηση λογισμικού επιτρέπει στον παίκτη να παίξει αρχεία βίντεο που δεν υποστηρίζονται από το τηλέφωνό σας, αλλά μπορεί να προκαλέσει κολλήματα ή ασταθή αναπαραγωγή σε υψηλή ανάλυση</string>
     <string name="starting_plugin_update_manually">Έναρξη διαδικασίας ενημέρωσης πρόσθετων!</string>
     <string name="plugins_updated_manually">Επιτυχής ενημέρωση του πρόσθετου(τών) %d!</string>
     <string name="qr_image">Εικόνα κωδικού QR</string>
     <string name="open_downloaded_repo">Ανοίξε αποθετήριο</string>
-    <string name="torrent_info">Αυτό το βίντεο είναι ένα Torrent, αυτό σημαίνει ότι η δραστηριότητα του βίντεο μπορεί να παρακολουθείται.\nΒεβαιωθείτε ότι έχετε κατανοήσει το Torrenting πριν συνεχίσετε.</string>
     <string name="offline_file">Διαθέσιμο για παρακολούθηση χωρίς σύνδεση</string>
     <string name="device_pin_url_message">Επισκεφθείτε το <b>%s</b> στο κινητό ή τον υπολογιστή σας και πληκτρολογήστε τον παραπάνω κωδικό</string>
     <string name="delete_plugin">Διαγραφή πρόσθετου</string>

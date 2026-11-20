@@ -625,15 +625,12 @@
     <string name="confirm_before_exiting_title">أكّد إنو بدك تطلع</string>
     <string name="backup_path_title">محل النسخة الاحتياطية</string>
     <string name="custom">حدد غير محل</string>
-    <string name="torrent_info">هيدا الڤيديو تورينت. هيدا بيعني إنه فيه ينعمله تراك، يعني بينعرف شو عم تحضر.\nإزا م بتعرف شو التورينت، م تستعمله.</string>
     <string name="subs_edge_size">حجم الحفّة</string>
     <string name="podcast_singular">پودكاست</string>
     <string name="audio_singular">صوت</string>
     <string name="unsupported_error">أرور، مش مدعوم</string>
     <string name="encoding_error">أرور بال إنكودينگ</string>
     <string name="player_load_one_subtitle_online">أفّي اللودينگ تلقائيًا</string>
-    <string name="torrent_preferred_media">سماح ب إستعمال الـTorrent بال سَتِنگز/المصادر/المحتوى المفضل</string>
-    <string name="torrent_not_accepted">سكر الآپ و رجاع فتحه، و قبال دعم التورنت ت تكفي.</string>
     <string name="software_decoding_desc">السوفتوار ديكودينگ بخلي مشغل الڤيديو يمشّي أنواع فيلات ڤيديو م بيدعمها جهازك، بس هال شي معقول يخلي الڤيديو يعلق، خاصتًا إزا كانت الجودة عالية.</string>
     <string name="software_decoding">سوفتوار ديكودينگ</string>
     <string name="sort_episodes_rating_low_high">رايتينگ (أوطا)</string>

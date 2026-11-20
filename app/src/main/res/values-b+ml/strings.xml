@@ -276,7 +276,6 @@
     <string name="speech_recognition_unavailable">സ്പീച്ച് റെക്കഗ്നിഷൻ ലഭ്യമല്ല</string>
     <string name="begin_speaking">സംസാരിക്കാൻ തുടങ്ങുക…</string>
     <string name="play_full_series_button">മുഴുനീള പരമ്പരയും പ്ലേ ചെയ്യുക</string>
-    <string name="torrent_info">ഈ വീഡിയോ ഒരു ടോറന്റ് ആണ്, അതായത് നിങ്ങളുടെ വീഡിയോ ആക്റ്റിവിറ്റി ട്രാക്ക് ചെയ്യപ്പെടാൻ സാധ്യതയുണ്ട്.\nതുടരുന്നതിന് മുൻപ് ടോറന്റിംഗിനെക്കുറിച്ച് നിങ്ങൾക്ക് കൃത്യമായി അറിയാമെന്ന് ഉറപ്പാക്കുക.</string>
     <string name="downloads_delete_select">ഡിലീറ്റ് ചെയ്യേണ്ടവ തിരഞ്ഞെടുക്കുക</string>
     <string name="downloads_empty">നിലവിൽ ഡൗൺലോഡുകൾ ഒന്നും തന്നെയില്ല.</string>
     <string name="queue_empty_message">നിലവിൽ ക്യൂവിലുള്ള ഡൗൺലോഡുകൾ ഒന്നും തന്നെയില്ല.</string>
