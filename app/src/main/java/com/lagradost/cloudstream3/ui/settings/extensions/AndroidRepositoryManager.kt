@@ -193,6 +193,38 @@ object AndroidRepositoryManager : RepositoryManager {
             info to plugins
         }
 
+    /**
+     * Audit-6 #9: best-effort rollback of a failed plugin update —
+     * removes the unloadable replacement, moves the previously
+     * installed file back from its ".bak" parking spot, and
+     * restores the anchor that belongs to it (or drops the new
+     * anchor when the old file had none).
+     */
+    private fun rollbackPluginUpdate(
+        file: File,
+        backupFile: File?,
+        previousAnchor: String?,
+    ) {
+        try {
+            file.delete()
+            if (backupFile != null && backupFile.exists()) {
+                Files.move(
+                    backupFile.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+            if (previousAnchor != null) {
+                PluginManager.storePluginHash(file.absolutePath, previousAnchor)
+            } else {
+                PluginManager.removePluginHash(file.absolutePath)
+            }
+        } catch (_: Exception) {
+            // Best effort only: the caller still reports the
+            // failed update either way.
+        }
+    }
+
     override suspend fun downloadPlugin(
         source: PluginDownloadSource,
         downloadProgress: (Long, Long?) -> Unit
@@ -240,6 +272,11 @@ object AndroidRepositoryManager : RepositoryManager {
         // its indentation; the finally removes the temp file
         // unless the move below consumed it.
         var tempMoved = false
+        // Audit-6 #9: where the installed file is parked while
+        // its replacement proves it loads, and the anchor that
+        // belongs to it (both restored by the rollback below).
+        val backupFile = file.parentFile?.let { File(it, file.name + ".bak") }
+        val previousAnchor = PluginManager.storedPluginHash(file.absolutePath)
         try {
         tempFile.outputStream().use { writeStream ->
             app.get(convertRawGitUrl(source.pluginUrl)).body.use { body ->
@@ -257,7 +294,22 @@ object AndroidRepositoryManager : RepositoryManager {
         // Always load the plugin
         unloadPlugin(file.absolutePath)
 
-        file.delete() // delete if we somehow already have this downloaded?
+        // Audit-6 #9: move the installed file aside instead of
+        // deleting it — it is only discarded once the replacement
+        // has proven it loads (see the rollback at loadPlugin
+        // below). The old flow deleted the working file here, so
+        // an update whose digest matched but whose dex/manifest
+        // this build cannot load destroyed the working plugin
+        // permanently.
+        if (backupFile != null && file.exists()) {
+            Files.move(
+                file.toPath(),
+                backupFile.toPath(),
+                StandardCopyOption.REPLACE_EXISTING
+            )
+        } else {
+            file.delete() // delete if we somehow already have this downloaded?
+        }
         file.parentFile?.mkdirs() // make the directories as Files.move needs this to work
 
         try {
@@ -289,20 +341,31 @@ object AndroidRepositoryManager : RepositoryManager {
             PluginManager.storePluginHash(file.absolutePath, anchorHash)
         }
 
-        val result = PluginManager.loadPlugin(
-            context = context,
-            file = file,
-            data = PluginData(
-                internalName = source.internalName,
-                url = source.pluginUrl,
-                isOnline = true,
-                filePath = file.absolutePath,
-                version = PLUGIN_VERSION_NOT_SET
+        val result = try {
+            PluginManager.loadPlugin(
+                context = context,
+                file = file,
+                data = PluginData(
+                    internalName = source.internalName,
+                    url = source.pluginUrl,
+                    isOnline = true,
+                    filePath = file.absolutePath,
+                    version = PLUGIN_VERSION_NOT_SET
+                )
             )
-        )
+        } catch (e: Exception) {
+            rollbackPluginUpdate(file, backupFile, previousAnchor)
+            throw e
+        }
         if (!result) {
+            // Audit-6 #9: the replacement cannot load — put the
+            // working file and its anchor back before reporting
+            // the failure, instead of leaving the broken file in
+            // place to fail at every startup with the plugin gone.
+            rollbackPluginUpdate(file, backupFile, previousAnchor)
             throw ErrorLoadingException("Unable to load plugin ${source.internalName}")
         }
+        backupFile?.delete()
 
         return@withContext file.absolutePath
     }

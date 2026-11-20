@@ -255,6 +255,27 @@ object PluginManager {
         }
     }
 
+    // Audit-6 #9: read/remove counterparts of storePluginHash,
+    // used by the Compose update path to roll a failed update
+    // back to the previously installed file and its anchor.
+    fun storedPluginHash(filePath: String): String? {
+        return getStoredPluginHash(filePath)
+    }
+
+    fun removePluginHash(filePath: String) {
+        synchronized(pluginHashLock) {
+            val current = try {
+                getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
+            } catch (e: Exception) {
+                logError(e)
+                return
+            } ?: emptyMap()
+            val updated = current - filePath
+            pluginHashCache = updated
+            setKey(PLUGIN_FILE_HASHES_KEY, updated)
+        }
+    }
+
     fun getPluginsOnline(): Array<PluginData> {
         return getKey<Array<PluginData>>(PLUGINS_KEY) ?: emptyArray()
     }
