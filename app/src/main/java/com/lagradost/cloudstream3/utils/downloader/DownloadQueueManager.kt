@@ -180,6 +180,13 @@ object DownloadQueueManager {
         // consistent (a failed attempt re-reads the same queue).
         var claimed: DownloadQueueWrapper? = null
         _queue.getAndUpdate { localQueue ->
+            // Audit-15 #1: reset per invocation — the same
+            // stale-claim bug as Audit-14 #5 survived here.
+            // A CAS retry that observes an empty queue (the
+            // item was removed concurrently) must not keep
+            // the previous attempt's claim, or popQueue
+            // starts a download the user just deleted.
+            claimed = null
             val first = localQueue.firstOrNull() ?: return@getAndUpdate localQueue
             claimed = first
             localQueue.filter { it.id != first.id }.toTypedArray()
