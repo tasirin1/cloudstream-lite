@@ -1061,8 +1061,12 @@ class GeneratorPlayer : FullScreenPlayer() {
      * so only use from a user click and not a background process */
     private fun addFirstSub(query: SubtitleSearch) =
         viewModel.viewModelScope.launch {
-            // async should not have a race condition if they are on the same group
-            var hasSelectASubtitle = false
+            // Audit-17 #9: the claim below runs inside
+            // parallel amap children — a plain Boolean
+            // check-then-set let two providers both win and
+            // both select subtitles (double player reload).
+            val hasSelectASubtitle =
+                java.util.concurrent.atomic.AtomicBoolean(false)
 
             // first come first served with these subtitles
             // we might want to change it to prefer different sources when used multiple times,
@@ -1112,8 +1116,9 @@ class GeneratorPlayer : FullScreenPlayer() {
                     }
 
                     // checks for both a race condition and if any of the subs generated is new
-                    if (this.isActive && !viewModel.state.subtitles.containsAll(subtitles) && !hasSelectASubtitle) {
-                        hasSelectASubtitle = true
+                    if (this.isActive && !viewModel.state.subtitles.containsAll(subtitles) &&
+                        hasSelectASubtitle.compareAndSet(false, true)
+                    ) {
                         runOnMainThread {
                             addAndSelectSubtitles(*subtitles.toTypedArray())
                         }
