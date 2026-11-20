@@ -18,6 +18,7 @@ import com.lagradost.cloudstream3.mvvm.launchSafe
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.services.DownloadQueueService
 import com.lagradost.cloudstream3.services.DownloadQueueService.Companion.downloadInstances
+import com.lagradost.cloudstream3.utils.downloader.DownloadFileManagement.getBasePath
 import com.lagradost.cloudstream3.utils.AppContextUtils.getNameFull
 import com.lagradost.cloudstream3.utils.AppContextUtils.setDefaultFocus
 import com.lagradost.cloudstream3.utils.ConsistentLiveData
@@ -416,7 +417,23 @@ class DownloadViewModel : ViewModel() {
 
     private fun updateStorageStats(visual: List<VisualDownloadCached.Header>) {
         try {
-            val stat = StatFs(Environment.getExternalStorageDirectory().path)
+            // Audit-4 #38: this always measured the primary
+            // external storage, even when the user's download
+            // folder lives on another volume (SD card / USB drive
+            // on the STB) — the stats then described the wrong
+            // disk. Measure the volume holding the actual
+            // download base path; fall back to the primary volume
+            // when the base path has no filesystem path (pure SAF
+            // tree) or does not exist yet.
+            val basePath = CloudStreamApp.context?.getBasePath()?.first?.filePath()
+            val statPath = basePath
+                ?.takeIf { it.isNotBlank() }
+                ?.let { path ->
+                    generateSequence(java.io.File(path)) { it.parentFile }
+                        .firstOrNull { it.exists() }?.path
+                }
+                ?: Environment.getExternalStorageDirectory().path
+            val stat = StatFs(statPath)
             val localBytesAvailable = stat.availableBytes
             val localTotalBytes = stat.blockSizeLong * stat.blockCountLong
             val localDownloadedBytes = visual.sumOf { it.totalBytes }
