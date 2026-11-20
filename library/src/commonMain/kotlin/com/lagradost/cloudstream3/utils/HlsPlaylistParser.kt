@@ -1184,10 +1184,16 @@ object HlsPlaylistParser {
             parseOptionalStringAttr(line, REGEX_KEYFORMATVERSIONS, "1", variableDefinitions)
         if (KEYFORMAT_WIDEVINE_PSSH_BINARY == keyFormat) {
             val urlString = parseStringAttr(line, REGEX_URI, variableDefinitions)
+            // Audit-15 #24: a plain URL (no comma) made
+            // indexOf return -1 and substring(-1) throw,
+            // killing the whole parse. No comma = not a
+            // data: URI — no payload to decode.
+            val commaIndex = urlString.indexOf(',')
             return SchemeData(
                 uuid = C.WIDEVINE_UUID,
                 mimeType = MimeTypes.VIDEO_MP4,
-                data = base64DecodeArray(urlString.substring(urlString.indexOf(',')))
+                data = if (commaIndex == -1) null
+                else base64DecodeArray(urlString.substring(commaIndex))
             )
         } else if (KEYFORMAT_WIDEVINE_PSSH_JSON == keyFormat) {
             return SchemeData(
@@ -1197,8 +1203,11 @@ object HlsPlaylistParser {
             )
         } else if (KEYFORMAT_PLAYREADY == keyFormat && "1" == keyFormatVersions) {
             val urlString = parseStringAttr(line, REGEX_URI, variableDefinitions)
+            // Audit-15 #24: same no-comma guard as above.
+            val commaIndex = urlString.indexOf(',')
             val data: ByteArray =
-                base64DecodeArray(urlString.substring(urlString.indexOf(',')))
+                if (commaIndex == -1) ByteArray(0)
+                else base64DecodeArray(urlString.substring(commaIndex))
             val psshData: ByteArray =
                 PsshAtomUtil.buildPsshAtom(
                     systemId = C.PLAYREADY_UUID,
