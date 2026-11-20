@@ -979,6 +979,46 @@ private class Scope(val parent: Scope? = null) {
         if (vars.containsKey(name)) this else parent?.findOwner(name)
 }
 
+// Audit-15 #6: CharSequence that aborts regex matching
+// once a deadline passes. java.util.regex reads the input
+// exclusively through these methods while backtracking,
+// so a check every few thousand accesses bounds even a
+// catastrophic pattern by the eval budget. (On targets
+// whose regex engine copies the input first this simply
+// degrades to the old behaviour — never worse.)
+private class JsDeadlineExceeded : RuntimeException()
+
+private class DeadlineCharSequence(
+    private val delegate: String,
+    private val deadline: TimeMark,
+) : CharSequence {
+    private var accesses = 0
+
+    private fun checkDeadline() {
+        if (++accesses % 4096 == 0 && deadline.hasPassedNow()) {
+            throw JsDeadlineExceeded()
+        }
+    }
+
+    override val length: Int
+        get() {
+            checkDeadline()
+            return delegate.length
+        }
+
+    override fun get(index: Int): Char {
+        checkDeadline()
+        return delegate[index]
+    }
+
+    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
+        checkDeadline()
+        return delegate.subSequence(startIndex, endIndex)
+    }
+
+    override fun toString(): String = delegate
+}
+
 private class JsInterpreter(
     private val maxExecutionTime: Duration = JS_DEFAULT_MAX_EXECUTION_TIME,
     private val maxInstructions: Long = JS_DEFAULT_MAX_INSTRUCTIONS,
@@ -1586,7 +1626,18 @@ private class JsInterpreter(
             "match" -> nativeFn("match") { args ->
                 val pattern = toJsString(args.getOrNull(0))
                 try {
-                    val result = Regex(pattern).find(obj)
+                    // Audit-15 #6: a script-controlled regex
+                    // ran with no time bound — the budget is
+                    // only checked between statements, so a
+                    // catastrophic-backtracking pattern hung
+                    // the calling thread forever. The matcher
+                    // reads its input through this CharSequence,
+                    // which aborts once the eval deadline
+                    // passes; the exception lands in the catch
+                    // below and the call returns null.
+                    val result = Regex(pattern).find(
+                        DeadlineCharSequence(obj, startMark + maxExecutionTime)
+                    )
                     if (result == null) null
                     else JsList(result.groupValues.map { it as Any? }.toMutableList())
                 } catch (_: Exception) { null }
