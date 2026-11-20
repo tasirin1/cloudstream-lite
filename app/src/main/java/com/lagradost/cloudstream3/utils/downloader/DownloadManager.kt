@@ -2595,7 +2595,24 @@ object VideoDownloadManager {
             }
         }
 
+        // Audit-17 #2: exception safety net, mirroring the
+        // sibling paths — the tail of this function (profile
+        // priority sort, subtitle sort) had none, so a setup
+        // exception escaped into the detached launcher and
+        // the instance never got a terminal flag: a zombie
+        // holding a queue slot for the process lifetime.
         private suspend fun downloadEpisodeWithoutLinks() {
+            try {
+                downloadEpisodeWithoutLinksInner()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                isFailed = true
+                logError(e)
+            }
+        }
+
+        private suspend fun downloadEpisodeWithoutLinksInner() {
             val downloadItem = downloadQueueWrapper.downloadItem ?: return
 
             val generator = RepoLinkGenerator(listOf(downloadItem.episode))
