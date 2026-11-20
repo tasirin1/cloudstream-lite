@@ -320,6 +320,13 @@ class SearchFragment : BaseFragment<FragmentSearchBinding>(
                 builder.let { dialog ->
                     val previousSelectedApis = selectedApis.toSet()
                     val previousSelectedSearchTypes = selectedSearchTypes.toSet()
+                    // Audit-13 #10: Cancel must cancel — item
+                    // clicks mutate the working set in place and
+                    // chip toggles persist the tags immediately,
+                    // so without this flag the dismiss listener
+                    // (which fires for Cancel too) saved every
+                    // change anyway.
+                    var dialogCancelled = false
 
                     val isMultiLang = ctx.getApiProviderLangSettings().let { set ->
                         set.size > 1 || set.contains(AllLanguagesName)
@@ -393,10 +400,12 @@ class SearchFragment : BaseFragment<FragmentSearchBinding>(
 
 
                     cancelBtt?.setOnClickListener {
+                        dialogCancelled = true
                         dialog.dismissSafe()
                     }
 
                     cancelBtt?.setOnClickListener {
+                        dialogCancelled = true
                         dialog.dismissSafe()
                     }
 
@@ -408,6 +417,24 @@ class SearchFragment : BaseFragment<FragmentSearchBinding>(
                     }
 
                     dialog.setOnDismissListener {
+                        if (dialogCancelled) {
+                            // Audit-13 #10: roll back everything
+                            // the dialog already mutated/persisted
+                            // (tags are written eagerly by
+                            // updateList; the type selection lives
+                            // in the fragment field), keep the
+                            // pre-dialog provider selection, and
+                            // do not re-run the search.
+                            DataStoreHelper.searchPreferenceTags =
+                                previousSelectedSearchTypes.toList()
+                            selectedSearchTypes.clear()
+                            selectedSearchTypes.addAll(previousSelectedSearchTypes)
+                            updateChips(
+                                binding.tvtypesChipsScroll.tvtypesChips,
+                                selectedSearchTypes
+                            )
+                            return@setOnDismissListener
+                        }
                         // Audit-12 #8: an all-selected working set
                         // IS the "search all providers" sentinel —
                         // persist it as the empty set, not as a
