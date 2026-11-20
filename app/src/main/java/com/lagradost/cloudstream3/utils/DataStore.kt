@@ -234,6 +234,20 @@ object DataStore {
         }
     }
 
+    // Audit-18 #1: the raw stored string, so a caller can
+    // tell "nothing stored" (null) apart from "stored but
+    // unparseable" — getKey swallows parse failures and
+    // returns the default, which made PluginManager's
+    // corruption detection unreachable.
+    fun Context.getKeyRaw(path: String): String? {
+        return try {
+            getSharedPrefs().getString(path, null)
+        } catch (e: Exception) {
+            logError(e)
+            null
+        }
+    }
+
     fun <T : Any> Context.getKey(path: String, valueType: Class<T>): T? {
         return try {
             val json: String = getSharedPrefs().getString(path, null) ?: return null

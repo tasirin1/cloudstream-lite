@@ -25,6 +25,7 @@ import com.lagradost.cloudstream3.utils.AppContextUtils.openBrowser
 import com.lagradost.cloudstream3.utils.AppDebug
 import com.lagradost.cloudstream3.utils.Coroutines.runOnMainThread
 import com.lagradost.cloudstream3.utils.DataStore.getKey
+import com.lagradost.cloudstream3.utils.DataStore.getKeyRaw
 import com.lagradost.cloudstream3.utils.DataStore.getKeys
 import com.lagradost.cloudstream3.utils.DataStore.removeKey
 import com.lagradost.cloudstream3.utils.DataStore.removeKeys
@@ -203,6 +204,10 @@ class CloudStreamApp : Application(), SingletonImageLoader.Factory {
 
         inline fun <reified T : Any> getKey(path: String): T? {
             return context?.getKey(path)
+        }
+
+        fun getKeyRaw(path: String): String? {
+            return context?.getKeyRaw(path)
         }
 
         inline fun <reified T : Any> getKey(folder: String, path: String): T? {

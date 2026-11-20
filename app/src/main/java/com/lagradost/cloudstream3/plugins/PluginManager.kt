@@ -24,6 +24,7 @@ import com.lagradost.cloudstream3.APIHolder.removePluginMapping
 import com.lagradost.cloudstream3.AllLanguagesName
 import com.lagradost.cloudstream3.AutoDownloadMode
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKeyRaw
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.removeKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.CommonActivity.showToast
@@ -232,6 +233,22 @@ object PluginManager {
     @Volatile
     private var pluginHashStoreCorrupt = false
 
+    // Audit-18 #1: read the anchor map from the RAW stored
+    // string. The old code caught around getKey(), but getKey
+    // swallows parse failures itself and returns null — the
+    // catch never fired, a corrupt map read as an empty one,
+    // and the Audit-6 #27 fail-closed flag could never be
+    // set. Returns null ONLY for "stored but unparseable".
+    private fun readStoredHashMap(): Map<String, String>? {
+        val raw = getKeyRaw(PLUGIN_FILE_HASHES_KEY) ?: return emptyMap()
+        return try {
+            parseJson<Map<String, String>>(raw) ?: emptyMap()
+        } catch (e: Exception) {
+            logError(e)
+            null
+        }
+    }
+
     private fun pluginHashMap(): Map<String, String> {
         pluginHashCache?.let { return it }
         // Audit-4 #4: initialize under the same lock storePluginHash
@@ -243,13 +260,10 @@ object PluginManager {
                 // Audit sesi 15 #11: a parse failure used to be swallowed and
                 // treated as "no anchor", silently disabling the integrity
                 // check for every online plugin. At least leave evidence.
-                val hashes = try {
-                    getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
-                } catch (e: Exception) {
-                    logError(e)
+                val hashes = readStoredHashMap() ?: run {
                     pluginHashStoreCorrupt = true
-                    null
-                } ?: emptyMap()
+                    emptyMap()
+                }
                 pluginHashCache = hashes
                 hashes
             }
@@ -281,12 +295,11 @@ object PluginManager {
             // back over the real anchors on the next store, wiping
             // every other plugin's anchor. As before Audit-3 #15,
             // a read that throws aborts the store instead.
-            val current = try {
-                getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
-            } catch (e: Exception) {
-                logError(e)
-                return
-            } ?: emptyMap()
+            // Audit-18 #1: abort on an unparseable store
+            // (the old getKey-based guard could never fire —
+            // see readStoredHashMap) instead of overwriting
+            // every other plugin's anchor with a partial map.
+            val current = readStoredHashMap() ?: return
             val updated = current + (filePath to stamped)
             pluginHashCache = updated
             setKey(PLUGIN_FILE_HASHES_KEY, updated)
@@ -310,12 +323,8 @@ object PluginManager {
 
     fun removePluginHash(filePath: String) {
         synchronized(pluginHashLock) {
-            val current = try {
-                getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
-            } catch (e: Exception) {
-                logError(e)
-                return
-            } ?: emptyMap()
+            // Audit-18 #1: same live guard as storePluginHash.
+            val current = readStoredHashMap() ?: return
             val updated = current - filePath
             pluginHashCache = updated
             setKey(PLUGIN_FILE_HASHES_KEY, updated)
