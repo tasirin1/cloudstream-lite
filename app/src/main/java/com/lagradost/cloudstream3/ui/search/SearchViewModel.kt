@@ -56,6 +56,13 @@ class SearchViewModel : ViewModel() {
     private var repos = apis.withLock { apis.map { APIRepository(it) } }
 
     fun clearSearch() {
+        // Audit-12 #4: invalidate and cancel the in-flight
+        // search first, like searchAndCancel does — clearing
+        // alone left the running job with a still-valid
+        // generation, so it finished and posted the OLD
+        // query's results over the cleared state.
+        currentSearchIndex++
+        onGoingSearch?.cancel()
         _searchResponse.postValue(Resource.Success(ExpandableSearchList(emptyList(), 0, false)))
         _currentSearch.postValue(emptyMap())
         expandableSearches.clear()
