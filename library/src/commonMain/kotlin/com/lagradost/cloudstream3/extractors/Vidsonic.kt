@@ -20,8 +20,18 @@ open class Vixeo : Vidsonic() {
     override fun extractEncodedVideoUrl(response: NiceResponse): String {
         // Vixeo encodes the stream URL as Base64 instead of inlining it into JavaScript
         val dataConfigBase64 = response.document.select("#streamsonic-player-root").attr("data-config")
-        val dataConfigRaw = base64Decode(dataConfigBase64)
-        val dataConfig = AppUtils.parseJson<JsonObject>(dataConfigRaw)
+        // Audit-8 #13: the decode and the parse both threw raw
+        // exceptions (IllegalArgumentException /
+        // SerializationException) on a malformed data-config —
+        // fail with the clean error this function's other paths
+        // already use.
+        val dataConfigRaw = try {
+            base64Decode(dataConfigBase64)
+        } catch (e: IllegalArgumentException) {
+            throw ErrorLoadingException("Invalid data-config encoding")
+        }
+        val dataConfig = AppUtils.tryParseJson<JsonObject>(dataConfigRaw)
+            ?: throw ErrorLoadingException("Invalid data-config JSON")
         // Audit-4 #18: was !! — a data-config without "source"
         // crashed with an NPE instead of a clean load failure.
         // Audit-5 #47: as? JsonPrimitive — a non-primitive
@@ -76,9 +86,13 @@ open class Vidsonic : ExtractorApi() {
         val streamUrl = encodedStreamUrl
             .replace("|", "")
             // always two base16 digits together build one ASCII char
+            // Audit-8 #14: toInt(16) threw NumberFormatException
+            // on any non-hex pair (format change, truncated page)
+            // — fail cleanly instead.
             .chunked(2)
             .map {
-                it.toInt(16).toChar()
+                it.toIntOrNull(16)?.toChar()
+                    ?: throw ErrorLoadingException("Invalid encoded stream URL")
             }
             .joinToString("")
             .reversed()
