@@ -833,17 +833,33 @@ class CS3IPlayer : IPlayer {
          **/
         var preferredAudioTrackLanguage: String? = null
             get() {
-                return field ?: getKey<String>(
+                // Audit-12 #2: this cache used to be
+                // account-blind — the first account's language
+                // was returned for every later account in the
+                // process, and the player's auto-apply path then
+                // WROTE it into the new account's key,
+                // permanently overwriting that account's own
+                // preference. Key the cache by account as well.
+                if (field != null && cachedAudioLanguageAccount == currentAccount) {
+                    return field
+                }
+                return getKey<String>(
                     "$currentAccount/$PREFERRED_AUDIO_LANGUAGE_KEY",
-                    field
+                    null
                 )?.also {
                     field = it
+                    cachedAudioLanguageAccount = currentAccount
                 }
             }
             set(value) {
                 setKey("$currentAccount/$PREFERRED_AUDIO_LANGUAGE_KEY", value)
                 field = value
+                cachedAudioLanguageAccount = currentAccount
             }
+
+        // Audit-12 #2: the account `preferredAudioTrackLanguage`'s
+        // cached field belongs to.
+        private var cachedAudioLanguageAccount: String? = null
 
         // Audit-7 #27: @Volatile + a lock for the lazy build in
         // getCacheOrBuild — the field was plain, so two loads on
