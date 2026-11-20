@@ -715,13 +715,8 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
             selectSpeedDialog = null
         }
 
-        // if (isLayout(PHONE)) {
-        //    val builder =
-        //        BottomSheetDialog(act, R.style.AlertDialogCustom)
-        //    builder.setContentView(binding.root)
-        //    builder.setOnDismissListener(dismiss)
-        //    builder.show()
-        //} else {
+        // Audit-14 #62: a commented-out BottomSheetDialog
+        // variant of this dialog used to wrap the live code.
         val builder =
             AlertDialog.Builder(act, R.style.AlertDialogCustom)
                 .setView(binding.root)
@@ -729,7 +724,6 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         val dialog = builder.create()
         this.selectSpeedDialog = dialog
         dialog.show()
-        //}
     }
 
     // getColorStateList(index) on a TypedArray built from a raw intArrayOf(...) can't be
