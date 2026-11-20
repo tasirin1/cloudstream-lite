@@ -2324,6 +2324,9 @@ class GeneratorPlayer : FullScreenPlayer() {
                             isNextEpisode = false
                             releasePlayer()
                             playerEpisodeOverlay.isGone = true
+                            // Audit-15 #4: keep the overlay
+                            // flag in sync with the view.
+                            onEpisodesOverlayDismissedExternally()
                             episodeClick.position?.let { viewModel.loadThisEpisode(it) }
                         }
                     },
