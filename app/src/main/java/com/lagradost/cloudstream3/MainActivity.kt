@@ -119,7 +119,6 @@ import com.lagradost.cloudstream3.ui.settings.Globals.updateTv
 import com.lagradost.cloudstream3.ui.settings.SettingsGeneral
 import com.lagradost.cloudstream3.ui.setup.HAS_DONE_SETUP_KEY
 import com.lagradost.cloudstream3.ui.setup.SetupFragmentExtensions
-import com.lagradost.cloudstream3.utils.ApkInstaller
 import com.lagradost.cloudstream3.utils.AppContextUtils.getApiDubstatusSettings
 import com.lagradost.cloudstream3.utils.AppContextUtils.html
 import com.lagradost.cloudstream3.utils.AppContextUtils.isLtr
@@ -607,11 +606,11 @@ class MainActivity : AppCompatActivity(), ColorPickerDialogListener, BiometricCa
 
     override fun onPause() {
         super.onPause()
-
-        // Start any delayed updates
-        if (ApkInstaller.delayedInstaller?.startInstallation() == true) {
-            Toast.makeText(this, R.string.update_started, Toast.LENGTH_LONG).show()
-        }
+        // Audit-5 #33: the delayed-installer hook that used to
+        // live here was removed with the dead PackageInstaller
+        // chain (PackageInstallerService + ApkInstaller) — nothing
+        // could ever start that service since InAppUpdater was
+        // made inert, so delayedInstaller was always null.
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean =
