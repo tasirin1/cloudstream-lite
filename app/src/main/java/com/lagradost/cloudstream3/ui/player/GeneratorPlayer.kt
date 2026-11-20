@@ -378,20 +378,22 @@ class GeneratorPlayer : FullScreenPlayer() {
                         }
 
                         // retry several times with a preview in case the preview generator is slow
-                        // Audit-5 #21: return@repeat only ended the
-                        // current iteration, so after a success the
+                        // Audit-5 #21: this was a repeat(10) whose
+                        // success path used return@repeat — that
+                        // only ended the current iteration, so the
                         // loop kept going and re-delivered the icon
-                        // every second for the remaining tries. Bail
-                        // out of the whole loop on success.
-                        previewLoop@ run {
-                            repeat(10) {
-                                val preview = this@GeneratorPlayer.player.getPreview(0.5f)
-                                if (preview != null) {
-                                    callback.onBitmap(preview)
-                                    return@previewLoop
-                                }
-                                delay(1000L)
+                        // every second for the remaining tries. A
+                        // plain while loop with break says exactly
+                        // what it does.
+                        var previewTries = 0
+                        while (previewTries < 10) {
+                            val preview = this@GeneratorPlayer.player.getPreview(0.5f)
+                            if (preview != null) {
+                                callback.onBitmap(preview)
+                                break
                             }
+                            previewTries++
+                            delay(1000L)
                         }
                     }
 
