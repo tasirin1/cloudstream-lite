@@ -182,6 +182,27 @@ class CS3IPlayer : IPlayer {
     private var currentWindow: Int = 0
     private var playbackPosition: Long = 0
 
+    // Audit-4 #14: budget for the automatic prepare() retries in
+    // onPlayerError. Previously a persistent failure (network error
+    // with a known duration, behind-live-window, stuck playlist)
+    // re-prepared forever — each prepare raised the same error
+    // again — draining battery/data and never surfacing an error
+    // to the user. Now: at most AUTO_RETRY_MAX retries per
+    // AUTO_RETRY_WINDOW_MS window, reset on STATE_READY; past the
+    // budget the error is surfaced like any other.
+    private var autoRetryCount = 0
+    private var autoRetryWindowStartMs = 0L
+
+    private fun consumeAutoRetry(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - autoRetryWindowStartMs > AUTO_RETRY_WINDOW_MS) {
+            autoRetryWindowStartMs = now
+            autoRetryCount = 0
+        }
+        autoRetryCount++
+        return autoRetryCount <= AUTO_RETRY_MAX
+    }
+
     private val subtitleHelper = PlayerSubtitleHelper()
 
     /** If we want to play the audio only in the background when the app is not open */
@@ -676,6 +697,10 @@ class CS3IPlayer : IPlayer {
 
     companion object {
         private const val CRONET_TIMEOUT_MS = 15_000
+
+        // Audit-4 #14: see consumeAutoRetry.
+        private const val AUTO_RETRY_MAX = 5
+        private const val AUTO_RETRY_WINDOW_MS = 60_000L
 
         /**
          * Single shared engine, to minimize the overhead of maintaining many as:
@@ -1573,6 +1598,9 @@ class CS3IPlayer : IPlayer {
 
                     when (playbackState) {
                         Player.STATE_READY -> {
+                            // Audit-4 #14: playback recovered —
+                            // refill the auto-retry budget.
+                            autoRetryCount = 0
                             onRenderFirst()
                         }
 
@@ -1610,31 +1638,49 @@ class CS3IPlayer : IPlayer {
                     when {
                         error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
                                 && exoPlayer?.duration != TIME_UNSET -> {
-                            exoPlayer?.prepare()
+                            // Audit-4 #14: bounded by the auto-retry
+                            // budget; past it the error surfaces.
+                            if (consumeAutoRetry()) {
+                                exoPlayer?.prepare()
+                            } else {
+                                event(ErrorEvent(error))
+                            }
                         }
 
                         error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> {
                             // Re-initialize player at the current live window default position.
-                            exoPlayer?.seekToDefaultPosition()
-                            exoPlayer?.prepare()
+                            if (consumeAutoRetry()) {
+                                exoPlayer?.seekToDefaultPosition()
+                                exoPlayer?.prepare()
+                            } else {
+                                event(ErrorEvent(error))
+                            }
                         }
 
                         // PlaylistStuckException usually happens when the player position is ahead of the live window.
                         // Seek to the default location in that case
                         error.cause is HlsPlaylistTracker.PlaylistStuckException -> {
-                            val position = exoPlayer?.currentPosition ?: exoPlayer?.duration ?: 0
+                            // Audit-4 #14: same auto-retry budget as
+                            // the other prepare() branches.
+                            if (consumeAutoRetry()) {
+                                val position =
+                                    exoPlayer?.currentPosition ?: exoPlayer?.duration ?: 0
 
-                            // Seek to live head
-                            val aheadOfLive =
-                                LiveHelper.getLiveManager(exoPlayer)?.getTimeAheadOfLive(position)
-                                    ?: 0
+                                // Seek to live head
+                                val aheadOfLive =
+                                    LiveHelper.getLiveManager(exoPlayer)
+                                        ?.getTimeAheadOfLive(position)
+                                        ?: 0
 
-                            if (aheadOfLive > 100) {
-                                exoPlayer?.seekTo(position - aheadOfLive)
+                                if (aheadOfLive > 100) {
+                                    exoPlayer?.seekTo(position - aheadOfLive)
+                                } else {
+                                    exoPlayer?.seekToDefaultPosition()
+                                }
+                                exoPlayer?.prepare()
                             } else {
-                                exoPlayer?.seekToDefaultPosition()
+                                event(ErrorEvent(error))
                             }
-                            exoPlayer?.prepare()
                         }
 
 
