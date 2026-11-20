@@ -69,6 +69,11 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
         private var overrideEncoding: String? = null
         val style: SaveCaptionStyle get() = SubtitlesFragment.getCurrentSavedStyle()
         private val locationRegex = Regex("""\{\\an(\d+)\}""", RegexOption.IGNORE_CASE)
+
+        // Audit-4 #24: hoisted out of trimStr, which recompiled
+        // it for every single cue.
+        private val unicodeSpaceRegex =
+            Regex("[\u00A0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u205F]")
         val bloatRegex =
             listOf(
                 Regex(
@@ -93,7 +98,7 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
         //https://www.fileformat.info/info/unicode/char/200b/index.htm
         fun trimStr(string: String): String {
             return string.trimStart().trim('\uFEFF', '\u200B').replace(
-                Regex("[\u00A0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A\u205F]"),
+                unicodeSpaceRegex,
                 " "
             )
         }
