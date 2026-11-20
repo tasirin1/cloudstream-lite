@@ -1,5 +1,6 @@
 package com.lagradost.cloudstream3.extractors
 
+import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
@@ -21,7 +22,10 @@ open class Vixeo : Vidsonic() {
         val dataConfigBase64 = response.document.select("#streamsonic-player-root").attr("data-config")
         val dataConfigRaw = base64Decode(dataConfigBase64)
         val dataConfig = AppUtils.parseJson<JsonObject>(dataConfigRaw)
-        return dataConfig["source"]!!.jsonPrimitive.content
+        // Audit-4 #18: was !! — a data-config without "source"
+        // crashed with an NPE instead of a clean load failure.
+        return dataConfig["source"]?.jsonPrimitive?.content
+            ?: throw ErrorLoadingException("Missing source in data-config")
     }
 }
 

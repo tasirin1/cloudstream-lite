@@ -88,7 +88,9 @@ object GogoHelper {
         if ((iv == null || secretKey == null || secretDecryptKey == null) && !isUsingAdaptiveKeys)
             return@safeApiCall
 
-        val id = hoistedRegex1.find(iframeUrl)!!.value.removePrefix("id=")
+        // Audit-4 #18: was !! — an iframe URL without an id
+        // crashed with an NPE instead of yielding no links.
+        val id = hoistedRegex1.find(iframeUrl)?.value?.removePrefix("id=") ?: return@safeApiCall
 
         var document: Document? = iframeDocument
         val foundIv = iv ?: (document ?: app.get(iframeUrl).document.also { document = it })

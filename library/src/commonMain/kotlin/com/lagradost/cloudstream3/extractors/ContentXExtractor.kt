@@ -23,7 +23,9 @@ open class ContentX : ExtractorApi() {
         val extRef   = referer ?: ""
 
         val iSource  = app.get(url, referer=extRef).text
-        val iExtract = hoistedRegex1.find(iSource)!!.groups[1]?.value ?: throw ErrorLoadingException("iExtract is null")
+        // Audit-4 #18: find() was force-unwrapped with !! before
+        // the (already present) null handling could run.
+        val iExtract = hoistedRegex1.find(iSource)?.groups?.get(1)?.value ?: throw ErrorLoadingException("iExtract is null")
 
         val subUrls = mutableSetOf<String>()
         Regex("""\"file\":\"([^\"]+)\",\"label\":\"([^\"]+)\"""").findAll(iSource).forEach {
@@ -41,7 +43,7 @@ open class ContentX : ExtractorApi() {
         }
 
         val vidSource  = app.get("${mainUrl}/source2.php?v=${iExtract}", referer=extRef).text
-        val vidExtract = hoistedRegex2.find(vidSource)!!.groups[1]?.value ?: throw ErrorLoadingException("vidExtract is null")
+        val vidExtract = hoistedRegex2.find(vidSource)?.groups?.get(1)?.value ?: throw ErrorLoadingException("vidExtract is null")
         val m3uLink    = vidExtract.replace("\\", "")
 
         callback.invoke(
@@ -56,10 +58,10 @@ open class ContentX : ExtractorApi() {
             }
         )
 
-        val iDublaj = hoistedRegex3.find(iSource)!!.groups[1]?.value
+        val iDublaj = hoistedRegex3.find(iSource)?.groups?.get(1)?.value
         if (iDublaj != null) {
             val dublajSource  = app.get("${mainUrl}/source2.php?v=${iDublaj}", referer=extRef).text
-            val dublajExtract = hoistedRegex4.find(dublajSource)!!.groups[1]?.value ?: throw ErrorLoadingException("dublajExtract is null")
+            val dublajExtract = hoistedRegex4.find(dublajSource)?.groups?.get(1)?.value ?: throw ErrorLoadingException("dublajExtract is null")
             val dublajLink    = dublajExtract.replace("\\", "")
 
             callback.invoke(

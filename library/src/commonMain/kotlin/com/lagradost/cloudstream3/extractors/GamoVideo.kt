@@ -19,7 +19,9 @@ open class GamoVideo : ExtractorApi() {
         callback: (ExtractorLink) -> Unit
     ) {
         app.get(url, referer = referer).document.select("script")
-            .firstOrNull { JwPlayerHelper.canParseJwScript(it.data()) }!!.let {
+            // Audit-4 #18: was !! — a page without a JW script
+            // crashed with an NPE instead of yielding no links.
+            .firstOrNull { JwPlayerHelper.canParseJwScript(it.data()) }?.let {
                 JwPlayerHelper.extractStreamLinks(it.data(), name, mainUrl, callback, subtitleCallback)
             }
     }

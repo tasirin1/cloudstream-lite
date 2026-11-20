@@ -28,7 +28,9 @@ open class Firestream : ExtractorApi() {
         val url = getExtractorUrl(id)
 
         val doc = app.get(url).document
-        val token = doc.selectFirst("script[id=token-blob]")!!.data()
+        // Audit-4 #18: was !! — a changed page layout crashed
+        // with an NPE instead of yielding no link.
+        val token = doc.selectFirst("script[id=token-blob]")?.data() ?: return
         val videoResponse = app.post("$mainUrl/api/videos/$id/resolve", json = mapOf("blob" to token))
             .parsed<VideoResponse>()
 
