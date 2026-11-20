@@ -133,7 +133,10 @@ object M3u8Helper2 {
     // parallel download jobs may race a duplicate decode, never
     // a wrong key — the raw bytes are compared before reuse.
     private var cachedRawKey: ByteArray? = null
-    private var cachedDecodedKey: AES.Key? = null
+    // AES.CBC.Key, not AES.Key: the CBC subtype carries the
+    // cipher() used below (typing the cache as the base key made
+    // CI fail with "Unresolved reference 'cipher'").
+    private var cachedDecodedKey: AES.CBC.Key? = null
 
     @OptIn(DelicateCryptographyApi::class)
     fun getDecrypted(
