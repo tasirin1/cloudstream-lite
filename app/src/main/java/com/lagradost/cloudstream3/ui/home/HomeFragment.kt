@@ -410,8 +410,14 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
 
                 var currentValidApis: MutableList<MainAPI> = mutableListOf()
                 val preSelectedTypes = DataStoreHelper.homePreference.toMutableList()
+                // Audit-13 #28: snapshot for Cancel — chip
+                // toggles rewrite DataStoreHelper.homePreference
+                // eagerly via updateList(), so dismissing alone
+                // kept the "cancelled" filter.
+                val originalHomeTypes = DataStoreHelper.homePreference
 
                 binding.cancelBtt.setOnClickListener {
+                    DataStoreHelper.homePreference = originalHomeTypes
                     dialog.dismissSafe()
                 }
 
