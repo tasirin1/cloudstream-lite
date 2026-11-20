@@ -639,22 +639,31 @@ private class Parser(private val lex: Lexer) {
                 return ForInStmt(varName, obj, parseStatement())
             }
             // backtrack is hard so we just reconstruct as normal for
-            val init: Node? = if (lex.peek().type != TT.SEMI) {
-                val initExpr = if (lex.matchIf(TT.EQ)) parseAssign() else null
-                VarDecl(listOf(varName to initExpr))
-            } else VarDecl(listOf(varName to null))
+            // Audit-20 #1: ALL declarators — the old form
+            // rebuilt only the first, so a comma left the
+            // parser desynced and the whole eval failed.
+            val decls = mutableListOf<Pair<String, Node?>>()
+            decls.add(varName to if (lex.matchIf(TT.EQ)) parseAssign() else null)
+            while (lex.matchIf(TT.COMMA)) {
+                val nextName = lex.expect(TT.IDENT).raw
+                decls.add(nextName to if (lex.matchIf(TT.EQ)) parseAssign() else null)
+            }
+            val init: Node = VarDecl(decls)
             lex.matchIf(TT.SEMI)
-            val test = if (lex.peek().type != TT.SEMI) parseAssign() else null
+            val test = if (lex.peek().type != TT.SEMI) parseSeq() else null
             lex.matchIf(TT.SEMI)
-            val update = if (lex.peek().type != TT.RPAREN) parseAssign() else null
+            val update = if (lex.peek().type != TT.RPAREN) parseSeq() else null
             lex.expect(TT.RPAREN)
             return ForStmt(init, test, update, parseStatement())
         }
-        val init = if (lex.peek().type != TT.SEMI) parseAssign() else null
+        // Audit-20 #1: init/update are sequence expressions
+        // in JS — parseSeq, not parseAssign, so comma lists
+        // work here too.
+        val init = if (lex.peek().type != TT.SEMI) parseSeq() else null
         lex.matchIf(TT.SEMI)
-        val test = if (lex.peek().type != TT.SEMI) parseAssign() else null
+        val test = if (lex.peek().type != TT.SEMI) parseSeq() else null
         lex.matchIf(TT.SEMI)
-        val update = if (lex.peek().type != TT.RPAREN) parseAssign() else null
+        val update = if (lex.peek().type != TT.RPAREN) parseSeq() else null
         lex.expect(TT.RPAREN)
         return ForStmt(init, test, update, parseStatement())
     }
