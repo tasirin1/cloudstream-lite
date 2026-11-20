@@ -354,7 +354,10 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
 
             output.accept(updatedCues)
         }
-        Log.i(TAG, "Parse subtitle, current parser: $realDecoder")
+        // Audit-14 #55: a Log.i used to fire here on EVERY
+        // parsed chunk, plus a take(30) preview log below —
+        // log spam and string building on the decoder hot
+        // path. The one-time "Parser selected" log stays.
         try {
             // Audit-5 #3: honor the (offset, length) window.
             // media3 hands us the decoder buffer's full backing
@@ -368,7 +371,6 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
                 data.copyOfRange(offset, windowEnd)
             }
             val inputString = getStr(window).first
-            Log.i(TAG, "Subtitle preview: ${inputString.take(30)}") // Fork fix (audit #19)
             if (inputString.isNotBlank()) {
                 var str: String = trimStr(inputString)
                 realDecoder = realDecoder ?: getSubtitleParser(inputString)
@@ -465,21 +467,21 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
 @OptIn(UnstableApi::class)
 class CustomSubtitleDecoderFactory : SubtitleDecoderFactory {
 
+    // Audit-14 #55: built once — supportsFormat used to
+    // allocate a fresh list on every call.
+    private val supportedMimeTypes = setOf(
+        MimeTypes.TEXT_VTT,
+        MimeTypes.TEXT_SSA,
+        MimeTypes.APPLICATION_TTML,
+        MimeTypes.APPLICATION_MP4VTT,
+        MimeTypes.APPLICATION_SUBRIP,
+        MimeTypes.APPLICATION_TX3G,
+        MimeTypes.APPLICATION_DVBSUBS,
+        MimeTypes.APPLICATION_PGS,
+    )
+
     override fun supportsFormat(format: Format): Boolean {
-        return listOf(
-            MimeTypes.TEXT_VTT,
-            MimeTypes.TEXT_SSA,
-            MimeTypes.APPLICATION_TTML,
-            MimeTypes.APPLICATION_MP4VTT,
-            MimeTypes.APPLICATION_SUBRIP,
-            MimeTypes.APPLICATION_TX3G,
-            //MimeTypes.APPLICATION_CEA608,
-            //MimeTypes.APPLICATION_MP4CEA608,
-            //MimeTypes.APPLICATION_CEA708,
-            MimeTypes.APPLICATION_DVBSUBS,
-            MimeTypes.APPLICATION_PGS,
-            //MimeTypes.TEXT_EXOPLAYER_CUES
-        ).contains(format.sampleMimeType)
+        return supportedMimeTypes.contains(format.sampleMimeType)
     }
 
     private var latestDecoder: WeakReference<CustomDecoder>? = null
