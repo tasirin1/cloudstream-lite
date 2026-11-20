@@ -17,36 +17,84 @@ import java.util.zip.ZipInputStream
  * @see addFile
  */
 class SubtitleResource {
+    companion object {
+        // Audit-6 #6: subtitle archives are small. Neither the
+        // download nor the extraction had any size cap (unlike
+        // the repository JSON and plugin paths), so a hostile or
+        // broken provider response — or a zip bomb — could fill
+        // the STB's internal storage before anything noticed.
+        private const val MAX_SUBTITLE_ARCHIVE_BYTES = 50_000_000L
+        private const val MAX_SUBTITLE_EXTRACTED_BYTES = 100_000_000L
+    }
+
     fun downloadFile(source: BufferedSource): File {
         val file = File.createTempFile("temp-subtitle", ".tmp").apply {
             deleteFileOnExit(this)
         }
-        val sink = file.sink().buffer()
-        sink.writeAll(source)
-        sink.close()
-        source.close()
-
+        try {
+            // Audit-6 #21: sink and source now close via use{} —
+            // the old sequential close() calls were skipped by
+            // any mid-write failure, leaking the descriptor and
+            // leaving the partial temp file behind.
+            file.sink().buffer().use { sink ->
+                source.use { src ->
+                    val buffer = ByteArray(16 * 1024)
+                    var total = 0L
+                    while (true) {
+                        val read = src.read(buffer)
+                        if (read < 0) break
+                        total += read
+                        if (total > MAX_SUBTITLE_ARCHIVE_BYTES) {
+                            throw java.io.IOException(
+                                "Subtitle archive exceeds $MAX_SUBTITLE_ARCHIVE_BYTES bytes"
+                            )
+                        }
+                        sink.write(buffer, 0, read)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            file.delete()
+            throw e
+        }
         return file
     }
 
     private fun unzip(file: File): List<Pair<String, File>> {
         val entries = mutableListOf<Pair<String, File>>()
+        var totalExtracted = 0L
 
-        ZipInputStream(file.inputStream()).use { zipInputStream ->
-            var zipEntry = zipInputStream.nextEntry
+        try {
+            ZipInputStream(file.inputStream()).use { zipInputStream ->
+                var zipEntry = zipInputStream.nextEntry
 
-            while (zipEntry != null) {
-                val tempFile = File.createTempFile("unzipped-subtitle", ".tmp").apply {
-                    deleteFileOnExit(this)
+                while (zipEntry != null) {
+                    val tempFile = File.createTempFile("unzipped-subtitle", ".tmp").apply {
+                        deleteFileOnExit(this)
+                    }
+                    entries.add(zipEntry.name to tempFile)
+
+                    tempFile.sink().buffer().use { buffer ->
+                        val entrySource = zipInputStream.source()
+                        while (true) {
+                            val read = entrySource.read(buffer.buffer, 16 * 1024L)
+                            if (read < 0) break
+                            totalExtracted += read
+                            if (totalExtracted > MAX_SUBTITLE_EXTRACTED_BYTES) {
+                                throw java.io.IOException(
+                                    "Subtitle archive extracts past $MAX_SUBTITLE_EXTRACTED_BYTES bytes"
+                                )
+                            }
+                            buffer.emitCompleteSegments()
+                        }
+                    }
+
+                    zipEntry = zipInputStream.nextEntry
                 }
-                entries.add(zipEntry.name to tempFile)
-
-                tempFile.sink().buffer().use { buffer ->
-                    buffer.writeAll(zipInputStream.source())
-                }
-
-                zipEntry = zipInputStream.nextEntry
             }
+        } catch (e: Exception) {
+            entries.forEach { it.second.delete() }
+            throw e
         }
         return entries
     }
