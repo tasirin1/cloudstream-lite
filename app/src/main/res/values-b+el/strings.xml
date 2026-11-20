@@ -100,8 +100,6 @@
     <string name="settings_info">Πληροφορίες</string>
     <string name="advanced_search">Προχωρημένη Αναζήτηση</string>
     <string name="advanced_search_des">Δίνει τα αποτελέσματα αναζήτησης ταξινομημένα ανά πάροχο</string>
-    <string name="updates_settings">Εμφάνιση ενημερώσεων</string>
-    <string name="updates_settings_des">Αυτόματη αναζήτηση νέων ενημερώσεων κατά την εκκίνηση της εφαρμογής.</string>
     <string name="github">GitHub</string>
     <string name="lightnovel">Εφαρμογή βιβλίων από τους ίδιους προγραμματιστές</string>
     <string name="anim">Εφαρμογή άνιμε από τους ίδιους προγραμματιστές</string>
@@ -449,16 +447,12 @@
     <string name="example_ip">127.0.0.1</string>
     <string name="all_languages_preference">Όλες οι γλώσσες</string>
     <string name="skip_type_format" formatted="true">Παράλειψη %s</string>
-    <string name="apk_installer_package_installer">PackageInstaller</string>
-    <string name="apk_installer_legacy">Legacy</string>
     <string name="play_trailer_button">Αναπαραγωγή τρέιλερ</string>
     <string name="action_add_to_bookmarks">Ορισμός κατάστασης θέασης</string>
     <string name="sort_copy">Αντιγραφή</string>
     <string name="sort_save">Αποθήκευση</string>
     <string name="subs_import_text" formatted="true">Εισάγετε γραμματοσειρές τοποθετώντας \'τες στο %s</string>
     <string name="autoplay_next_settings_des">Αναπαραγωγή του επόμενου επεισοδίου με το τέλος του τρέχοντος</string>
-    <string name="apk_installer_settings">Εγκαταστάτης APK</string>
-    <string name="apk_installer_settings_des">Ορισμένες συσκευές δεν υποστηρίζουν τον νέο εγκαταστάτη πακέτων. Δοκιμάστε την επιλογή Legacy εάν δεν εγκαθίστανται οι ενημερώσεις.</string>
     <string name="ova">OVA</string>
     <string name="torrent_singular">Torrent</string>
     <string name="pref_category_gestures">Χειρονομίες</string>

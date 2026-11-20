@@ -92,8 +92,6 @@
     <string name="settings_info">വിവരം</string>
     <!-- <string name="advanced_search">Advanced Search</string> -->
     <string name="advanced_search_des">സ്ട്രോതസായി തിരിച്ച ഫലം തരുക</string>
-    <string name="updates_settings">അപ്ഡേറ്റുകൾ അറിയിക്കുക</string>
-    <string name="updates_settings_des">ആരംഭത്തിൽ അപ്ഡേറ്റുകൾ തിരയുക</string>
     <string name="github">ഗിറ്റ്ഹബ്</string>
     <string name="lightnovel">നമ്മുടെ ലൈറ്റ് നോവൽ ആപ്പ്</string>
     <string name="anim">നമ്മുടെ ആനിമേ ആപ്പ്</string>
@@ -234,7 +232,6 @@
     <string name="picture_in_picture">ചിത്രം-ഇൻ-ചിത്രം</string>
     <string name="sort_updated_old">പുതുക്കിയത് (പഴയത് മുതൽ പുതിയത് വരെ)</string>
     <string name="sort_rating_desc">റേറ്റിംഗ് (ഉയർന്നത് മുതൽ താഴ്ന്നത്)</string>
-    <string name="apk_installer_legacy">പാരമ്പര്യം</string>
     <string name="subs_window_color">വിൻഡോ നിറം</string>
     <string name="sort_clear">ക്ലിയർ</string>
     <string name="test_log">ലോഗ്</string>
@@ -251,7 +248,6 @@
     <string name="sort_rating_asc">റേറ്റിംഗ് (താഴ്ന്നത് മുതൽ ഉയർന്നത് വരെ)</string>
     <string name="subs_text_color">വാചക നിറം</string>
     <string name="update_notification_failed">ആപ്പിൻ്റെ പുതിയ പതിപ്പ് ഇൻസ്റ്റാൾ ചെയ്യാനായില്ല</string>
-    <string name="apk_installer_package_installer">പാക്കേജ് ഇൻസ്റ്റാളർ</string>
     <string name="sort_alphabetical_a">അക്ഷരമാലാക്രമം (A മുതൽ Z വരെ)</string>
     <string name="sort_alphabetical_z">അക്ഷരമാലാക്രമം (Z മുതൽ A വരെ)</string>
     <string name="empty_library_logged_in_message">ഈ ലിസ്റ്റ് ശൂന്യമാണ്. മറ്റൊന്നിലേക്ക് മാറാൻ ശ്രമിക്കുക.</string>

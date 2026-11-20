@@ -150,8 +150,6 @@
     <string name="kitsu_settings">Mostrar posters do kitsu</string>
     <string name="pref_filter_search_quality">Esconder qualidades de vídeo selecionadas nos resultados da Pesquisa</string>
     <string name="automatic_plugin_updates">Atualizações de plugin automáticas</string>
-    <string name="updates_settings">Mostrar atualizações da app</string>
-    <string name="updates_settings_des">Procurar automaticamente por novas atualizações depois de iniciar o app.</string>
     <string name="github">Github</string>
     <string name="lightnovel">App light novel pelos mesmos devs</string>
     <string name="discord">Junte-se ao Discord</string>
@@ -367,7 +365,6 @@
     <string name="uppercase_all_subtitles">Todas as legendas em maiúsculas</string>
     <string name="download_all_plugins_from_repo">Aviso: O CloudStream 3 não se responsabiliza pelo uso de extensões de terceiros e não fornece qualquer suporte às mesmas!</string>
     <string name="single_plugin_disabled" formatted="true">%s (Desativado)</string>
-    <string name="apk_installer_settings">Instalador APK</string>
     <string name="duration_format" formatted="true">%d min</string>
     <string name="play_trailer_button">Assistir Trailer</string>
     <string name="action_add_to_bookmarks">Marcar como visto/não visto</string>
@@ -382,7 +379,6 @@
     <string name="cast_format" formatted="true">Elenco: %s</string>
     <string name="update_started">Atualização iniciada</string>
     <string name="test_log">Log</string>
-    <string name="apk_installer_settings_des">Alguns aparelhos não suportam o novo instalador de pacotes. Use a opção legado caso não esteja conseguindo atualizar.</string>
     <string name="episodes_range">%1$d-%2$d</string>
     <string name="episode_format" formatted="true">%1$d %2$s</string>
     <string name="start">Iniciar</string>
@@ -434,7 +430,6 @@
     <string name="restart">Reiniciar</string>
     <string name="sort_updated_old">Atualizado (Antigo para Novo)</string>
     <string name="quality_dvd">DVD</string>
-    <string name="apk_installer_package_installer">Instalador de pacotes</string>
     <string name="action_remove_from_watched">Remover dos assistidos</string>
     <string name="update_notification_failed">Não foi possível instalar a nova versão do aplicativo</string>
     <string name="subscription_deleted">Inscrição cancelada em %s</string>
@@ -492,7 +487,6 @@
     <string name="quality_tc">TC</string>
     <string name="quality_webrip">Web</string>
     <string name="extension_rating" formatted="true">Nota: %s</string>
-    <string name="apk_installer_legacy">Legado</string>
     <string name="safe_mode_description">Todas as extensões foram desativadas devido a uma falha para ajudá-lo a encontrar a que está causando o problema.</string>
     <string name="skip_type_recap">Recapitular</string>
     <string name="enable_skip_op_from_database_des">Mostrar pop-ups para pular abertura/encerramento</string>

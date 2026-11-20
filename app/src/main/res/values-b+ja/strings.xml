@@ -238,7 +238,6 @@
     <string name="show_trailers_settings">トレーラーを表示</string>
     <string name="jsdelivr_proxy">GitHub プロキシ</string>
     <string name="use_system_brightness_settings">システムの明るさを使用</string>
-    <string name="apk_installer_settings">APKインストーラ</string>
     <string name="pref_category_security">セキュリティ</string>
     <string name="add_account">アカウントを追加</string>
     <string name="backup_failed">ストレージの権限がありません。もう一度試してください。</string>
@@ -302,12 +301,10 @@
     <string name="offline_file">オフラインで視聴可能</string>
     <string name="select_all">全選択</string>
     <string name="deselect_all">すべて選択解除</string>
-    <string name="updates_settings">アプリの更新を表示</string>
     <string name="copy_link_toast">コピーされました</string>
     <string name="delete_message_multiple" formatted="true">これらのアイテムを完全に削除しますか？\n\n%s</string>
     <string name="nginx_url_pref">NGINXサーバーのURL</string>
     <string name="restore_settings">バックアップからデータを復元</string>
-    <string name="updates_settings_des">アプリ起動後に自動的に更新を探します。</string>
     <string name="subs_default_reset_toast">初期値にリセット</string>
     <string name="episode_format" formatted="true">%1$d %2$s</string>
     <string name="no_episodes_found">エピソードが見つかりません</string>
@@ -355,7 +352,6 @@
     <string name="mobile_data">モバイルデータ</string>
     <string name="app_info_intent_error">CloudStreamのアプリ情報を開くことができません.</string>
     <string name="update_notification_downloading">アプリの更新をダウンロード中…</string>
-    <string name="apk_installer_legacy">レガシー</string>
     <string name="profile_background_des">プロフィールの背景</string>
     <string name="pin_error_incorrect">PINが違います。もう一度試してください。</string>
     <string name="pin_error_length">PINは4文字でなければなりません</string>
@@ -395,7 +391,6 @@
     <string name="backup_path_title">バックアップフォルダの場所</string>
     <string name="custom">カスタム</string>
     <string name="delayed_update_notice">終了時にアプリが更新されます</string>
-    <string name="apk_installer_package_installer">パッケージインストーラ</string>
     <string name="sort_release_date_new">リリース日(新着順)</string>
     <string name="duplicate_title">潜在的な重複が見つかりました</string>
     <string name="plugin_deleted">プラグインが消されました</string>
@@ -478,7 +473,6 @@
     <string name="benene_des">与えられたベネネ</string>
     <string name="use">使用</string>
     <string name="quality_sd">SD</string>
-    <string name="apk_installer_settings_des">一部のスマートフォンは新しいパッケージインストーラをサポートしていません。アップデートがインストールされない場合はレガシーオプションを試してください。</string>
     <string name="episode_action_chromecast_mirror">Chromecastミラー</string>
     <string name="double_tap_to_seek_settings_des">前後にシークするために右側または左側をダブルタップ</string>
     <string name="quality_hdr">HDR</string>

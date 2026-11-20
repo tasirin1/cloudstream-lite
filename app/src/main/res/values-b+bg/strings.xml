@@ -151,8 +151,6 @@
     <string name="kitsu_settings">Покажете плакати от Kitsu</string>
     <string name="pref_filter_search_quality">Скрий избраното видео качество в резултатите от търсенето</string>
     <string name="automatic_plugin_updates">Автоматични актуализации на плъгини</string>
-    <string name="updates_settings">Показвай актуализации на приложението</string>
-    <string name="updates_settings_des">Автоматично търси нови актуализации при стартиране на приложението.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Light novel - приложение от същите разработчици</string>
     <string name="anim">Приложение за аниме от същите разработчици</string>
@@ -450,15 +448,11 @@
     <string name="skip_type_intro">въведение</string>
     <string name="clear_history">Изчистване на историята</string>
     <string name="automatic_plugin_download_summary">Автоматично инсталиране на всички все още неинсталирани добавки от добавени хранилища.</string>
-    <string name="apk_installer_settings">APK Инсталатор</string>
-    <string name="apk_installer_settings_des">Някои устройства не поддържат новия пакет за инсталиране. Опитайте предпоследената опция, ако актуализациите не се инсталират.</string>
     <string name="play_trailer_button">Пусни трейлър</string>
     <string name="pref_category_links">Връзки</string>
     <string name="pref_category_app_updates">Актуализации на приложението</string>
     <string name="pref_category_extensions">Разширения</string>
     <string name="pref_category_actions">Действия</string>
-    <string name="apk_installer_legacy">Предишна версия</string>
-    <string name="apk_installer_package_installer">Пакетен инсталатор</string>
     <string name="pref_category_player_features">Възможности на плеъра</string>
     <string name="pref_category_defaults">По подразбиране</string>
     <string name="pref_category_looks">Изгледи</string>

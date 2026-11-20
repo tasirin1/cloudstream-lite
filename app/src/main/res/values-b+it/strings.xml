@@ -154,8 +154,6 @@
     <string name="kitsu_settings">Mostra poster da Kitsu</string>
     <string name="pref_filter_search_quality">Nascondi la qualità video selezionata dai risultati di ricerca</string>
     <string name="automatic_plugin_updates">Aggiorna automaticamente i plugin</string>
-    <string name="updates_settings">Mostra gli aggiornamenti dell\'app</string>
-    <string name="updates_settings_des">Cerca automaticamente nuovi aggiornamenti dopo aver avviato l\'app.</string>
     <string name="github">GitHub</string>
     <string name="lightnovel">App per Light Novel degli stessi sviluppatori</string>
     <string name="anim">App per Anime degli stessi sviluppatori</string>
@@ -466,10 +464,6 @@
     <string name="no">No</string>
     <string name="update_notification_downloading">Download aggiornamento dell\'app…</string>
     <string name="automatic_plugin_download_summary">Installa automaticamente tutti i plugin non ancora installati dai repository aggiunti.</string>
-    <string name="apk_installer_package_installer">ProgrammaInstallazionePacchetti</string>
-    <string name="apk_installer_settings_des">Alcuni dispositivi non supportano il nuovo programma di installazione dei pacchetti. Se gli aggiornamenti non vengono installati, prova l\'opzione legacy.</string>
-    <string name="apk_installer_settings">Installer APK</string>
-    <string name="apk_installer_legacy">Legacy</string>
     <string name="play_trailer_button">Riproduci trailer</string>
     <string name="redo_setup_process">Ripeti il processo di configurazione</string>
     <string name="pref_category_links">Link</string>

@@ -141,8 +141,6 @@
     <string name="advanced_search">Pencarian Lanjutan</string>
     <string name="advanced_search_des">Memberikan hasil pencarian yang dipisahkan berdasarkan penyedia</string>
     <string name="show_fillers_settings">Tampilkan episode filler untuk anime</string>
-    <string name="updates_settings">Tampilkan pembaruan aplikasi</string>
-    <string name="updates_settings_des">Secara otomatis mencari pembaruan baru setelah aplikasi dibuka.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Aplikasi novel ringan dari developer yang sama</string>
     <string name="anim">Aplikasi anime dari developer yang sama</string>
@@ -450,10 +448,8 @@
     <string name="video_tracks">Video Trek</string>
     <string name="extension_types">Dukungan</string>
     <string name="hls_playlist">Daftar putar HLS</string>
-    <string name="apk_installer_settings">Penginstal APK</string>
     <string name="subtitles_encoding">Enkode subtitel</string>
     <string name="pref_category_gestures">Gestur</string>
-    <string name="apk_installer_settings_des">Beberapa perangkat tidak mendukung penginstal paket mode baru. Coba mode lama jika pembaruan tidak dapat diinstal.</string>
     <string name="pref_category_actions">Aksi</string>
     <string name="referer">Memberi referensi (opsional)</string>
     <string name="yes">Ya</string>
@@ -475,9 +471,7 @@
     <string name="clear_history">Hapus riwayat</string>
     <string name="enable_skip_op_from_database_des">Tampilkan popup untuk skip sesi pembuka/akhir</string>
     <string name="update_notification_downloading">Mengunduh pembaruan…</string>
-    <string name="apk_installer_legacy">Versi lama</string>
     <string name="skip_type_mixed_op">Sesi pembuka ganda</string>
-    <string name="apk_installer_package_installer">PackageInstaller</string>
     <string name="plugin_downloaded">Plugin terunduh</string>
     <string name="delayed_update_notice">Aplikasi akan diperbarui setelah keluar</string>
     <string name="update_started">Pembaruan Dimulai</string>

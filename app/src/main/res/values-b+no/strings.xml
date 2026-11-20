@@ -109,8 +109,6 @@
     <string name="advanced_search">Avansert søk</string>
     <string name="advanced_search_des">Gir deg søkeresultatene atskilt etter leverandør</string>
     <string name="show_fillers_settings">Vis filler-episode til anime</string>
-    <string name="updates_settings">Vis appoppdateringer</string>
-    <string name="updates_settings_des">Søk automatisk etter nye oppdateringer etter at appen har startet.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Light novel app av samme devs</string>
     <string name="anim">Anime app av samme devs</string>
@@ -458,13 +456,9 @@
     <string name="pref_category_defaults">Forvalg</string>
     <string name="pref_category_looks">Utseende</string>
     <string name="pref_category_ui_features">Funksjoner</string>
-    <string name="apk_installer_legacy">Gammeldags</string>
-    <string name="apk_installer_package_installer">PakkeInstallatør</string>
     <string name="redo_setup_process">Gjenta oppsettsprosess</string>
     <string name="pref_category_subtitles">Undertekster</string>
     <string name="pref_category_backup">Sikkerhetskopi</string>
-    <string name="apk_installer_settings">APK-installatør</string>
-    <string name="apk_installer_settings_des">Noen telefoner støtter ikke den nye pakkeinstallatøren. Prøv det eldre alternativet hvis oppdateringer ikke blir installert.</string>
     <string name="update_started">Oppdatering startet</string>
     <string name="plugin_downloaded">Programtillegg nedlastet</string>
     <string name="delayed_update_notice">Programmet vil oppgraderes når du avslutter det</string>

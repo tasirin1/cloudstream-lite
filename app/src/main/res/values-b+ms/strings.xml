@@ -435,7 +435,6 @@
     <string name="category_general">Umum</string>
     <string name="pref_category_extensions">Tambahan</string>
     <string name="app_theme_settings">Tema aplikasi</string>
-    <string name="apk_installer_legacy">Legasi</string>
     <string name="reset_btn">Tetap Semula</string>
     <string name="password_pin_authentication_title">Pengesahan Password/PIN</string>
     <string name="no_subtitles_loaded">Sari kata belum tetapkan lagi</string>
@@ -493,11 +492,7 @@
     <string name="action_open_play">@string/home_play</string>
     <string name="double_tap_to_seek_amount_settings">Pemain Mencari Amaun (Seconds)</string>
     <string name="automatic_plugin_download_summary">Secara automatik memasang semua plugin yang belum dipasang dari repositori yang ditambah.</string>
-    <string name="updates_settings">Tunjukkan kemas kini aplikasi</string>
-    <string name="updates_settings_des">Secara automatik cari kemas kini baru selepas memulakan aplikasi.</string>
     <string name="redo_setup_process">Redo Proses Persediaan</string>
-    <string name="apk_installer_settings">Pemasang APK</string>
-    <string name="apk_installer_settings_des">Sesetengah telefon tidak menyokong pemasang pakej baru. Cuba pilihan Legacy jika kemas kini tidak dipasang.</string>
     <string name="benene">Berikan benen kepada devs</string>
     <string name="benene_des">Diberi pisang</string>
     <string name="app_language">Bahasa App</string>

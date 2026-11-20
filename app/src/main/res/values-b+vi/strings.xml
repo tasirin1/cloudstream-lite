@@ -155,8 +155,6 @@
     <string name="kitsu_settings">Hiển thị poster từ Kitsu</string>
     <string name="pref_filter_search_quality">Ẩn chất lượng video trong kết quả tìm kiếm</string>
     <string name="automatic_plugin_updates">Tự động cập nhật tiện ích mở rộng</string>
-    <string name="updates_settings">Hiển thị thông báo cập nhật ứng dụng</string>
-    <string name="updates_settings_des">Tự động tìm kiếm bản cập nhật mới sau khi khởi động ứng dụng.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Ứng dụng đọc tiểu thuyết của cùng nhà phát triển</string>
     <string name="anim">Ứng dụng xem Anime của cùng nhà phát triển</string>
@@ -425,8 +423,6 @@
     <string name="action_mark_as_watched">Đánh dấu là đã xem</string>
     <string name="automatic_plugin_download">Tự động tải xuống tiện ích mở rộng</string>
     <string name="redo_setup_process">Làm lại tiến trình thiết lập</string>
-    <string name="apk_installer_settings">Trình cài đặt APK</string>
-    <string name="apk_installer_settings_des">Một số thiết bị không hỗ trợ trình cài đặt gói mới. Hãy thử chọn chế độ tương thích cũ nếu các bản cập nhật không thể cài đặt.</string>
     <string name="season_format">%1$s %2$d%3$s</string>
     <string name="play_trailer_button">Phát Trailer</string>
     <string name="automatic_plugin_download_summary">Tự động cài đặt tất cả tiện ích mở rộng chưa được cài đặt từ những kho nguồn phim đã thêm.</string>
@@ -481,13 +477,11 @@
     <string name="library">Thư viện</string>
     <string name="browser">Trình duyệt</string>
     <string name="plugin_downloaded">Tiện ích mở rộng đã tải xuống</string>
-    <string name="apk_installer_legacy">Chế độ tương thích cũ</string>
     <string name="sort_updated_new">Đã cập nhật (Mới đến Cũ)</string>
     <string name="sort_updated_old">Đã cập nhật (Cũ đến Mới)</string>
     <string name="empty_library_no_accounts_message">Thư viện của bạn đang trống :( \nĐăng nhập vào tài khoản thư viện hoặc thêm phim vào thư viện cục bộ.</string>
     <string name="open_with">Mở bằng</string>
     <string name="provider_info_meta">Siêu dữ liệu không được cung cấp bởi trang web, video sẽ không tải được nếu nó không tồn tại trên trang web.</string>
-    <string name="apk_installer_package_installer">Trình cài đặt gói</string>
     <string name="sort">Sắp xếp</string>
     <string name="sort_rating_desc">Xếp hạng (Cao đến Thấp)</string>
     <string name="sort_rating_asc">Xếp hạng (Thấp đến Cao)</string>

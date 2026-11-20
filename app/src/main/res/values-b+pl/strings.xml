@@ -145,8 +145,6 @@
     <string name="pref_filter_search_quality">Ukryj wybraną jakość wideo w wynikach wyszukiwania</string>
     <string name="automatic_plugin_updates">Automatyczne aktualizacje rozszerzeń</string>
     <string name="automatic_plugin_download">Automatyczne pobieranie rozszerzeń</string>
-    <string name="updates_settings">Pokazuj aktualizacje</string>
-    <string name="updates_settings_des">Automatycznie wyszukuj aktualizacje przy starcie.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Aplikacja do light novel od nas</string>
     <string name="anim">Aplikacja do anime od nas</string>
@@ -430,17 +428,13 @@
     <string name="automatic_plugin_download_summary">Automatycznie instaluj wszystkie jeszcze niezainstalowane wtyczki z dodanych repozytoriów.</string>
     <string name="search_poster_img_des">Poster</string>
     <string name="skip_type_recap">Podsumowanie</string>
-    <string name="apk_installer_settings">Instalator APK</string>
-    <string name="apk_installer_settings_des">Niektóre urządzenia nie obsługują nowego instalatora pakietów. Wypróbuj tryb legacy, jeśli aktualizacje nie zostaną zainstalowane.</string>
     <string name="example_password">hasło123</string>
     <string name="ova_singular">@string/ova</string>
     <string name="example_site_name">NowaNazwaWitryny</string>
     <string name="example_username">Nazwa użytkownika</string>
     <string name="example_ip">127.0.0.1</string>
-    <string name="apk_installer_legacy">Tryb kompatybilności</string>
     <string name="example_site_url">https://example.com</string>
     <string name="sync_total_episodes_none">/??</string>
-    <string name="apk_installer_package_installer">Instalator pakietów</string>
     <string name="action_open_play">@string/home_play</string>
     <string name="example_email">witaj@poczta.pl</string>
     <string name="anime_singular">@string/anime</string>

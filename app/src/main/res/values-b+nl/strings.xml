@@ -151,8 +151,6 @@
     <string name="show_fillers_settings">Toon filler episode voor anime</string>
     <string name="show_trailers_settings">Toon trailers</string>
     <string name="kitsu_settings">Toon posters van Kitsu</string>
-    <string name="updates_settings">App-updates tonen</string>
-    <string name="updates_settings_des">Automatisch zoeken naar nieuwe updates na het starten van de app.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Light novel app van dezelfde ontwikkelaars</string>
     <string name="anim">Anime app by the same devs</string>
@@ -418,7 +416,6 @@
     <string name="all_languages_preference">Alle Talen</string>
     <string name="automatic_plugin_download_summary">Installeer automatisch alle nog niet geïnstalleerde plugins uit toegevoegde repositories.</string>
     <string name="jsdelivr_enabled">Kan GitHub niet bereiken, schakel jsDelivr proxy in…</string>
-    <string name="apk_installer_settings">APK Installatie</string>
     <string name="automatic_plugin_download">Download plugins automatisch</string>
     <string name="extensions">Uitbreidingen</string>
     <string name="skip_type_op">Openen</string>
@@ -446,7 +443,6 @@
     <string name="others">Andere</string>
     <string name="redo_setup_process">Herhaal installatieproces</string>
     <string name="automatic_plugin_updates">Automatisch bijwerken plugin</string>
-    <string name="apk_installer_settings_des">Sommige apparaten ondersteunen het nieuwe installatieprogramma niet. Probeer de oude optie als de updates niet worden geïnstalleerd.</string>
     <string name="player_settings_play_in_app">Interne speler</string>
     <string name="skip_type_mixed_ed">Gemengd einde</string>
     <string name="skip_type_recap">Herhaling</string>
@@ -471,7 +467,6 @@
     <string name="confirm_exit_dialog">Weet je zeker dat je wilt afsluiten?</string>
     <string name="sort_updated_old">Bijgewerkt (Oud naar Nieuw)</string>
     <string name="sort_rating_desc">Beoordeling ( Hoog naar Laag)</string>
-    <string name="apk_installer_legacy">Erfenis</string>
     <string name="select_library">Kies Bibliotheek</string>
     <string name="yes">Ja</string>
     <string name="video_tracks">Videosporen</string>
@@ -487,7 +482,6 @@
     <string name="plugins_not_downloaded" formatted="true">Niet gedownload: %d</string>
     <string name="sort_alphabetical_z">Alfabetisch (Z tot A)</string>
     <string name="subscription_new">Ingeschreven op %s</string>
-    <string name="apk_installer_package_installer">PakketInstallatie</string>
     <string name="subscription_in_progress_notification">Bijwerken geabonneerde shows</string>
     <string name="setup_extensions_subtext">Download de lijst met sites die je wilt gebruiken</string>
     <string name="plugins_updated" formatted="true">Bijgewerkte %d plugins</string>

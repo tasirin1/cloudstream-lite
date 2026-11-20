@@ -191,14 +191,10 @@
     <string name="automatic_plugin_download">Shkarkim automatik i shtesave</string>
     <string name="automatic_plugin_download_mode_title">Zgjidh modalitetin për të filtruar shtesat që shkarkohen</string>
     <string name="automatic_plugin_download_summary">Instalo automatikisht të gjitha shtesat që janë shtuar dhe ende nuk janë instaluar nga repository-t.</string>
-    <string name="updates_settings">Shfaq përditësimet e aplikacionit</string>
-    <string name="updates_settings_des">Kërko automatikisht për përditësime të reja kur hapet aplikacioni.</string>
     <string name="redo_setup_process">Ribëj procesin e konfigurimit</string>
     <string name="install_prerelease">Instalo versione beta</string>
     <string name="prerelease_already_installed">Versioni beta është i instaluar.</string>
     <string name="prerelease_install_failed">Dështoi instalimi i versionit beta.</string>
-    <string name="apk_installer_settings">Instaluesi i APK-ve</string>
-    <string name="apk_installer_settings_des">Disa pajisje nuk mbështesin instaluesin e ri të paketës. Provoni opsionin e vjetër nëse përditësimet nuk instalohen.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Aplikacioni Light Novel nga të njëjtit developer-a</string>
     <string name="anim">Aplikacioni i Anime-ve nga të njëjtit developer-a</string>
@@ -566,8 +562,6 @@
     <string name="update_notification_downloading">Po shkarkohet përditësimi i aplikacionit…</string>
     <string name="update_notification_installing">Po instalohet përditësimi i aplikacionit…</string>
     <string name="update_notification_failed">Instalimi i versionit të ri dështoi</string>
-    <string name="apk_installer_legacy">Version i vjetër</string>
-    <string name="apk_installer_package_installer">Instaluesi i paketës</string>
     <string name="delayed_update_notice">Aplikacioni do të përditësohet sapo të mbyllet</string>
     <string name="sort_by">Rendit nga</string>
     <string name="sort">Rendit</string>

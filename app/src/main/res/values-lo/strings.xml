@@ -191,14 +191,10 @@
     <string name="automatic_plugin_download">ດາວໂຫຼດປລັກອິນອັດຕະໂນມັດ</string>
     <string name="automatic_plugin_download_mode_title">ເລືອກໂໝດການກັ່ນຕອງການດາວໂຫຼດປລັກອິນ</string>
     <string name="automatic_plugin_download_summary">ຕິດຕັ້ງປລັກອິນທັງໝົດທີ່ຍັງບໍ່ໄດ້ຕິດຕັ້ງຈາກ repository ທີ່ເພີ່ມໄວ້ໂດຍອັດຕະໂນມັດ.</string>
-    <string name="updates_settings">ສະແດງການອັບເດດແອັບຯ</string>
-    <string name="updates_settings_des">ຄົ້ນຫາການອັບເດດໃໝ່ໂດຍອັດຕະໂນມັດຫຼັງຈາກເປີດແອັບຯ.</string>
     <string name="redo_setup_process">ຕັ້ງຄ່າໃໝ່ທັງໝົດ</string>
     <string name="install_prerelease">ຕິດຕັ້ງເວີຊັນທົດລອງ (Pre-release)</string>
     <string name="prerelease_already_installed">ຕິດຕັ້ງເວີຊັນທົດລອງແລ້ວ.</string>
     <string name="prerelease_install_failed">ບໍ່ສາມາດຕິດຕັ້ງເວີຊັນທົດລອງໄດ້.</string>
-    <string name="apk_installer_settings">ຕົວຕິດຕັ້ງ APK</string>
-    <string name="apk_installer_settings_des">ບາງອຸປະກອນບໍ່ຮອງຮັບຕົວຕິດຕັ້ງແພັກເກດແບບໃໝ່. ລອງໃຊ້ຕົວເລືອກແບບເກົ່າ (Legacy) ຖ້າບໍ່ສາມາດອັບເດດໄດ້.</string>
     <string name="github">Github</string>
     <string name="lightnovel">ແອັບຯ Light novel ໂດຍຜູ້ພັດທະນາດຽວກັນ</string>
     <string name="anim">ແອັບຯ Anime ໂດຍຜູ້ພັດທະນາດຽວກັນ</string>
@@ -566,8 +562,6 @@
     <string name="update_notification_downloading">ກຳລັງດາວໂຫຼດອັບເດດແອັບ…</string>
     <string name="update_notification_installing">ກຳລັງຕິດຕັ້ງອັບເດດແອັບ…</string>
     <string name="update_notification_failed">ບໍ່ສາມາດຕິດຕັ້ງເວີຊັນໃໝ່ຂອງແອັບໄດ້</string>
-    <string name="apk_installer_legacy">ແບບເກົ່າ</string>
-    <string name="apk_installer_package_installer">PackageInstaller</string>
     <string name="delayed_update_notice">ແອັບຈະຖືກອັບເດດເມື່ອທ່ານອອກ</string>
     <string name="sort_by">ຈັດຮຽງຕາມ</string>
     <string name="sort">ຈັດຮຽງ</string>

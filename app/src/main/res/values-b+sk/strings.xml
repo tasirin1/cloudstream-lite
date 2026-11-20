@@ -124,8 +124,6 @@
     <string name="automatic_plugin_updates">Automatická aktualizácia doplnkov</string>
     <string name="pref_filter_search_quality">Skryť vybranú kvalitu videa vo výsledkoch vyhľadávania</string>
     <string name="show_fillers_settings">Zobraziť výplňovú epizódu pre anime</string>
-    <string name="apk_installer_settings">APK inštalátor</string>
-    <string name="apk_installer_settings_des">Niektoré zariadenia nepodporujú nový inštalátor balíčkov. Ak sa aktualizácie nenainštalujú, skúste použiť staršiu možnosť.</string>
     <string name="lightnovel">Nenáročná aplikácia pre romány od rovnakých vývojárov</string>
     <string name="app_language">Jazyk aplikácie</string>
     <string name="no_links_found_toast">Nenašli sa žiadne odkazy</string>
@@ -150,7 +148,6 @@
     <string name="automatic_plugin_download">Automaticky sťahovať doplnky</string>
     <string name="discord">Pripojte sa na Discord</string>
     <string name="player_size_settings_des">Odstrániť čierne okraje</string>
-    <string name="updates_settings_des">Automaticky vyhľadať nové aktualizácie po spustení aplikácie.</string>
     <string name="play_episode_toast">Prehrať epizódu</string>
     <string name="backup_failed">Chýbajú povolenia k úložisku. Skúste to prosím znova.</string>
     <string name="player_subtitles_settings_des">Nastavenia titulkov prehrávača</string>
@@ -173,7 +170,6 @@
     <string name="restore_failed_format" formatted="true">Nepodarilo sa obnoviť dáta zo súboru %s</string>
     <string name="backup_failed_error_format">Chyba pri zálohovaní %s</string>
     <string name="advanced_search_des">Poskytne vám výsledky vyhľadávania rozdelené podľa poskytovateľa</string>
-    <string name="updates_settings">Zobraziť aktualizácie aplikácie</string>
     <string name="subs_default_reset_toast">Obnoviť predvolenú hodnotu</string>
     <string name="season">Sezóna</string>
     <string name="synopsis">Synopsa</string>

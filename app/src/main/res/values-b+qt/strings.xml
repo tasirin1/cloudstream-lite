@@ -90,8 +90,6 @@
     <string name="settings_info">aauugghh ah</string>
     <string name="advanced_search">aah ouuhhhooo-ahah aaaghh</string>
     <string name="advanced_search_des">aauugghh ahahooo ouuhhhahh ooh oouuhahoooahhaaahhu ohaooh oouuhooo-ahah</string>
-    <string name="updates_settings">haa oohaauugghhooh oh</string>
-    <string name="updates_settings_des">aaaagggoooogg uuuugg aak aah aaaahhh ooogg uuuuuukh aah ooh</string>
     <string name="github">aauuhoha</string>
     <string name="lightnovel">ooo-ahahoh ohaaauugghh ahhh haaahooo</string>
     <string name="anim">ooooohaa ohaaaaaaahoooahoooaaaghh</string>
@@ -359,7 +357,6 @@
     <string name="plugin_downloaded">oooohh oooogggaah</string>
     <string name="sort_rating_asc">oooogg (Low ah High)</string>
     <string name="pref_filter_search_quality">aagg aaaahhhh aaagg aaaaggg ak uuuuhh aaaaggg</string>
-    <string name="apk_installer_settings_des">eeek uuuuhh uh aah aaaaaak aah oog aaaahhh uuuuuukah aah oog oooogg aaaahh ug ooooggg oh ooh aaaaggg</string>
     <string name="cartoons_singular">uuuuggg</string>
     <string name="video_buffer_size_settings">aaahh oooohh uuhh</string>
     <string name="video_buffer_length_settings">ooogg uuuuhh aaaahh</string>
@@ -375,7 +372,6 @@
     <string name="other_singular">ooohh</string>
     <string name="next">aagg</string>
     <string name="ok">oh</string>
-    <string name="apk_installer_package_installer">uuuuuukoooohhhah</string>
     <string name="sort_rating_desc">aaaahh (High ug Low)</string>
     <string name="sort_alphabetical_a">aaaaaakuuugg (A uh Z)</string>
     <string name="open_with">aagg oogg</string>
@@ -459,7 +455,6 @@
     <string name="update_notification_downloading">uuuugggaagg aah update…</string>
     <string name="update_notification_installing">eeeeeekooh aag update…</string>
     <string name="update_notification_failed">uuugg aag uuuuhhh aag uuh aaaaaak ug aag aak</string>
-    <string name="apk_installer_legacy">aaaahh</string>
     <string name="delayed_update_notice">aah oohh og uuuuhhh oogg uuhh</string>
     <string name="sort_by">uuhh ug</string>
     <string name="sort">uuhh</string>
@@ -531,7 +526,6 @@
     <string name="backup_failed_error_format">uuuhh oooohhh uh %s</string>
     <string name="kitsu_settings">oohh uuuuggg uuhh uuugg</string>
     <string name="delete_message_series_section" formatted="true">uuh oohh oogg aaaahhhuugg uuuugg oog aaaagggh ak uuh uuuuhhhog series: \n \n%s</string>
-    <string name="apk_installer_settings">aak aaaagggah</string>
     <string name="delete_files">oooohh uuuhh</string>
     <string name="delete_format" formatted="true">oooogg (%1$d | %2$s)</string>
     <string name="delete_message_multiple" formatted="true">uuh uug oohh uuk aagg oh uuuuggguugg aaaahh uuh aaaagggah items? \n \n%s</string>

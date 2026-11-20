@@ -203,7 +203,6 @@
     <string name="restore_settings">Restaurar datos desde el backup</string>
     <string name="backup_settings">Hacer copia de los datos (backup)</string>
     <string name="restore_success">Archivo de backup cargado</string>
-    <string name="updates_settings_des">Busque automáticamente nuevas actualizaciones después de iniciar la aplicación.</string>
     <string name="redo_setup_process">Rehacer el proceso de configuración inicial</string>
     <string name="show_fillers_settings">Mostrar episodio de relleno para Anime</string>
     <string name="play_episode_toast">Reproducir Episodio</string>
@@ -270,13 +269,8 @@
     <string name="apply_on_restart">Se aplicarán los cambios al reiniciar la App.</string>
     <string name="player_settings_play_in_app">Reproductor interno</string>
     <string name="extension_language">Idioma</string>
-    <string name="apk_installer_legacy">Tradicional</string>
-    <string name="apk_installer_package_installer">Instalador de programas</string>
     <string name="blank_repo_message">CloudStream no tiene sitios instalados por defecto. Necesitas instalar los sitios desde los repositorios. \n \nÚnete a nuestro Discord o busca en línea.</string>
     <string name="download_all_plugins_from_repo">Advertencia: ¡CloudStream 3 no asume ninguna responsabilidad por el uso de extensiones de terceros y no brinda ningún soporte para ellas!</string>
-    <string name="updates_settings">Mostrar actualizaciones de la aplicación</string>
-    <string name="apk_installer_settings">Instalador de APK</string>
-    <string name="apk_installer_settings_des">Algunos dispositivos no soportan el nuevo instalador de paquetes. Pruebe la opción antigua (legacy) si las actualizaciones no se instalan.</string>
     <string name="episode_sync_settings_des">Sincronizar automáticamente el progreso de su episodio actual</string>
     <string name="automatic_plugin_updates">Actualización automática de plugins</string>
     <string name="pref_category_player_features">Características del reproductor</string>

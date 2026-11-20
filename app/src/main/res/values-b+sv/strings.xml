@@ -92,8 +92,6 @@
     <string name="settings_info">Information</string>
     <string name="advanced_search">Avancerade sökresultat</string>
     <string name="advanced_search_des">Presenterar sökresultaten i flera olika rader baserat på leverantören</string>
-    <string name="updates_settings">Visa appuppdateringar</string>
-    <string name="updates_settings_des">Sök automatiskt efter nya uppdateringar vid start.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Lightnovel app av samma utvecklare</string>
     <string name="anim">Anime app av samma utvecklare</string>
@@ -245,8 +243,6 @@
     <string name="backup_failed">Lagringsbehörigheter saknas. Var vänlig försök igen.</string>
     <string name="no_episodes_found">Inga episoder hittade</string>
     <string name="kitsu_settings">Visa bilder från Kitsu</string>
-    <string name="apk_installer_settings_des">Vissa enheter stöjder inte den nya paketinstallatören. Prova alternativet för äldre versioner om uppdateringarna inte installeras.</string>
-    <string name="apk_installer_settings">APK-installatör</string>
     <string name="subs_import_text" formatted="true">Importera typsnitt genom att placera filerna i %s</string>
     <string name="episode_sync_settings_des">Automatiskt uppdatera antalet episoder sedda</string>
     <string name="backup_settings">Säkerhetskopiera data</string>
@@ -374,7 +370,6 @@
     <string name="subtitles_remove_bloat">Ta bort reklam från undertexter</string>
     <string name="all_languages_preference">Alla språk</string>
     <string name="clear_history">Rensa historik</string>
-    <string name="apk_installer_package_installer">PackageInstaller</string>
     <string name="library">Bibliotek</string>
     <string name="pref_category_defaults">Standardvärden</string>
     <string name="delayed_update_notice">Appen kommer uppdateras efter avslut</string>
@@ -399,7 +394,6 @@
     <string name="yes">Ja</string>
     <string name="video_tracks">Videospår</string>
     <string name="show_dub">Visa dub</string>
-    <string name="apk_installer_legacy">Gammal version</string>
     <string name="uppercase_all_subtitles">Undertexter skrivs med versaler</string>
     <string name="no">Nej</string>
     <string name="profile_number">Profil %d</string>

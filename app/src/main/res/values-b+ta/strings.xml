@@ -303,7 +303,6 @@
     <string name="confirm_exit_dialog">நிச்சயமாக நீங்கள் வெளியேற வேண்டுமா?</string>
     <string name="video_buffer_clear_settings">வீடியோ மற்றும் பட தற்காலிக சேமிப்பை அழிக்கவும்</string>
     <string name="action_remove_from_watched">பார்த்ததிலிருந்து அகற்று</string>
-    <string name="apk_installer_settings">APK நிறுவி</string>
     <string name="pref_category_android_tv">ஆண்ட்ராய்டு டிவி</string>
     <string name="max">அதிகபட்சம்</string>
     <string name="quality_cam_rip">கேம்</string>
@@ -328,7 +327,6 @@
     <string name="restore_settings">காப்புப்பிரதியிலிருந்து தரவை மீட்டெடுக்கவும்</string>
     <string name="backup_failed_error_format">பிழை %s</string>
     <string name="category_updates">புதுப்பிப்புகள் மற்றும் காப்புப்பிரதி</string>
-    <string name="apk_installer_package_installer">PackactionInstaller</string>
     <string name="delayed_update_notice">வெளியேறியதும் பயன்பாடு புதுப்பிக்கப்படும்</string>
     <string name="sort_by">வரிசைப்படுத்தவும்</string>
     <string name="sort_updated_old">புதுப்பிக்கப்பட்டது (பழையது முதல் புதியது)</string>
@@ -380,8 +378,6 @@
     <string name="settings_info">செய்தி</string>
     <string name="advanced_search_des">வழங்குநரால் பிரிக்கப்பட்ட தேடல் முடிவுகளை உங்களுக்கு வழங்குகிறது</string>
     <string name="pref_filter_search_quality">தேடல் முடிவுகளில் தேர்ந்தெடுக்கப்பட்ட வீடியோ தரத்தை மறைக்கவும்</string>
-    <string name="updates_settings">பயன்பாட்டு புதுப்பிப்புகளைக் காட்டு</string>
-    <string name="updates_settings_des">பயன்பாட்டைத் தொடங்கிய பின் புதிய புதுப்பிப்புகளைத் தானாகவே தேடுங்கள்.</string>
     <string name="redo_setup_process">அமைவு செயல்முறை மீண்டும்</string>
     <string name="lightnovel">அதே தேவ்சின் ஒளி நாவல் பயன்பாடு</string>
     <string name="benene">தேவ்சுக்கு ஒரு பெனீன் கொடுங்கள்</string>
@@ -554,12 +550,10 @@
     <string name="update">புதுப்பிப்பு</string>
     <string name="logout">விடுபதிகை</string>
     <string name="quality_webrip">விரலிடைத் தோல்</string>
-    <string name="apk_installer_settings_des">சில சாதனங்கள் புதிய தொகுப்பு நிறுவியை ஆதரிக்கவில்லை. புதுப்பிப்புகள் நிறுவப்படவில்லை என்றால், மரபு விருப்பத்தை முயற்சிக்கவும்.</string>
     <string name="battery_dialog_message">சந்தா தொலைக்காட்சி நிகழ்ச்சிகளுக்கான தடையற்ற பதிவிறக்கங்கள் மற்றும் அறிவிப்புகளை உறுதிப்படுத்த, கிளவுட்ச்ட்ரீம் பின்னணியில் இயங்க இசைவு தேவை. சரி என்பதை அழுத்துவதன் மூலம், உங்களுக்கு கோரிக்கை உரையாடல் காண்பிக்கப்படும். தயவுசெய்து \'இசைவு\' என்பதை அழுத்தவும். \n\nதயவுசெய்து கவனிக்கவும், இந்த இசைவு CS3 உங்கள் பேட்டரியை வெளியேற்றும் என்று அர்த்தமல்ல. அறிவிப்புகளைப் பெறும்போது அல்லது உத்தியோகபூர்வ நீட்டிப்புகளிலிருந்து வீடியோக்களைப் பதிவிறக்குவது போன்ற பின்னணியில் மட்டுமே இது செயல்படும்.</string>
     <string name="app_unrestricted_toast">பயன்பாட்டு பேட்டரி பயன்பாடு ஏற்கனவே கட்டுப்பாடற்றதாக அமைக்கப்பட்டுள்ளது</string>
     <string name="update_notification_installing">பயன்பாட்டு புதுப்பிப்பை நிறுவுகிறது…</string>
     <string name="update_notification_failed">பயன்பாட்டின் புதிய பதிப்பை நிறுவ முடியவில்லை</string>
-    <string name="apk_installer_legacy">மரபு</string>
     <string name="sort">வரிசைப்படுத்து</string>
     <string name="sort_rating_desc">மதிப்பீடு (உயர் முதல் குறைந்த வரை)</string>
     <string name="sort_rating_asc">மதிப்பீடு (குறைந்த முதல் உயர் வரை)</string>

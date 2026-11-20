@@ -283,8 +283,6 @@
     <string name="kitsu_settings">Montrer les affiches provenant de Kitsu</string>
     <string name="pref_filter_search_quality">Masque la qualité vidéo sélectionnée dans les résultats de recherche</string>
     <string name="automatic_plugin_updates">Mises à jour automatiques des plugins</string>
-    <string name="updates_settings">Afficher les mises à jour de l\'application</string>
-    <string name="updates_settings_des">Recherche automatique de nouvelles mises à jour au démarrage.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Application Light Novel par les mêmes devs</string>
     <string name="anim">Anime app by the same devs</string>
@@ -380,7 +378,6 @@
     <string name="extras">Extras</string>
     <string name="network_adress_example">https://exemple.com/exemple.mp4</string>
     <string name="referer">Référent (facultatif)</string>
-    <string name="apk_installer_settings">Installeur APK</string>
     <string name="go_forward_30">+30</string>
     <string name="quality_cam">Cam</string>
     <string name="subtitles_remove_bloat">Supprimer les pubs des sous-titres</string>
@@ -423,7 +420,6 @@
     <string name="skip_type_mixed_op">Introduction mitigée</string>
     <string name="update_notification_installing">Installation de la mise a jour de l\'application…</string>
     <string name="update_notification_failed">Impossible d\'installer la nouvelle version de l\'application</string>
-    <string name="apk_installer_settings_des">Certains appareils ne supportent pas le nouvel installateur d\'application. Essayez l\'option de l\'ancien installateur si les mises-à-jour ne s\'installe pas.</string>
     <string name="previous">Précédent</string>
     <string name="skip_setup">Ignorer la configuration</string>
     <string name="repository_name_hint">Nom de dépôt (optionnel)</string>
@@ -442,13 +438,11 @@
     <string name="player_settings_play_in_app">Lecteur interne</string>
     <string name="app_not_found_error">Application introuvable</string>
     <string name="clipboard_too_large">Trop de texte. Impossible de sauvegarder dans le presse papier.</string>
-    <string name="apk_installer_package_installer">Installateur de paquet</string>
     <string name="plugin">plugins</string>
     <string name="delete_repository_plugins">Cela supprimera également tous les plugins du repository</string>
     <string name="blank_repo_message">CloudStream n\'a aucun site installé par défaut. Vous devez installer les sites à partir de dépôts. \n \nRejoignez notre Discord ou cherchez en ligne.</string>
     <string name="extension_language">Langage</string>
     <string name="enable_skip_op_from_database_des">Afficher les popups skip pour les intro / fins</string>
-    <string name="apk_installer_legacy">Ancienne méthode d\'installation</string>
     <string name="pref_category_links">Liens</string>
     <string name="pref_category_gestures">Gestes</string>
     <string name="pref_category_player_features">Fonctionnalités du lecteur</string>

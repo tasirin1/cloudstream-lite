@@ -114,7 +114,6 @@
     <string name="player_subtitles_settings">כתוביות</string>
     <string name="action_open_play">@string/home_play</string>
     <string name="history">היסטוריה</string>
-    <string name="apk_installer_legacy">מורשת</string>
     <string name="no">לא</string>
     <string name="yes">כן</string>
     <string name="action_mark_as_watched">סימון כנצפה</string>
@@ -128,8 +127,6 @@
     <string name="update_started">העדכון התחיל</string>
     <string name="settings_info">מידע</string>
     <string name="automatic_plugin_download_summary">התקן אוטומטית את כל התוספים שטרם הותקנו ממאגרים שנוספו.</string>
-    <string name="updates_settings_des">חפש אוטומטית עדכונים חדשים לאחר פתיחת האפליקציה.</string>
-    <string name="updates_settings">הצג עדכונים לאפליקציה</string>
     <string name="redo_setup_process">בצע מחדש את תהליך ההגדרה</string>
     <string name="episodes">פרקים</string>
     <string name="episodes_range">%1$d-%2$d</string>
@@ -279,8 +276,6 @@
     <string name="show_trailers_settings">הצג טריילרים</string>
     <string name="kitsu_settings">הצג פוסטרים מKitsu</string>
     <string name="pref_filter_search_quality">הסתר את איכות הסרטון שנבחרה בתוצאות החיפוש</string>
-    <string name="apk_installer_settings">מתקין APK</string>
-    <string name="apk_installer_settings_des">חלק מהמכשירים אינם תומכים במתקין החבילות החדש. אם עדכונים לא מותקנים, נסה את האפשרות הישנה.</string>
     <string name="lightnovel">אפליקצית רומנים קלים על ידי אותו מפתחים</string>
     <string name="anim">אפליקצית אנימה על ידי אותו מפתחים</string>
     <string name="discord">הצטרפות לדיסקורד</string>
@@ -431,7 +426,6 @@
     <string name="audio_tracks">רצועות שמע</string>
     <string name="tracks">מסלולים</string>
     <string name="safe_mode_description">כל התוספים נכבו עקב התרסקות כדי לעזור לך למצוא את האחד הגורם לצרות.</string>
-    <string name="apk_installer_package_installer">מוריד החבילות</string>
     <string name="plugins_updated" formatted="true">עודכן %d תוספים</string>
     <string name="plugin">תוספים</string>
     <string name="delete_repository_plugins">פעולה זו תמחק גם את כל תוספי המאגר</string>

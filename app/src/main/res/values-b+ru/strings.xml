@@ -154,9 +154,6 @@
     <string name="pref_filter_search_quality">Скрыть выбранные форматы видео в результатах поиска</string>
     <string name="automatic_plugin_updates">Автоматическое обновление дополнений</string>
     <string name="automatic_plugin_download">Автозагрузка дополнений</string>
-    <string name="updates_settings">Показать обновления приложения</string>
-    <string name="updates_settings_des">Автоматически проверять обновления при старте приложения.</string>
-    <string name="apk_installer_settings">APK установщик</string>
     <string name="github">Github</string>
     <string name="app_language">Язык приложения</string>
     <string name="no_links_found_toast">Ссылок не найдено</string>
@@ -224,7 +221,6 @@
     <string name="restore_settings">Восстановить данные из резервной копии</string>
     <string name="show_fillers_settings">Показывать Филлер серии для аниме</string>
     <string name="kitsu_settings">Показывать афиши из Kitsu</string>
-    <string name="apk_installer_settings_des">Некоторые устройства не поддерживают новые установщики. Попробуйте использовать legacy (старый) вариант, если обновления не устанавливаются.</string>
     <string name="status_ongoing">Выходит</string>
     <string name="video_lock">Блокировка</string>
     <string name="no_update_found">Обновление не найдено</string>
@@ -427,7 +423,6 @@
     <string name="sort_rating_asc">Рейтинг (низкий - высокий)</string>
     <string name="sort_updated_new">Обновленный (новый - старый)</string>
     <string name="sort_by">Сортировать по</string>
-    <string name="apk_installer_package_installer">PackageInstaller</string>
     <string name="subtitles_encoding">Кодировка субтитров</string>
     <string name="player_load_subtitles">Загрузить из файла</string>
     <string name="extension_rating" formatted="true">Рейтинг: %s</string>
@@ -473,7 +468,6 @@
     <string name="network_adress_example">https://example.com/example.mp4</string>
     <string name="random_button_settings_desc">Отображать случайную кнопку в библиотеке и главной странице</string>
     <string name="random_button_settings">Случайная кнопка</string>
-    <string name="apk_installer_legacy">Устаревший</string>
     <string name="episode_action_reload_links">Перезагрузить ссылки</string>
     <string name="preferred_media_settings">Предпочтительные медиа</string>
     <string name="subtitles_depressed">Опущенные</string>

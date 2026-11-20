@@ -96,10 +96,7 @@
     <string name="kitsu_settings">Kitsu မှ ပိုစတာများကိုပြရန်</string>
     <string name="automatic_plugin_updates">အလိုအလျောက် ဖြည့်စွက်လုပ်ဆောင်ချက်များကိုအပ်ဒိတ်တင်ခြင်း</string>
     <string name="automatic_plugin_download_mode_title">အပိုလုပ်ဆောင်ချက်များကိုစစ်ထုတ်ရန်မုဒ်ရွေးပါ</string>
-    <string name="updates_settings">အက်ပ်အပ်ဒိတ်များပြရန်</string>
     <string name="redo_setup_process">အစီအစဥ်ချခြင်းကိုပြန်စမည်</string>
-    <string name="apk_installer_settings">အက်ပ်ထည့်သွင်းခြင်း</string>
-    <string name="apk_installer_settings_des">အချို့ဖုန်းတွေက အက်ပ်ထည့်သွင်းခြင်းလုပ်ဆောင်ချက်အသစ်ကို မပံ့ပိုးပါဘူး။အကယ်၍အလုပ်မဖြစ်ပါကသမားရိုးကျနည်းလမ်းကိုအသုံးပြုပါ။</string>
     <string name="github">Github</string>
     <string name="no_chromecast_support_toast">ဤဝန်ဆောင်မှုပေးသူသည် Chromecast ကိုမပံ့ပိုးပါ</string>
     <string name="no_links_found_toast">လင့်များမတွေ့ပါ</string>
@@ -253,7 +250,6 @@
     <string name="automatic_plugin_download_summary">ရီပိုစစ်ထရီများမှမထည့်သွင်းရသေးသောဖြည့်စွက်လုပ်ဆောင်ချက်များအားလုံးကိုထည့်သွင်းပါ။</string>
     <string name="picture_in_picture_des">ပြန်ကြည့်ခြင်းကိုအသေးစား ကြည့်ရှုမှုတွင်ဆက်ပြပါ</string>
     <string name="player_size_settings_des">အနက်ရောင်ဘောင်များကို ဖယ်ရှားရန်</string>
-    <string name="updates_settings_des">အက်ပ်ထဲဝင်လိုက်သည့်နှင့်အက်ပ်အပ်ဒိတ်ကိုစစ်ဆေးပါ။</string>
     <string name="chromecast_subtitles_settings">Chromecast စာတန်းထိုးများ</string>
     <string name="chromecast_subtitles_settings_des">Chromecast စာတန်းထိုး ပြုပြင်ရန်</string>
     <string name="swipe_to_change_settings_des">အသံအတိုးအကျယ်နှင့်အလင်းအမှောင်များကိုချိန်ညိှရန် ဘယ် သို့ ညာ ဘက်တွင် အပေါ်အောက်ဆွဲပါ</string>
@@ -336,8 +332,6 @@
     <string name="skip_type_credits">ခရက်ဒစ်များ</string>
     <string name="skip_type_intro">အစ</string>
     <string name="yes">သေချာသည်</string>
-    <string name="apk_installer_legacy">သမားရိုးကျ</string>
-    <string name="apk_installer_package_installer">ထည့်သွင်းသူ</string>
     <string name="delayed_update_notice">ထွက်ချိန်တွင် အက်ပ်ကို အပ်ဒိတ်လုပ်ပါမည်</string>
     <string name="blank_repo_message">CloudStream တွင် မူရင်းအတိုင်း ထည့်သွင်းထားသည့်ဆိုက်များ မရှိပါ။ ရီပိုစစ်ထရီများ မှ ဆိုဒ် များကို ထည့်သွင်းရန်လိုအပ်သည်။ \n \nSky UK Limited မှ ဦးနှောက်မဲ့ DMCA ကို ဖယ်ရှားလိုက်ခြင်းကြောင့် 🤮 ကျွန်ုပ်တို့သည် ရီပိုစစ်ထရီဆိုဒ်ကို အက်ပ်တွင် ချိတ်ဆက်၍မရပါ။ \n \nကျွန်ုပ်တို့၏ Discord တွင်ပါဝင်ပါ သို့မဟုတ် အွန်လိုင်းတွင်ရှာဖွေပါ။</string>
     <string name="view_public_repositories_button">အခြားသူများ၏ရီပိုစစ်ထရီများကိုရှာဖွေမည်</string>

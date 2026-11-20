@@ -202,14 +202,10 @@
     <string name="automatic_plugin_download">Automatically download plugins</string>
     <string name="automatic_plugin_download_mode_title">Select mode to filter plugins download</string>
     <string name="automatic_plugin_download_summary">Automatically install all not yet installed plugins from added repositories.</string>
-    <string name="updates_settings">Show app updates</string>
-    <string name="updates_settings_des">Automatically search for new updates after starting the app.</string>
     <string name="redo_setup_process">Redo setup process</string>
     <string name="install_prerelease">Install pre-release version</string>
     <string name="prerelease_already_installed">Pre-release is already installed.</string>
     <string name="prerelease_install_failed">Failed to install pre-release.</string>
-    <string name="apk_installer_settings">APK Installer</string>
-    <string name="apk_installer_settings_des">Some devices do not support the new package installer. Try the legacy option if updates do not install.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Light novel app by the same devs</string>
     <string name="anim">Anime app by the same devs</string>
@@ -609,8 +605,6 @@
     <string name="update_notification_downloading">Downloading app update…</string>
     <string name="update_notification_installing">Installing app update…</string>
     <string name="update_notification_failed">Could not install the new version of the app</string>
-    <string name="apk_installer_legacy">Legacy</string>
-    <string name="apk_installer_package_installer">PackageInstaller</string>
     <string name="delayed_update_notice">App will be updated upon exit</string>
     <string name="sort_by">Sort by</string>
     <string name="sort">Sort</string>

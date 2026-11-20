@@ -158,10 +158,7 @@
     <string name="automatic_plugin_updates">Automātiska papildinājumu atjaunināšana</string>
     <string name="automatic_plugin_download">Automātiski lejupielādēt papildinājumus</string>
     <string name="automatic_plugin_download_summary">Automātiski uzstāda visus vēl neuzstādītos papildinājumus no pievienotajiem repozitorijiem.</string>
-    <string name="updates_settings">Rādīt lietotņu atjauninājumus</string>
-    <string name="updates_settings_des">Automātiski pārbauda atjauninājumus, kad atver lietotni.</string>
     <string name="redo_setup_process">Atsākt uzstādīšanas procesu</string>
-    <string name="apk_installer_settings_des">Dažas ierīces neatbalsta jauno pakotnes uzstādītāju. Izmantojiet legacy (veco) uzstādītāju, ja atjauninājumus nevar uzstādīt.</string>
     <string name="lightnovel">Viegla romānu lietotne no šiem pašiem izstrādātājiem</string>
     <string name="anim">Anime lietotne no šiem pašiem izstrādātājiem</string>
     <string name="discord">Ienāc discordā</string>
@@ -443,8 +440,6 @@
     <string name="update_notification_downloading">Notiek lietotnes atjauninājuma lejupielāde…</string>
     <string name="update_notification_installing">Notiek lietotnes atjauninājuma instalēšana…</string>
     <string name="update_notification_failed">Nevarēja instalēt jauno lietotnes versiju</string>
-    <string name="apk_installer_legacy">Mantojums</string>
-    <string name="apk_installer_package_installer">Insteletājs</string>
     <string name="delayed_update_notice">Lietotne tiks atjaunināta pēc iziešanas</string>
     <string name="sort_by">Kārtot pēc</string>
     <string name="sort">Kārtot</string>
@@ -459,7 +454,6 @@
     <string name="revert">Atgriest</string>
     <string name="subscription_deleted">Anulēts %s abonements</string>
     <string name="subscription_episode_released">%d sērija izlaista!</string>
-    <string name="apk_installer_settings">Apk insteletājs</string>
     <string name="github">GitHub</string>
     <string name="no_subtitles">Nav subtitru</string>
     <string name="play_episode_toast">Atskaņot epizodi</string>

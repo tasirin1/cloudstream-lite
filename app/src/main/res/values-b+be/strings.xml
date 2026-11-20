@@ -179,7 +179,6 @@
     <string name="pref_filter_search_quality">Схаваць выбраную якасць відэа з вынікаў пошуку</string>
     <string name="automatic_plugin_updates">Аўтаматычнае абнаўленне ўбудоў</string>
     <string name="automatic_plugin_download">Аўтаматычная спампоўка ўбудоў</string>
-    <string name="apk_installer_settings_des">Некаторыя прылады не падтрымліваюць новы ўсталёўшчык пакетаў. Калі абнаўленні не ўсталёўваюцца, паспрабуйце ранейшую версію.</string>
     <string name="github">Github</string>
     <string name="automatic_plugin_download_mode_title">Выберыце рэжым фільтравання спампоўвання убудоў</string>
     <string name="search_suggestions">Прапановы пошуку</string>
@@ -187,13 +186,10 @@
     <string name="clear_suggestions">Ачысціць прапановы</string>
     <string name="show_cast_in_details">Паказваць склад акцёраў</string>
     <string name="automatic_plugin_download_summary">Аўтаматычна ўсталёўваць усе яшчэ не ўсталяваныя ўбудовы з даданых рэпазіторыяў.</string>
-    <string name="updates_settings">Паказваць абнаўленні праграмы</string>
-    <string name="updates_settings_des">Аўтаматычна правяраць на новыя абнаўленні пасля адкрыцця праграмы.</string>
     <string name="redo_setup_process">Паўтарыць наладжванне</string>
     <string name="install_prerelease">Усталяваць перадфінальную версію</string>
     <string name="prerelease_already_installed">Перадфінальная версія ўжо ўсталявана.</string>
     <string name="prerelease_install_failed">Не ўдалося ўсталяваць перадфінальную версію.</string>
-    <string name="apk_installer_settings">Усталёўшчык APK</string>
     <string name="lightnovel">Лёгкая праграма для раманаў ад тых жа распрацоўшчыкаў</string>
     <string name="anim">Праграма для анімэ ад тых жа распрацоўшчыкаў</string>
     <string name="discord">Далучайцеся да Discord</string>
@@ -559,8 +555,6 @@
     <string name="update_notification_downloading">Спампоўванне абнаўлення праграмы…</string>
     <string name="update_notification_installing">Усталяванне абнаўлення праграмы…</string>
     <string name="update_notification_failed">Не ўдалося ўсталяваць новую версію праграмы</string>
-    <string name="apk_installer_legacy">Састарэлая версія</string>
-    <string name="apk_installer_package_installer">Усталёўшчык пакетаў</string>
     <string name="delayed_update_notice">Праграма будзе абноўлена пасля выхаду</string>
     <string name="sort_by">Сартаваць па</string>
     <string name="sort">Сартаваць</string>

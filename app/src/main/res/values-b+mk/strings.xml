@@ -101,8 +101,6 @@
     <string name="advanced_search">Напредно пребарување</string>
     <string name="advanced_search_des">Ви ги дава резултатите од пребарувањето одделени по провајдер</string>
     <string name="show_fillers_settings">Прикажи епизода за полнење за аниме</string>
-    <string name="updates_settings">Прикажи ажурирања на апликации</string>
-    <string name="updates_settings_des">Автоматски пребарувај нови ажурирања откако ќе ја стартуваш апликацијата.</string>
     <string name="github">Github</string>
     <string name="lightnovel">Едноставна апликација за новели од истите развивачи</string>
     <string name="anim">Апликација за аниме од истите развивачи</string>
@@ -285,7 +283,6 @@
     <string name="android_tv_interface_off_seek_settings_summary">Износот на барањето што се користи кога плеерот е скриен</string>
     <string name="episode_action_download_subtitle">Преземи преводи</string>
     <string name="view_public_repositories_button_short">Јавна листа</string>
-    <string name="apk_installer_package_installer">Инсталатор на пакети</string>
     <string name="ova_singular">ОВА</string>
     <string name="category_updates">Ажурирање и резервна копија</string>
     <string name="empty_library_no_accounts_message">Твојата библиотека е празна :(\nНајави се на корисничка сметка или додади серии во твојата локална библиотека.</string>
@@ -316,7 +313,6 @@
     <string name="audio_tracks">Аудио јазик</string>
     <string name="poster_ui_settings">Вклучи ги елементите на корисничкиот интерфејс на постерот</string>
     <string name="plugins_disabled" formatted="true">Оневозможено: %d</string>
-    <string name="apk_installer_legacy">Легаси</string>
     <string name="autoplay_next_settings">Автоматска репродукција на следната епизода</string>
     <string name="video_buffer_clear_settings">Исчисти го кешот на видео и слики</string>
     <string name="pref_category_ui_features">Карактеристики</string>
@@ -382,7 +378,6 @@
     <string name="chromecast_subtitles_settings">Преводи на Chromecast</string>
     <string name="subtitle_offset_extra_hint_before_format">Користи го ова ако преводите се прикажуваат %d ms подоцна</string>
     <string name="random_button_settings">Случајно копче</string>
-    <string name="apk_installer_settings">Инсталатор на APK</string>
     <string name="extensions">Екстензии</string>
     <string name="quality_uhd">UHD</string>
     <string name="referer">Референт (опционално)</string>
@@ -444,7 +439,6 @@
     <string name="autoplay_next_settings_des">Започни ја следната епизода кога ќе заврши тековната</string>
     <string name="backup_failed_error_format">Грешка при правење резервна копија на %s</string>
     <string name="pref_filter_search_quality">Сокриј го избраниот квалитет на видеото во резултатите од пребарувањето</string>
-    <string name="apk_installer_settings_des">Некои уреди не го поддржуваат новиот инсталатор на пакети. Испробај ја легаси(старата) опција, ако ажурирањата не се инсталираат.</string>
     <string name="limit_title_rez">Прикажи информации за плеерот</string>
     <string name="video_buffer_size_settings">Големина на видео баферот</string>
     <string name="pref_category_player_layout">Распоред</string>
