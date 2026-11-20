@@ -71,8 +71,14 @@ object M3u8Helper2 {
             }
     }
 
-    private val ENCRYPTION_URL_IV_REGEX =
-        Regex("#EXT-X-KEY:METHOD=([^,]+),URI=\"([^\"]+)\"(?:,IV=(.*))?")
+    // Audit-5 #18: EXT-X-KEY attributes are parsed individually —
+    // RFC 8216 allows any attribute order, and the old single
+    // regex (METHOD,URI,IV in that exact order) silently skipped
+    // legally ordered tags like URI=...,METHOD=AES-128, leaving
+    // those segments to be "decrypted" with the wrong/no key.
+    private val KEY_METHOD_REGEX = Regex("METHOD=([^,]+)")
+    private val KEY_URI_REGEX = Regex("URI=\"([^\"]+)\"")
+    private val KEY_IV_REGEX = Regex("IV=([^,]+)")
     // TS_EXTENSION_REGEX was removed in Audit-5 #4: segment
     // extraction is a line scan in hslLazy now (see there).
 
@@ -430,11 +436,9 @@ object M3u8Helper2 {
             val line = rawLine.trim()
             when {
                 line.startsWith("#EXT-X-KEY:") -> {
-                    val groups = ENCRYPTION_URL_IV_REGEX.find(line)?.groupValues
-                    val method = groups?.getOrNull(1) ?: when {
-                        line.contains("METHOD=NONE") -> "NONE"
-                        else -> continue
-                    }
+                    val attributes = line.substringAfter("#EXT-X-KEY:")
+                    val method = KEY_METHOD_REGEX.find(attributes)?.groupValues?.getOrNull(1)
+                        ?: throw IllegalStateException("EXT-X-KEY without a METHOD: $line")
                     when {
                         method.equals("NONE", ignoreCase = true) -> {
                             keyRanges += LazyHlsDownloadData.KeyRange(
@@ -445,7 +449,8 @@ object M3u8Helper2 {
                         }
 
                         method.equals("AES-128", ignoreCase = true) -> {
-                            val keyUrl = groups?.getOrNull(2)?.takeIf { it.isNotEmpty() }
+                            val keyUrl = KEY_URI_REGEX.find(attributes)?.groupValues?.getOrNull(1)
+                                ?.takeIf { it.isNotEmpty() }
                                 ?: throw IllegalStateException("EXT-X-KEY without a URI")
                             val resolvedKeyUrl =
                                 resolveUrl(playlistStream.streamUrl, keyUrl)
@@ -463,7 +468,9 @@ object M3u8Helper2 {
                                     keyBody.close()
                                 }
                             }
-                            val iv = parseEncryptionIv(groups.getOrNull(3))
+                            val iv = parseEncryptionIv(
+                                KEY_IV_REGEX.find(attributes)?.groupValues?.getOrNull(1)
+                            )
                             keyRanges += LazyHlsDownloadData.KeyRange(
                                 fromIndex = keySegmentIndex,
                                 key = key,
