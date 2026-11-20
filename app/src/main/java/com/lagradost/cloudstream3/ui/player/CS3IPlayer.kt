@@ -77,7 +77,6 @@ import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.CommonActivity.activity
 import com.lagradost.cloudstream3.ErrorLoadingException
-import com.lagradost.cloudstream3.MainActivity.Companion.deleteFileOnExit
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.USER_AGENT
@@ -902,9 +901,20 @@ class CS3IPlayer : IPlayer {
             return try {
                 val databaseProvider = StandaloneDatabaseProvider(context)
                 SimpleCache(
-                    File(
-                        context.cacheDir, "exoplayer"
-                    ).also { deleteFileOnExit(it) }, // Ensures always fresh file
+                    // Audit-4 #21: this used to also register the
+                    // directory with MainActivity.deleteFileOnExit
+                    // ("Ensures always fresh file"). That helper's
+                    // consumer recursively deletes every registered
+                    // path in MainActivity.onDestroy — yanking the
+                    // directory from under the live, shared
+                    // SimpleCache on every activity recreation, so
+                    // the cache silently broke until the player was
+                    // recreated. The cache is shared process-wide
+                    // (companion) and bounded by the evictor below;
+                    // it is deliberately not release()d from any
+                    // one player's lifecycle, exactly like the
+                    // shared Cronet engine.
+                    File(context.cacheDir, "exoplayer"),
                     LeastRecentlyUsedCacheEvictor(cacheSize),
                     databaseProvider
                 )
