@@ -249,6 +249,11 @@ object APIHolder {
                     .substringAfter("rresp\",\"")
                     .substringBefore("\"")
             }
+        } catch (e: CancellationException) {
+            // Audit-14 #39: not a captcha failure — the caller
+            // was cancelled. getTracker below already rethrows;
+            // this site was missed when that fix landed.
+            throw e
         } catch (e: Exception) {
             logError(e)
         }
