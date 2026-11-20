@@ -42,8 +42,11 @@ class DownloadedPlayerActivity : AppCompatActivity() {
     private fun isSameIntent(newIntent: Intent): Boolean {
         val old = intent ?: return false
         // Compare URIs first
-        val oldUri = old.data ?: old.clipData?.getItemAt(0)?.uri
-        val newUri = newIntent.data ?: newIntent.clipData?.getItemAt(0)?.uri
+        // Audit-13 #21: guard itemCount like handleIntent does —
+        // getItemAt(0) on a present-but-empty ClipData throws
+        // IndexOutOfBoundsException, crashing onNewIntent.
+        val oldUri = old.data ?: old.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+        val newUri = newIntent.data ?: newIntent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
         if (oldUri != null && oldUri == newUri) return true
         // Fall back to comparing EXTRA_TEXT links
         val oldText = safe { old.getStringExtra(Intent.EXTRA_TEXT) }
