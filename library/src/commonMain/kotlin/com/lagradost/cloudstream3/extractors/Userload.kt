@@ -66,7 +66,14 @@ open class Userload : ExtractorApi() {
         }
         var txtresult = ""
         subchar.forEach {
-            txtresult = txtresult.plus(it.toInt(8).toChar())
+            // Audit-11 #14: the digit string is derived from
+            // remote JS — a piece containing 8/9 (invalid
+            // octal), an empty piece, or an over-long number
+            // made toInt(8) throw NumberFormatException out of
+            // getUrl. Skip unparseable pieces, like the rest of
+            // this file's guards (Audit-3 #20).
+            val code = it.toIntOrNull(8) ?: return@forEach
+            txtresult = txtresult.plus(code.toChar())
         }
         val val1 = Regex(""""morocco="((.|\\n)*?)"&mycountry="""").find(txtresult)?.groups?.get(1)?.value.toString().drop(1).dropLast(1)
         val val2 = txtresult.substringAfter("""&mycountry="+""").substringBefore(")")
