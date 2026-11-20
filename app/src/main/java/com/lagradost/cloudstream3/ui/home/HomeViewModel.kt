@@ -376,6 +376,16 @@ class HomeViewModel : ViewModel() {
         _apiName.postValue(repo?.name)
         _randomItems.postValue(listOf())
 
+        // Audit-9 #3: EVERY load() invalidates the previous
+        // generation — Audit-8 #7 only advanced homeLoadIndex on
+        // the Success exit, so the no-homepage early return and
+        // the Failure exit left the old provider's in-flight
+        // expand postable over the new provider's state, and its
+        // sections sitting in the map for a new expand to append
+        // to. Advance + clear up here, before any exit can run.
+        homeLoadIndex++
+        expandable.clear()
+
         if (repo?.hasMainPage != true) {
             _page.postValue(Resource.Success(emptyMap()))
             _preview.postValue(Resource.Failure(false, "No homepage"))
@@ -391,7 +401,10 @@ class HomeViewModel : ViewModel() {
         when (val data = repo?.getMainPage(1, null)) {
             is Resource.Success -> {
                 try {
-                    homeLoadIndex++
+                    // Generation advanced + map cleared at the top
+                    // of load() (Audit-9 #3); this clear only drops
+                    // anything a same-generation expand added while
+                    // the homepage fetch was in flight.
                     expandable.clear()
                     data.value.forEach { home ->
                         home?.items?.forEach { list ->
