@@ -1989,7 +1989,7 @@ object VideoDownloadManager {
         // could never be removed from inside the app — an orphan
         // entry the user could not delete. An unreachable file is
         // gone as far as the app is concerned.
-        val isFileDeleted = file == null || file.delete() || !file.exists()
+        val isFileDeleted = file == null || file.delete() == true || file.exists() == false
 
         if (isFileDeleted) {
             deleteMatchingSubtitles(context, info)

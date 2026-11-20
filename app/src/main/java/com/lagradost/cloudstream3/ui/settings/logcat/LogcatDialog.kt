@@ -1,8 +1,5 @@
 package com.lagradost.cloudstream3.ui.settings.logcat
 
-// Audit-6 #33: newest logcat entries kept by the debug dialog.
-private const val MAX_LOGCAT_ITEMS = 2000
-
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,6 +46,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
+// Audit-6 #33: newest logcat entries kept by the debug dialog.
+private const val MAX_LOGCAT_ITEMS = 2000
 
 @Composable
 fun LogcatDialog(dismiss: () -> Unit) {
