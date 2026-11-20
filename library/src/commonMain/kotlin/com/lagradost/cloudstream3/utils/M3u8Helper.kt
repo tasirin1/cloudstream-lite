@@ -267,7 +267,12 @@ object M3u8Helper2 {
                     // as OutOfMemoryError.
                     throw e
                 } catch (t: Throwable) {
-                    delay(failDelay)
+                    // Audit-5 #19: do not sleep after the final
+                    // attempt — the delay only exists to space out
+                    // retries, and sleeping before returning null
+                    // added a pointless failDelay (3s) to every
+                    // exhausted segment.
+                    if (i < tries - 1) delay(failDelay)
                 }
             }
             return null
@@ -291,7 +296,12 @@ object M3u8Helper2 {
                 } catch (e: Error) {
                     throw e
                 } catch (t: Throwable) {
-                    delay(failDelay)
+                    // Audit-5 #19: do not sleep after the final
+                    // attempt — the delay only exists to space out
+                    // retries, and sleeping before returning null
+                    // added a pointless failDelay (3s) to every
+                    // exhausted segment.
+                    if (i < tries - 1) delay(failDelay)
                 }
             }
             return null
