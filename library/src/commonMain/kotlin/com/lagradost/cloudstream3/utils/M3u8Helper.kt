@@ -8,7 +8,6 @@ import dev.whyoleg.cryptography.DelicateCryptographyApi
 import dev.whyoleg.cryptography.algorithms.AES
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
-import kotlin.math.pow
 
 /** backwards api surface */
 class M3u8Helper {
@@ -78,10 +77,17 @@ object M3u8Helper2 {
         Regex("""#EXTINF:(([0-9]*[.])?[0-9]+|).*\n(.+?\n)""") // fuck it we ball, who cares about the type anyways
 
     private fun toBytes16Big(n: Int): ByteArray {
-        return ByteArray(16) {
-            val fixed = n / 256.0.pow((15 - it))
-            (maxOf(0, fixed.toInt()) % 256).toByte()
+        // Audit-4 #19: this was 16 Double pow() calls, and it runs
+        // once per segment for the default IV. Same 16-byte
+        // big-endian encoding via shifts (n is a media sequence
+        // number, never negative).
+        val bytes = ByteArray(16)
+        var value = n
+        for (i in 15 downTo 0) {
+            bytes[i] = (value and 0xFF).toByte()
+            value = value ushr 8
         }
+        return bytes
     }
 
     private fun defaultIv(index: Int): ByteArray {
