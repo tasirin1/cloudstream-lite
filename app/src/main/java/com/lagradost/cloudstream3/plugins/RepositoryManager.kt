@@ -330,6 +330,11 @@ object RepositoryManager {
             var tempMoved = false
             try {
             val body = app.get(convertRawGitUrl(pluginUrl)).okhttpResponse.body
+            // Audit-7 #23: the body must close on EVERY path —
+            // the Content-Length rejection below used to throw
+            // before byteStream().use{} was reached, leaving the
+            // connection held in the pool.
+            try {
 
             // Audit-4 #8: bounded copy — the declared content
             // length is checked up front and the actual bytes are
@@ -385,6 +390,10 @@ object RepositoryManager {
             tempMoved = true
 
             file
+            } finally {
+                // Audit-7 #23: see the body acquisition above.
+                body.close()
+            }
             } finally {
                 // Audit-4 #32: see tempMoved above.
                 if (!tempMoved) tempFile.delete()
