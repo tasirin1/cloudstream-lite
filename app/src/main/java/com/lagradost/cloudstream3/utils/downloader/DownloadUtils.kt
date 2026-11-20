@@ -18,6 +18,7 @@ import com.lagradost.cloudstream3.utils.UiText
 import com.lagradost.cloudstream3.utils.downloader.DownloadFileManagement.getFileName
 import com.lagradost.cloudstream3.utils.downloader.DownloadFileManagement.getFolder
 import com.lagradost.cloudstream3.utils.txt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 
@@ -189,6 +190,13 @@ object DownloadUtils {
         forEach { job ->
             try {
                 job.join()
+            } catch (t: CancellationException) {
+                // Audit-13 #15: join() never throws the CHILD's
+                // exception — a CancellationException here is
+                // the CALLER's own cancellation, and swallowing
+                // it let cancelled download scopes run their
+                // completion logic anyway.
+                throw t
             } catch (t: Throwable) {
                 logError(t)
             }
