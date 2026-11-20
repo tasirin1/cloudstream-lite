@@ -2145,6 +2145,15 @@ object VideoDownloadManager {
 
             try {
                 for (index in (downloadResumePackage.linkIndex ?: 0) until item.links.size) {
+                    // Audit-7 #2: a user stop is delivered as an
+                    // event that only a live DownloadMetaData hears.
+                    // A stop landing before the first metadata
+                    // exists, or between mirrors (previous metadata
+                    // closed, next not yet created), was lost and
+                    // the loop downloaded the episode anyway. The
+                    // persisted isCancelled flag is checked here so
+                    // the stop survives those gaps.
+                    if (isCancelled) break
                     val link = item.links[index]
                     val resume = downloadResumePackage.linkIndex == index
 
@@ -2177,6 +2186,11 @@ object VideoDownloadManager {
                         )
                     }
 
+                    // Audit-7 #2: a stop that landed while this
+                    // mirror was being attempted ends the loop
+                    // quietly — it is neither success nor failure.
+                    if (isCancelled) break
+
                     if (connectionResult.success) { // SUCCESS
                         isCompleted = true
                         break
@@ -2189,7 +2203,10 @@ object VideoDownloadManager {
                 isFailed = true
                 logError(e)
             } finally {
-                isFailed = !isCompleted
+                // Audit-7 #2: a user stop already ran its own
+                // cleanup via the isCancelled setter; do not
+                // re-report it as a failure here.
+                isFailed = !isCompleted && !isCancelled
                 // Audit-3 #32: a completed download no longer needs
                 // its resume package; leaving it behind accumulated
                 // one stale entry per finished download forever.
@@ -2244,7 +2261,10 @@ object VideoDownloadManager {
             Log.d(TAG, "Starting download ${downloadQueueWrapper.id}")
             setKey(KEY_RESUME_IN_QUEUE, downloadQueueWrapper.id.toString(), downloadQueueWrapper)
 
-            ioSafe {
+            // Audit-7 #2: keep the job handle for every entry
+            // path — the resume path used to launch anonymously,
+            // leaving downloadJob null here.
+            downloadJob = ioSafe {
                 if (downloadQueueWrapper.resumePackage != null) {
                     downloadFromResume()
                     // Load links if they are not already loaded
