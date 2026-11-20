@@ -7,7 +7,6 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64DecodeArray
 import com.lagradost.cloudstream3.base64Encode
 import com.lagradost.cloudstream3.newSubtitleFile
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
@@ -140,7 +139,13 @@ open class Rabbitstream : ExtractorApi() {
     }
 
     open suspend fun extractRealKey(sources: String): Pair<String, String> {
-        val rawKeys = parseJson<List<Int>>(app.get(key).text)
+        // Audit-8 #15: the key file is fetched from a third-party
+        // repository — a moved/renamed repo answers "404: Not
+        // Found", and the throwing parseJson let the raw
+        // SerializationException escape instead of failing the
+        // load cleanly.
+        val rawKeys = tryParseJson<List<Int>>(app.get(key).text)
+            ?: throw ErrorLoadingException("Invalid key file")
         val extractedKey = base64Encode(rawKeys.map { it.toByte() }.toByteArray())
         return extractedKey to sources
     }

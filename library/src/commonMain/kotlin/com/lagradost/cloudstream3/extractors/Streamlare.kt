@@ -33,10 +33,14 @@ open class Slmaxed : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?): List<ExtractorLink>? {
         // Audit-3 #48: a non-embed URL used to NPE on the !! here.
         val id = embedRegex.find(url)?.groupValues?.get(1) ?: return null
+        // Audit-8 #16: this was the last throwing .parsed<> in
+        // the extractors tree — an HTML error/rate-limit page
+        // from the API escaped as a raw SerializationException
+        // instead of a clean no-result.
         val json = app.post(
             "${mainUrl}api/video/stream/get",
             requestBody = """{"id":"$id"}""".toRequestBody(RequestBodyTypes.JSON.toMediaTypeOrNull()),
-        ).parsed<JsonResponse>()
+        ).parsedSafe<JsonResponse>() ?: return null
         return json.result?.mapNotNull {
             it.value.let { result ->
                 newExtractorLink(
