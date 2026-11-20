@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.MainActivity.Companion.deleteFileOnExit
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.mvvm.safe
+import com.lagradost.cloudstream3.plugins.RepositoryManager.MAX_PLUGIN_FILE_SIZE_BYTES
 import com.lagradost.cloudstream3.receivers.PackageInstallerStatusReceiver
 import com.lagradost.cloudstream4.AppSettings
 import com.lagradost.cloudstream4.viewmodels.AppUpdater
@@ -23,6 +24,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.DigestException
@@ -188,6 +190,18 @@ object ApkUpdater : AppUpdater {
             md?.update(buffer, 0, read)
 
             transferred += read.toLong()
+            // Audit-4 #8: enforce the manifest's declared size and
+            // an absolute ceiling while copying. Previously the
+            // declared length only drove the progress display, so a
+            // repository could stream unbounded data into the cache
+            // dir and fill the device storage.
+            if (transferred > MAX_PLUGIN_FILE_SIZE_BYTES ||
+                (length != null && transferred > length)
+            ) {
+                throw IOException(
+                    "Plugin download exceeded its size limit ($transferred bytes)"
+                )
+            }
             downloadProgress(transferred, length)
             context.ensureActive()
         }

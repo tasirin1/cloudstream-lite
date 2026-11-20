@@ -97,6 +97,12 @@ data class PluginWrapper(
 
 object RepositoryManager {
     const val ONLINE_PLUGINS_FOLDER = "Extensions"
+
+    // Audit-4 #8: hard ceiling for a single plugin file. Real
+    // .cs3 plugins are a few MB; this only stops a malicious or
+    // compromised repository (or a MITM) from streaming data into
+    // the cache dir until the device storage is full.
+    const val MAX_PLUGIN_FILE_SIZE_BYTES: Long = 100_000_000L
     val PREBUILT_REPOSITORIES: Array<RepositoryData> by lazy {
         getKey<Array<RepositoryData>>("PREBUILT_REPOSITORIES") ?: emptyArray()
     }
@@ -238,9 +244,31 @@ object RepositoryManager {
 
             val body = app.get(convertRawGitUrl(pluginUrl)).okhttpResponse.body
 
-            body.byteStream().use { body ->
-                tempFile.outputStream().use { fileSteam ->
-                    body.copyTo(fileSteam)
+            // Audit-4 #8: bounded copy — the declared content
+            // length is checked up front and the actual bytes are
+            // counted while copying (the header can lie or be
+            // absent). The manifest's fileSize was never enforced
+            // on this path at all.
+            if (body.contentLength() > MAX_PLUGIN_FILE_SIZE_BYTES) {
+                throw IllegalStateException(
+                    "Plugin file too large: ${body.contentLength()} bytes"
+                )
+            }
+            body.byteStream().use { input ->
+                tempFile.outputStream().use { output ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    var total = 0L
+                    while (true) {
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        total += read
+                        if (total > MAX_PLUGIN_FILE_SIZE_BYTES) {
+                            throw IllegalStateException(
+                                "Plugin file too large: exceeds $MAX_PLUGIN_FILE_SIZE_BYTES bytes"
+                            )
+                        }
+                        output.write(buffer, 0, read)
+                    }
                 }
             }
 
