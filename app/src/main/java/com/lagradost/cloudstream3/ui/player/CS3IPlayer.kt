@@ -881,6 +881,16 @@ class CS3IPlayer : IPlayer {
             // https://gist.github.com/ShivamKumarJha/3c8398b47053ae05112d2a8f8b5de531
             return try {
                 val cacheDirectory = File(context.cacheDir, "CronetEngine")
+                // Audit-5 #26: sweep trash dirs left behind by
+                // Audit-4 #22 renames whose background delete never
+                // finished (process death) — nothing ever revisited
+                // "CronetEngine.old-*" and each engine recreation
+                // could orphan another full cache copy on disk.
+                context.cacheDir.listFiles()?.filter {
+                    it.isDirectory && it.name.startsWith("CronetEngine.old-")
+                }?.takeIf { it.isNotEmpty() }?.let { stale ->
+                    Thread { stale.forEach { it.deleteRecursively() } }.start()
+                }
                 // Audit-4 #22: deleteRecursively() here ran
                 // synchronously on the caller's thread (the main
                 // thread on the load path) and could jank on a
