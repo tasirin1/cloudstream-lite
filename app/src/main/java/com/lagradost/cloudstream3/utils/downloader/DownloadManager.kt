@@ -1762,8 +1762,10 @@ object VideoDownloadManager {
         context: Context,
         id: Int,
     ): DownloadedFileInfoResult? {
-        // Audit-4 #39: see fileInfoCache.
-        val cacheable = id !in downloadStatus
+        // Audit-4 #39: see fileInfoCache. (containsKey, not `in`:
+        // downloadStatus is a ConcurrentHashMap, whose legacy
+        // contains() means containsValue — Kotlin rejects it.)
+        val cacheable = !downloadStatus.containsKey(id)
         if (cacheable) {
             val cached = fileInfoCache[id]
             if (cached != null &&
