@@ -6,6 +6,13 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("""file": "(.*)",""")
+private val hoistedRegex2 = Regex("""\};\s*(eval\(function[\s\S]*?)var played = \d+;""")
+private val hoistedRegex3 = Regex("""file":"(.*)","label""")
+
+
 open class RapidVid : ExtractorApi() {
     override val name            = "RapidVid"
     override val mainUrl         = "https://rapidvid.net"
@@ -30,16 +37,16 @@ open class RapidVid : ExtractorApi() {
             )
         }
 
-        var extractedValue   = Regex("""file": "(.*)",""").find(videoReq)?.groupValues?.get(1)
+        var extractedValue   = hoistedRegex1.find(videoReq)?.groupValues?.get(1)
         var decoded: String? = null
 
         if (extractedValue != null) {
             val bytes = extractedValue.split("\\x").filter { it.isNotEmpty() }.map { it.toInt(16).toByte() }.toByteArray()
             decoded   = bytes.decodeToString()
         } else {
-            val evalJWSsetup = Regex("""\};\s*(eval\(function[\s\S]*?)var played = \d+;""").find(videoReq)?.groupValues?.get(1) ?: throw ErrorLoadingException("File not found")
+            val evalJWSsetup = hoistedRegex2.find(videoReq)?.groupValues?.get(1) ?: throw ErrorLoadingException("File not found")
             val JWSsetup      = getAndUnpack(getAndUnpack(evalJWSsetup)).replace("\\\\", "\\")
-            extractedValue  = Regex("""file":"(.*)","label""").find(JWSsetup)?.groupValues?.get(1)?.replace("\\\\x", "")
+            extractedValue  = hoistedRegex3.find(JWSsetup)?.groupValues?.get(1)?.replace("\\\\x", "")
 
             val bytes = extractedValue?.chunked(2)?.map { it.toInt(16).toByte() }?.toByteArray()
             decoded   = bytes?.decodeToString() ?: throw ErrorLoadingException("File not found")

@@ -8,6 +8,12 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("(?<=var idUser = \")(.*)(?=\";)")
+private val hoistedRegex2 = Regex("(?<=var idfile = \")(.*)(?=\";)")
+
+
 open class PlayLtXyz : ExtractorApi() {
     override val name = "PlayLt"
     override val mainUrl = "https://play.playlt.xyz"
@@ -24,10 +30,10 @@ open class PlayLtXyz : ExtractorApi() {
             text.contains("var idUser")
         }?.toString() ?: ""
         if (bodyText.isNotBlank()) {
-            idUser = "(?<=var idUser = \")(.*)(?=\";)".toRegex().find(bodyText)
+            idUser = hoistedRegex1.find(bodyText)
                 ?.groupValues?.get(0) ?: ""
 
-            idFile = "(?<=var idfile = \")(.*)(?=\";)".toRegex().find(bodyText)
+            idFile = hoistedRegex2.find(bodyText)
                 ?.groupValues?.get(0) ?: ""
         }
 

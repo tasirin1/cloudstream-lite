@@ -9,6 +9,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.jsoup.nodes.Element
 
+// Audit-3 #46: constant regexes hoisted out of function bodies;
+// they were recompiled on every call.
+private val hoistedRegex1 = Regex("data='(\\S+?)'")
+private val hoistedRegex2 = Regex("null,['|\"](\\w+)['|\"]")
+private val hoistedRegex3 = Regex("\\D+")
+private val hoistedRegex4 = Regex("var pass = \"(\\S+?)\"")
+private val hoistedRegex5 = Regex("\"file\":\"(\\S+?)\".*?res=(\\d+)")
+
+
 class DatabaseGdrive2 : Gdriveplayer() {
     override val mainUrl = "https://databasegdriveplayer.co"
 }
@@ -79,19 +88,19 @@ open class Gdriveplayer : ExtractorApi() {
     ) {
         val document = app.get(url).document
         val eval = unpackJs(document)?.replace("\\", "") ?: return
-        val data = Regex("data='(\\S+?)'").first(eval) ?: return
-        val password = Regex("null,['|\"](\\w+)['|\"]").first(eval)
-            ?.split(Regex("\\D+"))
+        val data = hoistedRegex1.first(eval) ?: return
+        val password = hoistedRegex2.first(eval)
+            ?.split(hoistedRegex3)
             ?.joinToString("") {
                 it.toInt().toChar().toString()
-            }.let { Regex("var pass = \"(\\S+?)\"").first(it ?: return)?.encodeToByteArray() }
+            }.let { hoistedRegex4.first(it ?: return)?.encodeToByteArray() }
                 ?: throw ErrorLoadingException("can't find password")
 
         val decryptedData = cryptoAESHandler(data, password, false, false)?.let { getAndUnpack(it) }?.replace("\\", "")
         val sourceData = decryptedData?.substringAfter("sources:[")?.substringBefore("],")
         val subData = decryptedData?.substringAfter("tracks:[")?.substringBefore("],")
 
-        Regex("\"file\":\"(\\S+?)\".*?res=(\\d+)").findAll(sourceData ?: return).map {
+        hoistedRegex5.findAll(sourceData ?: return).map {
             it.groupValues[1] to it.groupValues[2]
         }.toList().distinctBy { it.second }.map { (link, quality) ->
             callback.invoke(
