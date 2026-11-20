@@ -1,31 +1,11 @@
 package com.lagradost.cloudstream4.viewmodels
 
-import androidx.compose.runtime.Immutable
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.lagradost.cloudstream3.mvvm.safe
-import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
-import com.lagradost.cloudstream4.AppSettings
-import com.lagradost.cloudstream4.state.ActionHandler
-import com.lagradost.cloudstream4.state.DefaultStateContainer
-import com.lagradost.cloudstream4.state.SingleActiveQuery
-import com.lagradost.cloudstream4.state.StateContainer
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
-@Immutable
-
-interface AppUpdater {
-    @Throws
-    suspend fun update(
-        settings: AppSettings,
-        url: String,
-        digest: DigestPair?,
-        downloadProgress: (Long, Long?) -> Unit,
-    )
-}
-
+// Audit-5 #36: the AppUpdater interface that used to share this
+// file was orphaned (no implementation, no usage anywhere) and
+// was removed. DigestPair below is live — it carries the plugin
+// digest from the repository manifest to ApkUpdater.
 
 data class DigestPair(
     val algorithm: String,
