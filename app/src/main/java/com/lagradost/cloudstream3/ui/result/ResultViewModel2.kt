@@ -2534,6 +2534,14 @@ class ResultViewModel2 : ViewModel() {
         )
     }
 
+    // Audit-8 #11: load() kept no job handle, unlike loadLinks
+    // below — a plugin-load-finished reload while a slow first
+    // load was still in flight started a SECOND concurrent load
+    // of the same URL (hasLoaded() stays false for the whole
+    // first load), and whichever finished last won the page and
+    // currentRepo. Track and cancel like loadLinks does.
+    private var currentLoadJob: Job? = null
+
     fun load(
         activity: Activity?,
         url: String,
@@ -2542,8 +2550,9 @@ class ResultViewModel2 : ViewModel() {
         dubStatus: DubStatus,
         autostart: AutoResume?,
         loadTrailers: Boolean = true,
-    ) =
-        ioSafe {
+    ) {
+        currentLoadJob?.cancel()
+        currentLoadJob = ioSafe {
             _page.postValue(Resource.Loading(url))
             _episodes.postValue(Resource.Loading())
 
@@ -2631,4 +2640,5 @@ class ResultViewModel2 : ViewModel() {
                 }
             }
         }
+    }
 }
