@@ -1214,7 +1214,16 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
                 playerView.callbacks?.onGestureEnd(hadSwipe, uiShowingBeforeGesture)
 
                 // Reset touch
-                lastTouchEndTime = System.currentTimeMillis()
+                // Audit-20 #4: a tap swallowed because the
+                // previous gesture was a swipe never reached
+                // onTapDetected, so it must not move the
+                // double-tap clock — otherwise the next
+                // ordinary tap within 200 ms was treated as
+                // the second half of a double-tap and seeked
+                // or paused instead of showing the controls.
+                val swallowedTap =
+                    currentTouchAction == null && currentLastTouchAction != null
+                if (!swallowedTap) lastTouchEndTime = System.currentTimeMillis()
                 isCurrentTouchValid = false
                 currentTouchStart = null
                 currentLastTouchAction = currentTouchAction
