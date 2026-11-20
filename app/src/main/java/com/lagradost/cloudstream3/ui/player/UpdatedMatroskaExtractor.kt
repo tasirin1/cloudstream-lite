@@ -973,10 +973,20 @@ class UpdatedMatroskaExtractor private constructor(
     protected fun binaryElement(id: Int, contentSize: Int, input: ExtractorInput) {
         when (id) {
             ID_SEEK_ID -> {
-                Arrays.fill(seekEntryIdBytes.data, 0.toByte())
-                input.readFully(seekEntryIdBytes.data, 4 - contentSize, contentSize)
-                seekEntryIdBytes.position = 0
-                seekEntryId = seekEntryIdBytes.readUnsignedInt().toInt()
+                // Audit-15 #25: a SeekID declaring 5+ bytes
+                // made the offset (4 - contentSize) negative
+                // and overran the 4-byte buffer — a raw
+                // IndexOutOfBounds instead of a malformed
+                // container. Skip oversized ids entirely.
+                if (contentSize > 4) {
+                    input.skipFully(contentSize)
+                    seekEntryId = UNSET_ENTRY_ID
+                } else {
+                    Arrays.fill(seekEntryIdBytes.data, 0.toByte())
+                    input.readFully(seekEntryIdBytes.data, 4 - contentSize, contentSize)
+                    seekEntryIdBytes.position = 0
+                    seekEntryId = seekEntryIdBytes.readUnsignedInt().toInt()
+                }
             }
 
             ID_BLOCK_ADD_ID_EXTRA_DATA -> handleBlockAddIDExtraData(
@@ -2128,7 +2138,16 @@ class UpdatedMatroskaExtractor private constructor(
                     mimeType = MimeTypes.APPLICATION_DVBSUBS
                     // Init data: composition_page (2), ancillary_page (2)
                     val initializationDataBytes = ByteArray(4)
-                    System.arraycopy(getCodecPrivate(codecId!!), 0, initializationDataBytes, 0, 4)
+                    // Audit-15 #26: a CodecPrivate shorter
+                    // than 4 bytes threw ArrayIndexOutOfBounds
+                    // here; the sibling private-data parsers
+                    // convert that to ParserException. Copy
+                    // only what exists.
+                    val dvbPrivate = getCodecPrivate(codecId!!)
+                    System.arraycopy(
+                        dvbPrivate, 0, initializationDataBytes, 0,
+                        minOf(4, dvbPrivate.size)
+                    )
                     initializationData = ImmutableList.of(initializationDataBytes)
                 }
 
