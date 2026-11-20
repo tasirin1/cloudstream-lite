@@ -188,7 +188,12 @@ class DynamicRangeCompressor : AudioProcessor {
             input.position(frameStart)
             repeat(channelCount) {
                 val s = input.getShort() / 32768f
-                out.putShort((s * gain).coerceIn(-1f, 1f).let { (it * 32768f).toInt().toShort() })
+                // Audit-14 #3: scale by 32767, not 32768 — a
+                // sample clamped to exactly 1.0f used to become
+                // 32768, whose toShort() wraps to -32768: every
+                // full-scale positive peak turned into a
+                // full-scale negative spike.
+                out.putShort((s * gain).coerceIn(-1f, 1f).let { (it * 32767f).toInt().toShort() })
             }
         }
     }
