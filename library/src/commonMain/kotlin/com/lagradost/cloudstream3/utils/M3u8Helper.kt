@@ -327,7 +327,11 @@ object M3u8Helper2 {
                 } catch (e: IllegalArgumentException) {
                     return null
                 } catch (e: CancellationException) {
-                    return null
+                    // Audit-14 #40: rethrow — returning null
+                    // relabelled a cancelled download as a
+                    // failed segment (same class as the
+                    // AesHelper fix, Audit-10 #13).
+                    throw e
                 } catch (e: ErrorLoadingException) {
                     // Audit-4 #20: permanent content failures (no
                     // data, ASCII error page) do not fix themselves
@@ -361,7 +365,11 @@ object M3u8Helper2 {
                 } catch (e: IllegalArgumentException) {
                     return null
                 } catch (e: CancellationException) {
-                    return null
+                    // Audit-14 #40: rethrow — returning null
+                    // relabelled a cancelled download as a
+                    // failed segment (same class as the
+                    // AesHelper fix, Audit-10 #13).
+                    throw e
                 } catch (e: ErrorLoadingException) {
                     // Audit-4 #20: see resolveLinkWhileSafe.
                     return null
