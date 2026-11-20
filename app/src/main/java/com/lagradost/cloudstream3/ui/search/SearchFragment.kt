@@ -429,6 +429,15 @@ class SearchFragment : BaseFragment<FragmentSearchBinding>(
                                 previousSelectedSearchTypes.toList()
                             selectedSearchTypes.clear()
                             selectedSearchTypes.addAll(previousSelectedSearchTypes)
+                            // Audit-14 #28: the provider selection
+                            // was missing from the rollback — when
+                            // non-empty, the dialog's working set
+                            // IS selectedApis (mutated in place),
+                            // so a Cancel left the cancelled
+                            // provider set in effect for the next
+                            // search.
+                            selectedApis.clear()
+                            selectedApis.addAll(previousSelectedApis)
                             updateChips(
                                 binding.tvtypesChipsScroll.tvtypesChips,
                                 selectedSearchTypes
