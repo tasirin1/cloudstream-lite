@@ -125,7 +125,7 @@ class ProfilesAdapter(
                     )
                     if (color != null) {
                         paletteColorCache[drawableResId] = color
-                        if (bindingAdapterPosition == boundPosition) {
+                        if (holder.bindingAdapterPosition == boundPosition) {
                             applyProfileColor(color)
                         }
                     }
