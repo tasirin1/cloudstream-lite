@@ -180,9 +180,17 @@ class SettingsAccount {
             // binding alive and could pop an "authenticated" toast
             // from a dead dialog. Cancel it on any dismiss.
             var pinTimer: CountDownTimer? = null
+            // Audit-17 #11: the in-flight poll job too —
+            // cancelling only the timer left a running
+            // api.login() to complete setupLogin (and its
+            // "authenticated" toast) after the user had
+            // cancelled the dialog.
+            var pinPollJob: kotlinx.coroutines.Job? = null
             dialog.setOnDismissListener {
                 pinTimer?.cancel()
                 pinTimer = null
+                pinPollJob?.cancel()
+                pinPollJob = null
             }
 
             ioSafe {
@@ -259,7 +267,7 @@ class SettingsAccount {
                                 )
                             )
 
-                            ioSafe {
+                            pinPollJob = ioSafe {
                                 if (secondsUntilFinished.rem(pinCodeData.interval) == 0 && api.login(
                                         pinCodeData
                                     )
