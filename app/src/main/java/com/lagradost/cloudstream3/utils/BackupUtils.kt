@@ -110,7 +110,11 @@ object BackupUtils {
 
     /** false if key should not be contained in backup */
     private fun String.isTransferable(): Boolean {
-        return !nonTransferableKeys.any { this.contains(it) }
+        // Audit-3 #36: substring matching used to exclude legitimate
+        // keys that merely contain a blacklisted name (e.g. a key
+        // containing "mal_token" inside a longer name). Match the
+        // key itself, or the key as a folder prefix ("folder/path").
+        return !nonTransferableKeys.any { this == it || this.startsWith("$it/") }
     }
 
     private var restoreFileSelector: ActivityResultLauncher<Array<String>>? = null
