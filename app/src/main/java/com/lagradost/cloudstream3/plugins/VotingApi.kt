@@ -30,7 +30,13 @@ object VotingApi {
     suspend fun SitePlugin.vote(): Int = vote(url)
     fun SitePlugin.canVote(): Boolean = canVote(this.url)
 
-    private val votesCache = mutableMapOf<String, Int>()
+    // Audit-4 #35: this was a plain HashMap mutated from
+    // coroutines on several threads (getVotes check-then-act is
+    // not under voteLock) — concurrent HashMap writes can corrupt
+    // or lose entries. ConcurrentHashMap makes each operation
+    // safe; the remaining getVotes race can only cause a
+    // duplicate idempotent fetch.
+    private val votesCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     private suspend fun readVote(pluginUrl: String): Int {
         val id = transformUrl(pluginUrl)
