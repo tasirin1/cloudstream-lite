@@ -786,6 +786,15 @@ class GeneratorPlayer : FullScreenPlayer() {
             androidx.appcompat.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 binding.searchLoadingBar.show()
+                // Audit-14 #17: cancel the previous search before
+                // overwriting its handle. Audit-13 #24 only
+                // cancelled on dismiss, so re-submitting (typing a
+                // new query, changing year/language) orphaned the
+                // in-flight search — it kept running against the
+                // dialog and its stale results could land last,
+                // overwriting the new list and hiding the new
+                // search's loading bar.
+                subtitleSearchJob?.cancel()
                 subtitleSearchJob = ioSafe {
                     val search =
                         SubtitleSearch(
