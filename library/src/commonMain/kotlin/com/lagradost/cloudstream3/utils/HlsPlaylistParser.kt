@@ -1197,7 +1197,9 @@ object HlsPlaylistParser {
         return try {
             base64DecodeArray(payload)
         } catch (e: IllegalArgumentException) {
-            throw ParserException("Invalid DRM data URI payload", e)
+            throw ParserException.createForMalformedManifest(
+                "Invalid DRM data URI payload", e
+            )
         }
     }
 
