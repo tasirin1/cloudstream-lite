@@ -834,7 +834,26 @@ class CS3IPlayer : IPlayer {
                 field = value
             }
 
+        // Audit-7 #27: @Volatile + a lock for the lazy build in
+        // getCacheOrBuild — the field was plain, so two loads on
+        // different threads could both see null, build two
+        // SimpleCaches on the same directory, and the loser's
+        // constructor exception was turned into a null that
+        // OVERWROTE the healthy cache reference.
+        @Volatile
         private var simpleCache: SimpleCache? = null
+        private val simpleCacheLock = Any()
+
+        private fun getCacheOrBuild(context: Context, cacheSize: Long): SimpleCache? {
+            simpleCache?.let { return it }
+            return synchronized(simpleCacheLock) {
+                // Never assign a failed build over an existing
+                // cache: only publish non-null results.
+                simpleCache ?: getCache(context, cacheSize)?.also {
+                    simpleCache = it
+                }
+            }
+        }
 
         // Audit-4 #29: getSubSources() calls createOnlineSource
         // once per subtitle track, and each call used to build a
@@ -1514,11 +1533,12 @@ class CS3IPlayer : IPlayer {
         val dataSourceFactory = if (onlineSource == null) {
             null
         } else {
-            if (simpleCache == null)
-                simpleCache = getCache(context, simpleCacheSize)
+            // Audit-7 #27: synchronized build; a failed build
+            // leaves the previous reference untouched.
+            val cache = getCacheOrBuild(context, simpleCacheSize)
 
             val cacheFactory = CacheDataSource.Factory().apply {
-                simpleCache?.let { setCache(it) }
+                cache?.let { setCache(it) }
                 setUpstreamDataSourceFactory(onlineSource)
             }
             cacheFactory
