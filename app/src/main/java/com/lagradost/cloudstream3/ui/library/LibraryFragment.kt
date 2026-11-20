@@ -379,7 +379,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(
                             )
                         })
                         //fix focus on the viewpager itself
-                        (viewpager.getChildAt(0) as RecyclerView).apply {
+                        // Audit-3 #28: safe cast; a framework change
+                        // in the ViewPager2 child order must not crash
+                        // the library screen.
+                        (viewpager.getChildAt(0) as? RecyclerView)?.apply {
                             tag = "tv_no_focus_tag"
                             //isFocusable = false
                         }
