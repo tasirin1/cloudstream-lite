@@ -520,6 +520,7 @@ object AppContextUtils {
     }
 
     fun Activity.loadRepository(url: String) {
+        val activity = this
         ioSafe {
             val repo = RepositoryManager.parseRepository(url) ?: return@ioSafe
             val data = RepositoryData(
@@ -528,15 +529,34 @@ object AppContextUtils {
                 url,
                 repo.description
             )
-            RepositoryManager.addRepository(data)
-            main {
-                showToast(
-                    getString(R.string.player_loaded_subtitles, repo.name),
-                    Toast.LENGTH_LONG
-                )
+            // Audit-3 #12: this entry point is reachable from deep
+            // links and from any page shown in the internal WebView
+            // (the RepoApi JavaScript bridge), and it used to add
+            // the repository immediately. Ask the user first; only
+            // a confirmed tap adds it.
+            activity.runOnUiThread {
+                AlertDialog.Builder(activity).apply {
+                    setTitle(repo.name)
+                    setMessage(activity.getString(R.string.add_repository_confirm, url))
+                    setPositiveButton(R.string.add_repository) { _, _ ->
+                        ioSafe {
+                            RepositoryManager.addRepository(data)
+                            main {
+                                showToast(
+                                    activity.getString(
+                                        R.string.player_loaded_subtitles, repo.name
+                                    ),
+                                    Toast.LENGTH_LONG
+                                )
+                            }
+                            afterRepositoryLoadedEvent.invoke(true)
+                            activity.addRepositoryDialog(data)
+                        }
+                    }
+                    setNegativeButton(R.string.dismiss, null)
+                    show().setDefaultFocus()
+                }
             }
-            afterRepositoryLoadedEvent.invoke(true)
-            addRepositoryDialog(data)
         }
     }
 
