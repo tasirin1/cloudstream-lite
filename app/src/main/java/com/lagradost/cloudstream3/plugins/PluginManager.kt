@@ -195,6 +195,17 @@ object PluginManager {
     @Volatile
     private var pluginHashCache: Map<String, String>? = null
 
+    // Audit-6 #27: set when the stored anchor map exists but
+    // cannot be parsed. pluginHashMap() then falls back to an
+    // empty map — indistinguishable from "no anchors stored" —
+    // which used to disable the load-time integrity check for
+    // EVERY online plugin with only a log line. loadPlugin
+    // refuses online plugins while this is set (fail-closed,
+    // like the digest policy in Audit-4 #5): an unreadable
+    // anchor store means nothing can be verified.
+    @Volatile
+    private var pluginHashStoreCorrupt = false
+
     private fun pluginHashMap(): Map<String, String> {
         pluginHashCache?.let { return it }
         // Audit-4 #4: initialize under the same lock storePluginHash
@@ -210,6 +221,7 @@ object PluginManager {
                     getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
                 } catch (e: Exception) {
                     logError(e)
+                    pluginHashStoreCorrupt = true
                     null
                 } ?: emptyMap()
                 pluginHashCache = hashes
@@ -758,6 +770,18 @@ object PluginManager {
         } else if (!data.isOnline) {
             Log.w(TAG, "Loading local plugin $fileName without integrity verification")
         } else {
+            // Audit-6 #27: no anchor because the anchor STORE is
+            // unreadable is not the same as no anchor because the
+            // repository never provided one — refuse the load
+            // instead of running unverifiable code.
+            if (pluginHashStoreCorrupt) {
+                Log.e(
+                    TAG,
+                    "Refusing to load online plugin $fileName: stored integrity anchors could not be read"
+                )
+                currentlyLoading = null
+                return false
+            }
             // Audit sesi 15 #11: verified download paths always store
             // an anchor, so an online plugin without one is worth a
             // visible warning instead of silent trust.
