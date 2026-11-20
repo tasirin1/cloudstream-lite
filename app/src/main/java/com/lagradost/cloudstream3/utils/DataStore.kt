@@ -273,9 +273,14 @@ object DataStore {
         return try {
             val json: String = getSharedPrefs().getString(path, null) ?: return defVal
             parseJson<T>(json)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             // Audit-3 #35: a parse failure used to return null even
             // when the caller supplied a default value.
+            // Audit-11 #11: log it, like the valueType overload
+            // does (audit #39) — this is the main read path, and
+            // a corrupt value otherwise discarded the user's
+            // data with no trace at all.
+            logError(e)
             defVal
         }
     }
