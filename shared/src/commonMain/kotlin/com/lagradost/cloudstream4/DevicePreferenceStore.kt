@@ -44,8 +44,9 @@ class BackupPreferences(preferences: PreferenceStore) {
     val visualPath = preferences.getString("backup_dir_key")
 }
 class UpdatePreferences(preferences: PreferenceStore) {
-    val apkInstaller = preferences.getInt("apk_installer_key",1)
-    val showAppUpdates = preferences.getBoolean("auto_update", true)
+    // Audit-13 #29/#30: apkInstaller ("apk_installer_key") and
+    // showAppUpdates ("auto_update") removed with their dead
+    // settings UI — nothing read either key.
     // Node id for this update
     val skipUpdate = preferences.getString("skip_update_key", "")
 }
