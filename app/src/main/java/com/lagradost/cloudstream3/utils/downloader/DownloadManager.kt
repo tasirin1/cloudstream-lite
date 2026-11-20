@@ -1609,13 +1609,13 @@ object VideoDownloadManager {
         try {
             val info =
                 context.getKey<DownloadedFileInfo>(KEY_DOWNLOAD_INFO, id.toString()) ?: return null
-            val file = info.toFile(context)
+            val file = info.toFile(context) ?: return null
 
-            // only delete the key if the file is not found
-            if (file == null || file.exists() == false) {
-                return null
-            }
-
+            // Audit-3 #38: the old code paid a separate SAF exists()
+            // provider query per episode on every stats refresh, on
+            // top of the length query below. lengthOrThrow() already
+            // throws for a missing file, which the catch turns into
+            // the same null result.
             return DownloadedFileInfoResult(
                 file.lengthOrThrow(),
                 info.totalBytes,
