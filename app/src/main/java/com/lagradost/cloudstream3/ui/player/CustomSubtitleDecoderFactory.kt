@@ -421,7 +421,16 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
                 // a continuously failing file does not re-toast
                 // per chunk, because the flag is only cleared by
                 // a success.
-                parseFailureReported = false
+                //
+                // Audit-8 #8: the reset ran UNCONDITIONALLY —
+                // including when realDecoder == null and no parse
+                // was attempted at all — so the no-parser toast
+                // above re-armed itself and repeated for every
+                // subtitle chunk of the episode. Only an actual
+                // parse counts as a success.
+                if (realDecoder != null) {
+                    parseFailureReported = false
+                }
             }
         } catch (e: Exception) {
             logError(e)
