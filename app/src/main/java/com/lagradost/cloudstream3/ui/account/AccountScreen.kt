@@ -489,7 +489,9 @@ object AccountScreen {
             ),
         ) {
             state.accounts.sorted.forEach { key ->
-                val account = state.accounts.data[key]!!
+                // Audit-4 #46: was data[key]!! — a sorted/data
+                // desync crashed composition; skip the entry.
+                val account = state.accounts.data[key] ?: return@forEach
                 Account(
                     edit = state.canEditAccount,
                     account = account,

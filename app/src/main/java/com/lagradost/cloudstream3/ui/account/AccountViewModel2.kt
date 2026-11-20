@@ -60,10 +60,12 @@ class AccountViewModel2(
             /** `adding` has will "Replace" on same key, and "Add" on a new key */
             val newAccounts = updater(accounts)
             DataStoreHelper.accounts =
-                Array(newAccounts.sorted.size) { i ->
-                    /** i -> keyIndex -> Account; As keyIndex != index */
-                    newAccounts.data[newAccounts.sorted[i]]!!
-                }
+                // Audit-4 #46: was data[...]!! per sorted key — a
+                // sorted/data desync crashed the account save.
+                // i -> keyIndex -> Account; As keyIndex != index
+                newAccounts.sorted.mapNotNull { key ->
+                    newAccounts.data[key]
+                }.toTypedArray()
             copy(accounts = newAccounts)
         }
 
