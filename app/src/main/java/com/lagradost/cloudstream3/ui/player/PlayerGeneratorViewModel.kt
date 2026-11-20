@@ -373,7 +373,13 @@ class PlayerGeneratorViewModel : ViewModel() {
             return
         }
         currentStampJob?.cancel()
-        currentStampJob = ioSafe {
+        // Audit-14 #16: this was ioSafe — a detached scope the
+        // ViewModel cannot cancel (the file has no onCleared),
+        // so leaving the player mid-fetch let the network call
+        // and the state write run against a dead ViewModel.
+        // viewModelScope dies with the ViewModel, like the
+        // other jobs in this file.
+        currentStampJob = viewModelScope.launchSafe {
             val stamps = SkipAPI.videoStamps(
                 page,
                 meta,
