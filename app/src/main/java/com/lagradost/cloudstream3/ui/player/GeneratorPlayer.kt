@@ -2212,6 +2212,13 @@ class GeneratorPlayer : FullScreenPlayer() {
 
                 // update overlay season title
                 var lastTopIndex = -1
+                // Audit-5 #23: this block reruns on every overlay
+                // open and stacked a fresh listener each time
+                // (each with its own lastTopIndex, all writing the
+                // same title). This list has no other scroll
+                // listeners, so clear before adding — same pattern
+                // as Audit-4 #15.
+                playerEpisodeList.clearOnScrollListeners()
                 playerEpisodeList.addOnScrollListener(object : RecyclerView.OnScrollListener() {
                     override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                         val layoutManager =
