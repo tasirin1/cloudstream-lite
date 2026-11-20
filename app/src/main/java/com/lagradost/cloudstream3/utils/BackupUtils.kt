@@ -121,7 +121,6 @@ object BackupUtils {
         QUEUE_KEY,
 
         // Prevent automatic plugin download after restoring backup
-        "auto_download_plugins_key2"
     )
 
     /** false if key should not be contained in backup */

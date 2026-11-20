@@ -34,8 +34,9 @@ class AppSettings internal constructor(
 
 class PluginPreferences(preferences: PreferenceStore) {
     val autoUpdate = preferences.getBoolean("auto_update_plugins", true)
-    /** Not used anymore, as a user should never auto install all plugins in a repository */
-    val autoDownload = preferences.getInt("auto_download_plugins_key2", 0)
+    // Audit-14 #44: autoDownload ("auto_download_plugins_key2")
+    // removed — its only UI was a commented-out block in
+    // SettingsUpdatesScreen, and nothing read the value.
 }
 
 class BackupPreferences(preferences: PreferenceStore) {

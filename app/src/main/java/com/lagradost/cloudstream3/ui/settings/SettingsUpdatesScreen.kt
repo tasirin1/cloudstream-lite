@@ -139,26 +139,10 @@ object SettingsUpdatesScreen : SearchableSettings {
                         preference = settings.plugins.autoUpdate,
                     ),
 
-                    /*Preference.PreferenceItem.ListPreference(
-                        title = stringResource(R.string.automatic_plugin_download),
-                        subtitle = "%s\n" + stringResource(R.string.automatic_plugin_download_summary),
-                        icon = painterResource(R.drawable.extention_renew2),
-                        entries = AutoDownloadMode.entries.map { it.value }.sorted()
-                            .zip(stringArrayResource((R.array.auto_download_plugin))).toMap(),
-                        preference = settings.plugins.autoDownload
-                    ),
-                    Preference.PreferenceItem.TextPreference(
-                        title = stringResource(R.string.update_plugins),
-                        subtitle = stringResource(R.string.update_plugins_manually),
-                        icon = painterResource(R.drawable.extention_download),
-                        onClick = {
-                            ioSafe {
-                                PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_manuallyReloadAndUpdatePlugins(
-                                    activity ?: return@ioSafe
-                                )
-                            }
-                        }
-                    ),*/
+                    // Audit-14 #44: a commented-out auto-download
+                    // ListPreference + manual-update item used to
+                    // sit here; the autoDownload preference it was
+                    // bound to was dead (see DevicePreferenceStore).
                     Preference.PreferenceItem.TextPreference(
                         title = stringResource(R.string.test_extensions),
                         subtitle = stringResource(R.string.test_extensions_summary),
