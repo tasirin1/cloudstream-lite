@@ -133,7 +133,7 @@ class CustomSubripParser : SubtitleParser {
             var alignmentTag: String? = null
             for (i in tags.indices) {
                 val tag = tags[i]
-                if (tag.matches(SUBRIP_ALIGNMENT_TAG.toRegex())) {
+                if (tag.matches(SUBRIP_ALIGNMENT_REGEX)) {
                     alignmentTag = tag
                     // Subsequent alignment tags should be ignored.
                     break
@@ -257,6 +257,11 @@ class CustomSubripParser : SubtitleParser {
         // NOTE: Android Studio's suggestion to simplify '\\}' is incorrect [internal: b/144480183].
         private val SUBRIP_TAG_PATTERN: Pattern = Pattern.compile("\\{\\\\.*?\\}")
         private const val SUBRIP_ALIGNMENT_TAG = "\\{\\\\an[1-9]\\}"
+
+        // Audit-14 #53: compiled once — toRegex() used to run
+        // for every alignment tag of every cue (thousands per
+        // subtitle file).
+        private val SUBRIP_ALIGNMENT_REGEX = SUBRIP_ALIGNMENT_TAG.toRegex()
 
         // Alignment tags for SSA V4+.
         private const val ALIGN_BOTTOM_LEFT = "{\\an1}"
