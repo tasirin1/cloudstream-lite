@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.lagradost.cloudstream3.APIHolder.apis
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKeys
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.removeKey
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.SearchResponse
@@ -31,6 +32,9 @@ data class ExpandableSearchList(
 )
 
 const val SEARCH_HISTORY_KEY = "search_history"
+
+// Audit-6 #32: history is pruned to this many newest entries.
+const val MAX_HISTORY_ENTRIES = 100
 
 class SearchViewModel : ViewModel() {
     private val _searchResponse: MutableLiveData<Resource<ExpandableSearchList>> =
@@ -97,6 +101,23 @@ class SearchViewModel : ViewModel() {
             getKey<SearchHistoryItem>(it)
         }?.sortedByDescending { it.searchedAt } ?: emptyList()
         _currentHistory.postValue(items)
+    }
+
+    // Audit-6 #32: see the write site in search().
+    private fun searchHistoryKey(query: String): String {
+        return java.security.MessageDigest.getInstance("SHA-256")
+            .digest(query.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    private fun pruneSearchHistory() {
+        val items = getKeys("$currentAccount/$SEARCH_HISTORY_KEY")?.mapNotNull {
+            getKey<SearchHistoryItem>(it)
+        }?.sortedByDescending { it.searchedAt } ?: return
+        if (items.size <= MAX_HISTORY_ENTRIES) return
+        items.drop(MAX_HISTORY_ENTRIES).forEach { item ->
+            removeKey("$currentAccount/$SEARCH_HISTORY_KEY", item.key)
+        }
     }
 
     /**
@@ -228,7 +249,14 @@ class SearchViewModel : ViewModel() {
             }
 
             if (!isQuickSearch) {
-                val key = query.hashCode().toString()
+                // Audit-6 #32: the history key was the query's
+                // 32-bit String.hashCode — collisions silently
+                // overwrote another query's entry ("Aa"/"BB"
+                // style), and entries accumulated without bound,
+                // with updateHistory() loading and sorting ALL of
+                // them on every call. Key by SHA-256 of the query
+                // and prune to the newest MAX_HISTORY_ENTRIES.
+                val key = searchHistoryKey(query)
                 setKey(
                     "$currentAccount/$SEARCH_HISTORY_KEY",
                     key,
@@ -239,6 +267,7 @@ class SearchViewModel : ViewModel() {
                         key = key,
                     )
                 )
+                pruneSearchHistory()
             }
 
             _searchResponse.postValue(Resource.Loading())
