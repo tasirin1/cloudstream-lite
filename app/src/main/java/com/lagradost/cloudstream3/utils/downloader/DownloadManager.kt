@@ -2170,11 +2170,19 @@ object VideoDownloadManager {
         val downloadQueueWrapper: DownloadQueueWrapper
     ) {
         private val TAG = "EpisodeDownloadInstance"
+        // Audit-16 #10: @Volatile like the neighbouring
+        // state flags — these handles are written on the IO
+        // thread and cancelled from the service/UI thread;
+        // without a happens-before edge cancelDownload()
+        // could read a stale null and leave the subtitle job
+        // running past cleanup.
+        @Volatile
         private var subtitleDownloadJob: Job? = null
         // Audit-15 #18: a downloadJob field used to sit here —
         // written by both launch sites, read by nothing
         // (cancellation runs through the metadata flags, not
         // the job handle). Removed with its assignments.
+        @Volatile
         private var linkLoadingJob: Job? = null
 
         /** isCompleted just means the download should not be retried.
