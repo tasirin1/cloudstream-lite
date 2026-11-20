@@ -939,14 +939,17 @@ class ResultFragmentTv : BaseFragment<FragmentResultTvBinding>(
                             // If there is no rating to display, we don't want an empty gap
                             resultMetaContentRating.width = 0
                         } else {
-                            // Audit-11 #9: restore the width — the
-                            // first emission for a title (from
-                            // search) has no rating and zeroed it,
-                            // and nothing ever set it back, so the
-                            // rating stayed invisible for the whole
-                            // screen session.
-                            resultMetaContentRating.width =
-                                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                            // Audit-12 #5: Audit-11 #9's restore
+                            // set WRAP_CONTENT through View.width,
+                            // which for this MaterialButton (a
+                            // TextView) is setWidth(int PIXELS) —
+                            // -2 px kept the measured width at 0
+                            // and the rating invisible. Undo the
+                            // zeroing on the same axis it was
+                            // applied: TextView min/max width back
+                            // to their defaults.
+                            resultMetaContentRating.minWidth = 0
+                            resultMetaContentRating.maxWidth = Int.MAX_VALUE
                         }
 
                         resultSearchButton.setOnClickListener {
