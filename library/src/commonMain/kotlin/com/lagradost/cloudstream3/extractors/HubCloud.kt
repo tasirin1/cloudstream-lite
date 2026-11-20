@@ -65,6 +65,11 @@ class HubCloud : ExtractorApi() {
 
         document.select("div.card-body h2 a.btn").amap { element ->
             val link = element.attr("href")
+            // Audit-10 #20: attr() returns "" when a server
+            // button has no href (offline/removed slot) — all
+            // branches below published it unchecked, producing
+            // dead links. Skip the button entirely.
+            if (link.isBlank()) return@amap
             val text = element.text()
 
             when {
