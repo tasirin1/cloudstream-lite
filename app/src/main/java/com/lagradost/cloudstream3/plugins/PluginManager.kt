@@ -1038,9 +1038,25 @@ object PluginManager {
             // an uppercase hex or a "SHA-256:<hex>" spelling
             // (both fine on the Compose path since Audit-6 #7)
             // mismatched the computed lowercase sha256 forever.
-            val normalizedHash = pluginHash?.trim()
-                ?.substringAfterLast(':')?.trim()?.lowercase()
-                ?.takeIf { it.isNotEmpty() }
+            //
+            // Audit-8 #5: the Audit-7 normalization stripped the
+            // algorithm prefix and produced a BARE hex, but both
+            // consumers compare against RepositoryManager.sha256()
+            // which returns "sha256-<hex>" — so colon spellings
+            // ("sha256:<hex>") could NEVER match and every plugin
+            // from such a repository failed to install/update on
+            // this path forever. Normalize to the canonical
+            // "sha256-<hex>" form the consumers expect; anything
+            // that is not a 64-char hex passes through unchanged
+            // (and keeps failing closed, as before).
+            val normalizedHash = pluginHash?.trim()?.lowercase()?.let { raw ->
+                val hex = raw.substringAfterLast(':').substringAfterLast('-').trim()
+                if (hex.length == 64 && hex.all { it in '0'..'9' || it in 'a'..'f' }) {
+                    "sha256-$hex"
+                } else {
+                    raw.takeIf { it.isNotEmpty() }
+                }
+            }
             // The plugin file needs to be salted with the repository url hash as to allow multiple repositories with the same internal plugin names
             val newFile = downloadPluginToFile(activity, pluginUrl, file, normalizedHash) ?: return false
 
