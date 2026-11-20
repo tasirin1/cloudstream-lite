@@ -168,6 +168,18 @@ class SettingsAccount : BasePreferenceFragmentCompat(), BiometricCallback {
 
             val dialog = builder.create()
 
+            // Audit-6 #15: the CountDownTimer below kept polling
+            // api.login until server-side expiry even after the
+            // user cancelled the dialog — it was never stored, so
+            // nothing could cancel it; it held the activity and
+            // binding alive and could pop an "authenticated" toast
+            // from a dead dialog. Cancel it on any dismiss.
+            var pinTimer: CountDownTimer? = null
+            dialog.setOnDismissListener {
+                pinTimer?.cancel()
+                pinTimer = null
+            }
+
             ioSafe {
                 val pinCodeData = try {
                     api.pinRequest()
@@ -229,7 +241,7 @@ class SettingsAccount : BasePreferenceFragmentCompat(), BiometricCallback {
                     val expirationMillis =
                         pinCodeData.expiresIn.times(1000).toLong()
 
-                    object : CountDownTimer(expirationMillis, 1000) {
+                    pinTimer = object : CountDownTimer(expirationMillis, 1000) {
                         override fun onTick(millisUntilFinished: Long) {
                             val secondsUntilFinished =
                                 millisUntilFinished.div(1000).toInt()
@@ -263,7 +275,8 @@ class SettingsAccount : BasePreferenceFragmentCompat(), BiometricCallback {
                             showToast(R.string.device_pin_expired_message)
                             dialog.dismissSafe(activity)
                         }
-                    }.start()
+                    }
+                    pinTimer?.start()
                 }
             }
         }
