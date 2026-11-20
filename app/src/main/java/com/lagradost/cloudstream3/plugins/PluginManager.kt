@@ -157,6 +157,11 @@ object PluginManager {
 
     suspend fun deleteRepositoryData(repositoryPath: String) {
         lock.withLock {
+            // Audit-7 #6: the removed plugins' anchors go with
+            // them (see deletePlugin).
+            val removed = getPluginsOnline().filter {
+                it.filePath.contains(repositoryPath)
+            }
             val plugins = getPluginsOnline().filter {
                 !it.filePath.contains(repositoryPath)
             }
@@ -165,6 +170,7 @@ object PluginManager {
                 if (file.exists()) file.deleteRecursively()
             }
             setKey(PLUGINS_KEY, plugins)
+            removed.forEach { removePluginHash(it.filePath) }
         }
     }
 
@@ -1011,7 +1017,18 @@ object PluginManager {
             val newFile = downloadPluginToFile(activity, pluginUrl, file, pluginHash) ?: return false
 
             // Fork fix (audit #9): anchor for the load-time check.
-            if (pluginHash != null) storePluginHash(newFile.absolutePath, pluginHash)
+            if (pluginHash != null) {
+                storePluginHash(newFile.absolutePath, pluginHash)
+            } else {
+                // Audit-7 #6: this download was accepted WITHOUT
+                // a manifest hash, so any anchor stored for the
+                // previous file at this path is stale — keeping
+                // it made loadPlugin compare the new file against
+                // the old file's hash and reject it forever (the
+                // repo dropping fileHash from its manifest bricked
+                // the plugin at every startup). Clear it.
+                removePluginHash(newFile.absolutePath)
+            }
 
             val data = PluginData(
                 internalName,
@@ -1046,6 +1063,11 @@ object PluginManager {
             if (File(file.absolutePath).delete()) {
                 unloadPlugin(file.absolutePath)
                 list.forEach { deletePluginData(it) }
+                // Audit-7 #6: drop the deleted plugin's anchor
+                // too — orphaned anchors accumulated forever and
+                // could later mismatch a different file installed
+                // at the same path.
+                removePluginHash(file.absolutePath)
                 return true
             }
             false
