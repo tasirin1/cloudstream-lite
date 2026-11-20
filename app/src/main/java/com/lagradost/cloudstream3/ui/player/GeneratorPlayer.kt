@@ -1497,6 +1497,14 @@ class GeneratorPlayer : FullScreenPlayer() {
             }
         } catch (e: Exception) {
             logError(e)
+            // Audit-14 #18: the Pause at the top already
+            // happened; if building the dialog threw before it
+            // could show, its dismiss listener (the only resume
+            // path) never runs — resume here so playback is not
+            // left silently frozen.
+            if (isPlaying) {
+                player.handleEvent(CSPlayerEvent.Play)
+            }
         }
     }
 
@@ -1657,6 +1665,14 @@ class GeneratorPlayer : FullScreenPlayer() {
             }
         } catch (e: Exception) {
             logError(e)
+            // Audit-14 #18: the Pause at the top already
+            // happened; if building the dialog threw before it
+            // could show, its dismiss listener (the only resume
+            // path) never runs — resume here so playback is not
+            // left silently frozen.
+            if (isPlaying) {
+                player.handleEvent(CSPlayerEvent.Play)
+            }
         }
     }
 
