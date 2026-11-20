@@ -32,7 +32,7 @@ import com.lagradost.cloudstream3.newTvSeriesLoadResponse
 import com.lagradost.cloudstream3.newTvSeriesSearchResponse
 import com.lagradost.cloudstream3.runAllAsync
 import com.lagradost.cloudstream3.toNewSearchResponseList
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -306,15 +306,20 @@ open class TmdbProvider : MainAPI() {
     open suspend fun fetchContentRating(id: Int?, country: String): String? {
         id ?: return null
         // Try TV content ratings first
-        val tvRating = parseJson<TmdbContentRatings>(
+        // Audit-9 #10: every parseJson in this file used to
+        // throw a raw SerializationException on a non-JSON TMDB
+        // response (rate-limit / error page) — all sites now use
+        // tryParseJson with a per-site fallback, like MyDramaList
+        // in Audit-8 #20.
+        val tvRating = tryParseJson<TmdbContentRatings>(
             getApi("/tv/$id/content_ratings")
-        ).results?.firstOrNull { it.country == country }?.rating
+        )?.results?.firstOrNull { it.country == country }?.rating
         if (tvRating != null) return tvRating
 
         // Fall back to movie release dates
-        return parseJson<TmdbReleaseDates>(
+        return tryParseJson<TmdbReleaseDates>(
             getApi("/movie/$id/release_dates")
-        ).results?.firstOrNull { it.country == country }
+        )?.results?.firstOrNull { it.country == country }
             ?.releaseDates?.firstOrNull { !it.certification.isNullOrBlank() }
             ?.certification
     }
@@ -326,9 +331,9 @@ open class TmdbProvider : MainAPI() {
 
         for (season in validSeasons) {
             val seasonNum = season.seasonNumber ?: continue
-            val fullSeason = parseJson<TmdbSeasonDetail>(
+            val fullSeason = tryParseJson<TmdbSeasonDetail>(
                 getApi("/tv/$id/season/$seasonNum", mapOf("append_to_response" to "external_ids"))
-            )
+            ) ?: continue
 
             fullSeason.episodes?.forEach { episode ->
                 episodes += newEpisode(
@@ -411,24 +416,24 @@ open class TmdbProvider : MainAPI() {
         var topSeries: List<TvSeriesSearchResponse> = listOf()
         runAllAsync(
             {
-                discoverMovies = parseJson<TmdbPageResult>(
+                discoverMovies = tryParseJson<TmdbPageResult>(
                     getApi("/discover/movie", mapOf("page" to "$page"))
-                ).results?.map { it.toSearchResponse() as MovieSearchResponse } ?: listOf()
+                )?.results?.map { it.toSearchResponse() as MovieSearchResponse } ?: listOf()
             },
             {
-                discoverSeries = parseJson<TmdbPageResult>(
+                discoverSeries = tryParseJson<TmdbPageResult>(
                     getApi("/discover/tv", mapOf("page" to "$page"))
-                ).results?.map { it.toSearchResponse() as TvSeriesSearchResponse } ?: listOf()
+                )?.results?.map { it.toSearchResponse() as TvSeriesSearchResponse } ?: listOf()
             },
             {
-                topMovies = parseJson<TmdbPageResult>(
+                topMovies = tryParseJson<TmdbPageResult>(
                     getApi("/movie/top_rated", mapOf("page" to "$page", "language" to "en-US", "region" to "US"))
-                ).results?.map { it.toSearchResponse() as MovieSearchResponse } ?: listOf()
+                )?.results?.map { it.toSearchResponse() as MovieSearchResponse } ?: listOf()
             },
             {
-                topSeries = parseJson<TmdbPageResult>(
+                topSeries = tryParseJson<TmdbPageResult>(
                     getApi("/tv/top_rated", mapOf("page" to "$page", "language" to "en-US"))
-                ).results?.map { it.toSearchResponse() as TvSeriesSearchResponse } ?: listOf()
+                )?.results?.map { it.toSearchResponse() as TvSeriesSearchResponse } ?: listOf()
             },
         )
 
@@ -459,7 +464,7 @@ open class TmdbProvider : MainAPI() {
 
         return if (useMetaLoadResponse) {
             if (isTvSeries) {
-                val detail = parseJson<TmdbTvDetail>(
+                val detail = tryParseJson<TmdbTvDetail>(
                     getApi(
                         "/tv/$id",
                         mapOf(
@@ -467,10 +472,10 @@ open class TmdbProvider : MainAPI() {
                             "append_to_response" to "external_ids,videos,credits,recommendations,similar,content_ratings",
                         )
                     )
-                )
+                ) ?: throw ErrorLoadingException("Failed to load TV details")
                 detail.toLoadResponse()
             } else {
-                val detail = parseJson<TmdbMovieDetail>(
+                val detail = tryParseJson<TmdbMovieDetail>(
                     getApi(
                         "/movie/$id",
                         mapOf(
@@ -478,33 +483,32 @@ open class TmdbProvider : MainAPI() {
                             "append_to_response" to "external_ids,videos,credits,recommendations,similar,release_dates",
                         )
                     )
-                )
+                ) ?: throw ErrorLoadingException("Failed to load movie details")
                 detail.toLoadResponse()
             }
         } else {
             loadFromTmdb(id)?.let { return it }
             if (isTvSeries) {
-                val externalIds = parseJson<TmdbIds>(getApi("/tv/$id/external_ids"))
-                val imdbId = externalIds.imdbId
+                val imdbId = tryParseJson<TmdbIds>(getApi("/tv/$id/external_ids"))?.imdbId
                 if (imdbId != null) {
                     val fromImdb = loadFromImdb(imdbId)
                     if (fromImdb != null) return fromImdb
                 }
-                val seasons = parseJson<TmdbTvDetail>(getApi("/tv/$id")).seasons ?: listOf()
+                val seasons = tryParseJson<TmdbTvDetail>(getApi("/tv/$id"))?.seasons ?: listOf()
                 if (imdbId != null) {
                     loadFromImdb(imdbId, seasons) ?: loadFromTmdb(id, seasons)
                 } else {
                     loadFromTmdb(id, seasons)
                 }
             } else {
-                val imdbId = parseJson<TmdbMovieDetail>(getApi("/movie/$id")).imdbId
+                val imdbId = tryParseJson<TmdbMovieDetail>(getApi("/movie/$id"))?.imdbId
                 if (imdbId != null) loadFromImdb(imdbId) else null
             }
         }
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList? {
-        return parseJson<TmdbMultiResult>(
+        return tryParseJson<TmdbMultiResult>(
             getApi(
                 "/search/multi",
                 mapOf(
@@ -514,7 +518,7 @@ open class TmdbProvider : MainAPI() {
                     "include_adult" to "$includeAdult",
                 )
             )
-        ).results?.mapNotNull {
+        )?.results?.mapNotNull {
             if (it.mediaType == "person") null else it.toSearchResponse()
         }?.toNewSearchResponseList()
     }
