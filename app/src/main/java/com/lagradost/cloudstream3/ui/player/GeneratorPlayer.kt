@@ -250,12 +250,20 @@ class GeneratorPlayer : FullScreenPlayer() {
     // episode list) recomputes.
     private var allMetaSource: List<*>? = null
     private var allMetaCache: List<ResultEpisode>? = null
+    private var allMetaCacheTimeMs: Long = 0
 
     private val allMeta: List<ResultEpisode>?
         get() {
             val source = viewModel.state.generatorState?.allMeta
-            if (source !== allMetaSource) {
+            // Audit-15 #8: the identity-only key froze the
+            // refreshed watch positions for the whole session
+            // (the source list is stable per generator load).
+            // A short TTL keeps the burst-cheap property the
+            // memo exists for while bounding staleness.
+            val nowMs = android.os.SystemClock.uptimeMillis()
+            if (source !== allMetaSource || nowMs - allMetaCacheTimeMs > 5_000) {
                 allMetaSource = source
+                allMetaCacheTimeMs = nowMs
                 allMetaCache = source?.filterIsInstance<ResultEpisode>()
                     ?.map { episode ->
                         // Refresh all the episodes watch duration
