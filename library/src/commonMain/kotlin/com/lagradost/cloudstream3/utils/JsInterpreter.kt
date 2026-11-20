@@ -842,7 +842,11 @@ private class JsExecutionLimitExceeded(message: String) : Throwable(message)
 private fun toInt32(v: Any?): Int {
     val n = toNumber(v)
     if (n.isNaN() || n.isInfinite() || n == 0.0) return 0
-    val wrapped = ((n % 4294967296.0) + 4294967296.0) % 4294967296.0
+    // Audit-17 #4: truncate the fraction FIRST (JS
+    // ToIntegerOrInfinity), then wrap — Audit-16 #3 wrapped
+    // first, so fractions just under a wrap boundary landed
+    // one off (e.g. 2147483648.5 -> -2147483647, JS -2147483648).
+    val wrapped = ((truncate(n) % 4294967296.0) + 4294967296.0) % 4294967296.0
     return if (wrapped >= 2147483648.0) (wrapped - 4294967296.0).toInt()
     else wrapped.toInt()
 }
@@ -850,7 +854,7 @@ private fun toInt32(v: Any?): Int {
 private fun toUint32(v: Any?): Long {
     val n = toNumber(v)
     if (n.isNaN() || n.isInfinite() || n == 0.0) return 0L
-    return (((n % 4294967296.0) + 4294967296.0) % 4294967296.0).toLong()
+    return (((truncate(n) % 4294967296.0) + 4294967296.0) % 4294967296.0).toLong()
 }
 
 // Audit-16 #8: Double.toLong() saturates at 2^63, so
