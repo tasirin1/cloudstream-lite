@@ -132,9 +132,10 @@ class HomeViewModel : ViewModel() {
 
     private var currentShuffledList: List<SearchResponse> = listOf()
 
-    private fun autoloadRepo(): APIRepository {
-        return APIRepository(apis.withLock { apis.first { it.hasMainPage } })
-    }
+    // Audit-5 #41: autoloadRepo() was removed — its only caller
+    // was commented out. (The audit's other two candidates here,
+    // AccountAdapter and AccountSelectLinearItemDecoration, were
+    // verified LIVE via showAccountSelectLinear() and kept.)
 
     private val _availableWatchStatusTypes =
         MutableLiveData<Pair<Set<WatchType>, Set<WatchType>>>()
