@@ -250,6 +250,16 @@ object M3u8Helper2 {
                     return null
                 } catch (e: CancellationException) {
                     return null
+                } catch (e: ErrorLoadingException) {
+                    // Audit-4 #20: permanent content failures (no
+                    // data, ASCII error page) do not fix themselves
+                    // within a few seconds — fail fast instead of
+                    // burning the full retry budget per segment.
+                    return null
+                } catch (e: Error) {
+                    // Audit-4 #20: never retry/swallow Errors such
+                    // as OutOfMemoryError.
+                    throw e
                 } catch (t: Throwable) {
                     delay(failDelay)
                 }
@@ -269,6 +279,11 @@ object M3u8Helper2 {
                     return null
                 } catch (e: CancellationException) {
                     return null
+                } catch (e: ErrorLoadingException) {
+                    // Audit-4 #20: see resolveLinkWhileSafe.
+                    return null
+                } catch (e: Error) {
+                    throw e
                 } catch (t: Throwable) {
                     delay(failDelay)
                 }
