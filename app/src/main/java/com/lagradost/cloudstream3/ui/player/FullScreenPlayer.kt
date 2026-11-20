@@ -88,7 +88,9 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
     // was never set to true anywhere, so the episodes-button
     // fade in toggleLock() was dead. isThereEpisodes() is
     // the live predicate and is used there now.
-        private set
+    // Audit-15 #11: that removal also orphaned the flag's
+    // `private set` accessor, which then attached itself to
+    // metadataVisibilityToken above — removed.
 
     /**
      * Default profile 1
