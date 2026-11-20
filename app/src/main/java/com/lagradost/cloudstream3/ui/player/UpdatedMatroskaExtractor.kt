@@ -3189,8 +3189,15 @@ class UpdatedMatroskaExtractor private constructor(
                 }
 
                 for (i in 0 until cuePointsSize - 1) {
-                    sizes[i] = (offsets[i + 1] - offsets[i]).toInt()
-                    durationsUs[i] = timesUs[i + 1] - timesUs[i]
+                    // Audit-14 #58: cues are sorted by TIME, and
+                    // a crafted file's cluster positions need not
+                    // be monotonic — the raw difference went
+                    // negative, and the Long->Int cast wrapped
+                    // for spans over 2 GB, corrupting every
+                    // downstream seek computation. Clamp both.
+                    sizes[i] = (offsets[i + 1] - offsets[i])
+                        .coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+                    durationsUs[i] = (timesUs[i + 1] - timesUs[i]).coerceAtLeast(0L)
                 }
 
                 // Start from the last cue point and move backward until a valid duration is found.
@@ -3200,9 +3207,11 @@ class UpdatedMatroskaExtractor private constructor(
                 }
 
                 // Calculate sizes and durations for the last valid index
+                // Audit-14 #58: same clamping as above.
                 sizes[lastValidIndex] =
-                    (segmentContentPosition + segmentContentSize - offsets[lastValidIndex]).toInt()
-                durationsUs[lastValidIndex] = durationUs - timesUs[lastValidIndex]
+                    (segmentContentPosition + segmentContentSize - offsets[lastValidIndex])
+                        .coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+                durationsUs[lastValidIndex] = (durationUs - timesUs[lastValidIndex]).coerceAtLeast(0L)
 
                 // If trailing cue points were found, truncate the arrays to the last valid index.
                 if (lastValidIndex < cuePointsSize - 1) {
