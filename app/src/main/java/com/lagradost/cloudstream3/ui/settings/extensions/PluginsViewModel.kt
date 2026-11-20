@@ -36,17 +36,19 @@ class PluginsViewModel : ViewModel() {
     /** plugins is an unaltered list of plugins */
     private var plugins: List<PluginViewData> = emptyList()
         set(value) {
-            // Also set all the plugin languages for easier filtering
-            value.map { pluginViewData ->
+            // Also set all the plugin languages for easier filtering.
+            // Audit-6 #31: rebuild the set from the new list
+            // instead of only adding to it — the languages of
+            // uninstalled/removed plugins used to stay in the
+            // language filter for the whole session.
+            pluginLanguages = value.map { pluginViewData ->
                 val language = pluginViewData.pluginWrapper.plugin.language?.lowercase()
-                pluginLanguages.add(
-                    when {
-                        language.isNullOrBlank() -> "none"
-                        else -> language.lowercase()
-                    }
-                )
+                when {
+                    language.isNullOrBlank() -> "none"
+                    else -> language
+                }
                 // not sorting as most likely this is a language tag instead of name
-            }
+            }.toMutableSet()
             field = value
         }
     var pluginLanguages = mutableSetOf<String>() // set to avoid duplicates
