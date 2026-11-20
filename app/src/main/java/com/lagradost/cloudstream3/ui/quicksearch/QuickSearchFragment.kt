@@ -42,6 +42,7 @@ import com.lagradost.cloudstream3.utils.AppContextUtils.filterSearchResultByFilm
 import com.lagradost.cloudstream3.utils.AppContextUtils.isRecyclerScrollable
 import com.lagradost.cloudstream3.utils.AppContextUtils.ownShow
 import com.lagradost.cloudstream3.utils.Coroutines.ioSafe
+import com.lagradost.cloudstream3.utils.UIHelper.dismissSafe
 import com.lagradost.cloudstream3.utils.UIHelper.fixSystemBarsPadding
 import com.lagradost.cloudstream3.utils.UIHelper.getSpanCount
 import com.lagradost.cloudstream3.utils.UIHelper.hideKeyboard
@@ -116,6 +117,12 @@ class QuickSearchFragment : BaseFragment<QuickSearchBinding>(
     }
 
     override fun onDestroy() {
+        // Audit-6 #13: dismiss the expanded-list sheet — it was
+        // never even hidden here, and its span listener leaves
+        // the static configEvent only via the OnDismissListener
+        // (see SearchFragment's Audit-6 #13 note).
+        bottomSheetDialog?.dismissSafe()
+        bottomSheetDialog = null
         super.onDestroy()
         clickCallback = null
     }

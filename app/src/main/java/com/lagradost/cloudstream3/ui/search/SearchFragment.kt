@@ -147,6 +147,20 @@ class SearchFragment : BaseFragment<FragmentSearchBinding>(
         super.onDestroyView()
     }
 
+    override fun onDestroy() {
+        // Audit-6 #13: the same leak HomeFragment's Audit-5 #14
+        // fixed — the expanded-list dialog is only hidden in
+        // onDestroyView, and its span listener leaves the static
+        // configEvent only via the OnDismissListener that hide()
+        // never fires. This fragment had no onDestroy at all, so
+        // destroying it with the sheet open leaked the listener
+        // (and the captured binding hierarchy) for the process
+        // lifetime.
+        bottomSheetDialog?.dismissSafe()
+        bottomSheetDialog = null
+        super.onDestroy()
+    }
+
     override fun onResume() {
         super.onResume()
         searchViewModel.clearSuggestions()
