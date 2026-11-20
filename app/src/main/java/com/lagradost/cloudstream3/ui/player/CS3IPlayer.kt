@@ -341,6 +341,10 @@ class CS3IPlayer : IPlayer {
         } else {
             currentSubtitles = subtitle
             playbackPosition = 0
+            // Audit-19 #4: the window index too — a stale
+            // index >= 1 from a playlist episode made the
+            // initial seekTo throw for a single-file episode.
+            currentWindow = 0
         }
 
         startPosition?.let {
@@ -2337,8 +2341,15 @@ class CS3IPlayer : IPlayer {
         releasePlayer(false)
         currentLink?.let {
             loadOnlinePlayer(context, it)
+            // Audit-19 #1: reloadPlayer bypasses loadPlayer,
+            // so the Audit-18 #2 stamp re-apply never fired
+            // here — and this is the path manual subtitle
+            // selection takes. A reload is always the same
+            // episode.
+            reapplyTimeStampsIfSameEpisode(true)
         } ?: currentDownloadedFile?.let {
             loadOfflinePlayer(context, it)
+            reapplyTimeStampsIfSameEpisode(true)
         }
     }
 
