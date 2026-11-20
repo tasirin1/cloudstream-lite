@@ -2360,13 +2360,19 @@ class ResultViewModel2 : ViewModel() {
         return ResumeWatchingStatus(progress = progress, isMovie = isMovie, result = episode)
     }
 
-    private fun loadTrailers(loadResponse: LoadResponse) = ioSafe {
-        _trailers.postValue(
-            getTrailers(
-                loadResponse,
-                3
-            )
-        ) // we dont want to fetch too many trailers
+    // Audit-9 #15: launch in the CALLER's scope so the trailer
+    // fetch is a child of the load job — the old detached ioSafe
+    // launch escaped Audit-8 #11's cancellation, letting a
+    // previous title's trailers land on the new title's page.
+    private fun CoroutineScope.loadTrailers(loadResponse: LoadResponse) {
+        launchSafe {
+            _trailers.postValue(
+                getTrailers(
+                    loadResponse,
+                    3
+                )
+            ) // we dont want to fetch too many trailers
+        }
     }
 
     private suspend fun getTrailers(
