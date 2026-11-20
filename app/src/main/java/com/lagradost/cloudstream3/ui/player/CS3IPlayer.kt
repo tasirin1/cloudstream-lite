@@ -133,6 +133,11 @@ const val toleranceAfterUs = 300_000L
 class CS3IPlayer : IPlayer {
     private var playerListener: Player.Listener? = null
 
+    // Audit-5 #25: per-instance subtitle state (was companion —
+    // see the note at the old declaration site).
+    private var currentSubtitleDecoder: CustomSubtitleDecoderFactory? = null
+    private var currentTextRenderer: TextRenderer? = null
+
     // Audit-5 #24: the one-shot Play-from-IDLE resume listener,
     // kept so a new Play can replace (not stack) a previous one
     // whose STATE_READY never arrived.
@@ -1044,8 +1049,13 @@ class CS3IPlayer : IPlayer {
             return trackSelector
         }
 
-        private var currentSubtitleDecoder: CustomSubtitleDecoderFactory? = null
-        private var currentTextRenderer: TextRenderer? = null
+        // Audit-5 #25: currentSubtitleDecoder/currentTextRenderer
+        // used to be declared here in the companion — process-wide
+        // state shared by every CS3IPlayer instance, so a second
+        // live player overwrote the first one's decoder/renderer
+        // and getSubtitleCues()/offset refresh acted on the wrong
+        // player. They are instance fields now (declared at class
+        // level); all readers/writers are instance code.
     }
 
     private fun getCurrentTimestamp(writePosition: Long? = null): VideoSkipStamp? {
