@@ -624,7 +624,6 @@ class CS3IPlayer : IPlayer {
 
     private fun releasePlayer(saveTime: Boolean = true) {
         Log.i(TAG, "releasePlayer")
-        eventLooperIndex.incrementAndGet()
         if (saveTime)
             updatedTime()
 
@@ -1123,14 +1122,9 @@ class CS3IPlayer : IPlayer {
         }
     }
 
-    // we want to push metadata when loading torrents, so we just set up a looper that loops until
-    // the index changes, this way only 1 looper is active at a time, and modifying eventLooperIndex
-    // will kill any active loopers
-    // Fork fix (audit #24): the counter is bumped from IO coroutines and
-    // releasePlayer() at once; a plain Int made the read-modify-write
-    // race, so two loopers could share an index (zombie looper) or the
-    // new one died instantly. AtomicInteger makes each claim unique.
-    private val eventLooperIndex = java.util.concurrent.atomic.AtomicInteger(0)
+    // Audit-4 #26: eventLooperIndex used to live here — it only
+    // ever fed the torrent metadata looper, which was removed
+    // with the torrent engine; the counter had no readers left.
 
     private fun buildExoPlayer(
         context: Context,
