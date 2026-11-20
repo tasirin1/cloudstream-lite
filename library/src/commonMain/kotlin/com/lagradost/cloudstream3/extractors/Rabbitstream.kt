@@ -202,7 +202,15 @@ open class Rabbitstream : ExtractorApi() {
         val ivBytes = decryptionKey.copyOfRange(32, decryptionKey.size)
 
         val aesKey = aesCbc.keyDecoder().decodeFromByteArray(AES.Key.Format.RAW, keyBytes)
-        val decryptedData = aesKey.cipher(padding = true).decryptWithIv(ivBytes, encrypted)
+        // Audit-9 #9: a valid-base64 garbage payload passes the
+        // decode + length guards above but throws in the decrypt
+        // itself (block alignment / padding) — surface it as the
+        // ErrorLoadingException this function uses everywhere else.
+        val decryptedData = try {
+            aesKey.cipher(padding = true).decryptWithIv(ivBytes, encrypted)
+        } catch (e: Exception) {
+            throw ErrorLoadingException("Failed to decrypt source URL")
+        }
         return decryptedData.decodeToString()
     }
 
