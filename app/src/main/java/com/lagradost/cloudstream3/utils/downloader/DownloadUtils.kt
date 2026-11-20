@@ -170,7 +170,19 @@ object DownloadUtils {
         context?.let { ctx ->
             val fileName = getFileName(ctx, meta)
             val folder = getFolder(meta.type ?: return, meta.mainName)
+            // Audit-20 #6: the job used to launch BEFORE it
+            // was registered, so a delete landing in that gap
+            // cancelled nothing and the subtitle file
+            // resurrected after the episode was deleted. The
+            // job now waits for its registration and aborts
+            // if a cancel removed it again in the meantime.
+            val registration = kotlinx.coroutines.CompletableDeferred<Job>()
             val job = ioSafe {
+                val self = registration.await()
+                val stillRegistered = synchronized(singleSubtitleJobs) {
+                    singleSubtitleJobs[meta.id]?.contains(self) == true
+                }
+                if (!stillRegistered) return@ioSafe
                 downloadSubtitle(
                     ctx,
                     ExtractorSubtitleLink(link.name, link.url, "", link.headers),
@@ -181,6 +193,7 @@ object DownloadUtils {
             synchronized(singleSubtitleJobs) {
                 singleSubtitleJobs.getOrPut(meta.id) { mutableSetOf() }.add(job)
             }
+            registration.complete(job)
             job.invokeOnCompletion {
                 synchronized(singleSubtitleJobs) {
                     val jobs = singleSubtitleJobs[meta.id]
