@@ -503,13 +503,13 @@ class GeneratorPlayer : FullScreenPlayer() {
         isPlayerActive.set(true)
         // manage UI
         binding?.playerLoadingOverlay?.isVisible = false
-        val isTorrent =
-            link.first?.type == ExtractorLinkType.MAGNET || link.first?.type == ExtractorLinkType.TORRENT
-
+        // Audit-3 #27: the download-header toggle only existed for
+        // torrent playback, which this fork removed (torrent links
+        // end in torrent_not_supported), so it now stays hidden.
         playerBinding?.downloadHeader?.isVisible = false
-        playerBinding?.downloadHeaderToggle?.isVisible = isTorrent
+        playerBinding?.downloadHeaderToggle?.isVisible = false
         if (!isLayout(PHONE)) {
-            playerBinding?.downloadBothHeader?.isVisible = isTorrent
+            playerBinding?.downloadBothHeader?.isVisible = false
         }
 
         showDownloadProgress(DownloadEvent(0, 0, 0, null))
