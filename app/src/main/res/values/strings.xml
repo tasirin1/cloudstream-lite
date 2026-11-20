@@ -504,6 +504,8 @@
     <string name="setup_done">Done</string>
     <string name="extensions">Extensions</string>
     <string name="add_repository">Add repository</string>
+    <string name="local_plugins_pref">Load local plugins</string>
+    <string name="local_plugins_pref_summary">Load .cs3 plugins placed in the Cloudstream3/plugins folder on shared storage. Only enable this if you put them there yourself: any app with storage access can write to that folder, and local plugins run with full app access.</string>
     <string name="repository_name_hint">Repository name (Optional)</string>
     <string name="repository_url_hint">Repository URL or Shortcode</string>
     <string name="plugin_loaded">Plugin Loaded</string>

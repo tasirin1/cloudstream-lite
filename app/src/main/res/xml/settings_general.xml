@@ -115,4 +115,14 @@
         </Preference>
 
     </PreferenceCategory>
+    <PreferenceCategory android:title="@string/pref_category_extensions">
+
+        <SwitchPreference
+            android:defaultValue="false"
+            android:key="@string/local_plugins_enabled_key"
+            android:summary="@string/local_plugins_pref_summary"
+            android:title="@string/local_plugins_pref" />
+
+    </PreferenceCategory>
+
 </PreferenceScreen>

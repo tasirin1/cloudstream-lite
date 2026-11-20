@@ -598,6 +598,30 @@ object PluginManager {
         }
 
         val sortedPlugins = dir.listFiles()
+
+        // Audit-3 #13: local plugins are code from shared storage
+        // executed with full app access and no integrity check, and
+        // any app with storage permission can write into this
+        // folder. They now load only when the user explicitly opted
+        // in (Settings > General > Extensions, default off).
+        if (!sortedPlugins.isNullOrEmpty()) {
+            val localEnabled = try {
+                androidx.preference.PreferenceManager
+                    .getDefaultSharedPreferences(context)
+                    .getBoolean("local_plugins_enabled", false)
+            } catch (e: Exception) {
+                logError(e)
+                false
+            }
+            if (!localEnabled) {
+                Log.w(
+                    TAG,
+                    "Skipping ${sortedPlugins.size} local plugin(s): local plugins are disabled"
+                )
+                loadedLocalPlugins = true
+                return
+            }
+        }
         // Always sort plugins alphabetically for reproducible results
 
         Log.d(TAG, "Files in '${LOCAL_PLUGINS_PATH}' folder: ${sortedPlugins?.size}")
