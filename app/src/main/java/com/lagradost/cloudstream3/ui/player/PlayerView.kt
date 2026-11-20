@@ -669,6 +669,16 @@ class PlayerView @JvmOverloads constructor(
             exoPlayerView?.setShowMultiWindowTimeBar(true)
             exoPlayerView?.player = player
             exoPlayerView?.performClick()
+        } else if (player == null) {
+            // Audit-15 #22: releasePlayer() announces null,
+            // but this handler only forwarded it — the media
+            // session stayed bound to the released player
+            // (media controls pointing at a dead player for
+            // the whole link-loading window) and the view
+            // kept its player reference.
+            mMediaSession?.release()
+            mMediaSession = null
+            exoPlayerView?.player = null
         }
         callbacks?.playerUpdated(player)
     }
