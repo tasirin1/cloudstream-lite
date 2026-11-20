@@ -231,6 +231,15 @@ object AndroidRepositoryManager : RepositoryManager {
             )
         }
 
+        // Audit-3 #1: anchor BEFORE load, like the legacy path
+        // (PluginManager.downloadPlugin). Storing after load made
+        // loadPlugin compare the new file against the previous
+        // version's anchor, so every update via this screen failed
+        // with "Unable to load plugin" and stayed broken.
+        if (anchorHash != null) {
+            PluginManager.storePluginHash(file.absolutePath, anchorHash)
+        }
+
         val result = PluginManager.loadPlugin(
             context = context,
             file = file,
@@ -244,10 +253,6 @@ object AndroidRepositoryManager : RepositoryManager {
         )
         if (!result) {
             throw ErrorLoadingException("Unable to load plugin ${source.internalName}")
-        }
-
-        if (anchorHash != null) {
-            PluginManager.storePluginHash(file.absolutePath, anchorHash)
         }
 
         return@withContext file.absolutePath
