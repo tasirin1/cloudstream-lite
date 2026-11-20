@@ -154,8 +154,17 @@ object JwPlayerHelper {
     }
 
     private fun String.addMarks(vararg strings: String): String {
+        // Audit-7 #18: only quote the word where it appears as
+        // an object KEY (after '{' or ',', before ':'). The old
+        // pattern replaced the bare word EVERYWHERE in the JSON
+        // text, including inside string values — a video URL
+        // containing /file/ or /label/ was rewritten to
+        // /"file"/ and the whole source list failed to parse.
         return strings.fold(this) { accumulator, str ->
-            accumulator.replace(Regex("\"?$str\"?"), "\"$str\"")
+            accumulator.replace(
+                Regex("([{,]\\s*)\"?$str\"?(\\s*:)"),
+                "$1\"$str\"$2"
+            )
         }
     }
 

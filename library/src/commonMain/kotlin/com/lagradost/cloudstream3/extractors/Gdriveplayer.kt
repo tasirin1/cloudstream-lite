@@ -77,7 +77,11 @@ open class Gdriveplayer : ExtractorApi() {
     }
 
     private fun String.addMarks(str: String): String {
-        return this.replace(Regex("\"?$str\"?"), "\"$str\"")
+        // Audit-7 #18: key-position only — see JWPlayerHelper.
+        return this.replace(
+            Regex("([{,]\\s*)\"?$str\"?(\\s*:)"),
+            "$1\"$str\"$2"
+        )
     }
 
     override suspend fun getUrl(
