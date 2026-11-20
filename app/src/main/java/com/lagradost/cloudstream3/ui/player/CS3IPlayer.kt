@@ -696,6 +696,8 @@ class CS3IPlayer : IPlayer {
         drmSessionManager = null
         // Audit-7 #28: no timestamp messages outlive the player.
         cancelTimestampMessages()
+        // Audit-17 #3: nor do the percentage messages.
+        cancelListeningPercentageMessages()
         event(PlayerAttachedEvent(null))
         //simpleCache = null
     }
@@ -2050,11 +2052,21 @@ class CS3IPlayer : IPlayer {
     private val timestampMessages =
         mutableListOf<androidx.media3.exoplayer.PlayerMessage>()
 
-    private fun cancelTimestampMessages() {
+    // Audit-17 #3: the two lists are cancelled separately
+    // — Audit-16 #13 merged them into this one function,
+    // so every addTimeStamps() (fired when SkipAPI stamps
+    // arrive, typically after the first frame) also killed
+    // the listening-percentage messages for the episode.
+    // addTimeStamps cancels only its own list; the release
+    // path cancels both (see releasePlayer).
+    private fun cancelListeningPercentageMessages() {
         synchronized(listeningPercentageMessages) {
             listeningPercentageMessages.forEach { it.cancel() }
             listeningPercentageMessages.clear()
         }
+    }
+
+    private fun cancelTimestampMessages() {
         synchronized(timestampMessages) {
             timestampMessages.forEach { it.cancel() }
             timestampMessages.clear()
