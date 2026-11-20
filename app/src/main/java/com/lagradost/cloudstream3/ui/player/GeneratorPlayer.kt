@@ -1531,7 +1531,12 @@ class GeneratorPlayer : FullScreenPlayer() {
 
                 trackDialog.setOnDismissListener {
                     dismiss()
-                    // selectTracksDialog = null
+                    // Audit-7 #32: actually clear the reference —
+                    // the nulling line was commented out, so the
+                    // dismissed dialog (and its view graph) stayed
+                    // referenced until the next dialog or fragment
+                    // destruction.
+                    this.selectTrackDialog = null
                 }
 
                 var audioIndexStart = currentAudioTracks.indexOfFirst { track ->
