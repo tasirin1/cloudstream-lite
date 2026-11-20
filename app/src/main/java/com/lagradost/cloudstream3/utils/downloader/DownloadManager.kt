@@ -2285,8 +2285,19 @@ object VideoDownloadManager {
             // it. (Same claim pattern as popQueue, Audit-4 #2.)
             var alreadyDownloading = false
             _currentDownloads.update { downloads ->
-                if (downloads.contains(id)) {
-                    alreadyDownloading = true
+                // Audit-14 #5: reassign the flag on EVERY
+                // invocation of the transform. update() retries
+                // under contention, and the previous shape only
+                // ever set the flag to true — a failed attempt
+                // that saw the id (owner still downloading)
+                // followed by a winning retry on the emptied set
+                // (owner just finished) added the id but left
+                // the flag true, so the caller returned via the
+                // Resume path without ever entering the
+                // try/finally that removes the id: the episode
+                // stayed claimed forever with nothing running.
+                alreadyDownloading = downloads.contains(id)
+                if (alreadyDownloading) {
                     downloads
                 } else {
                     downloads + id
