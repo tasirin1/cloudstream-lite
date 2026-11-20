@@ -581,6 +581,12 @@ object VideoDownloadManager {
         @Volatile
         private var hlsCheckpoint: Pair<Int, Long> = Pair(0, 0L)
 
+        // Audit-4 #37: segment index of the checkpoint as of the
+        // last updateFileInfo() persist (any path). notify() uses
+        // it to avoid re-persisting every second.
+        @Volatile
+        private var lastPersistedHlsIndex: Int = 0
+
         fun setHlsCheckpoint(index: Int, bytes: Long) {
             hlsCheckpoint = Pair(index, bytes)
         }
@@ -678,6 +684,11 @@ object VideoDownloadManager {
                         } else null
                     )
                 )
+                // Audit-4 #37: every persist path funnels through
+                // here, so this keeps the notify() gate accurate.
+                if (isHLS) {
+                    lastPersistedHlsIndex = hlsCheckpoint.first
+                }
             }
         }
 
@@ -779,7 +790,24 @@ object VideoDownloadManager {
 
                 // as hls has an approx file size we want to update this metadata
                 if (isHLS) {
-                    updateFileInfo()
+                    // Audit-4 #37: notify() runs ~1x/sec, and
+                    // persisting here unconditionally rewrote the
+                    // whole preferences file every second for the
+                    // entire download, defeating the Audit-3 #6
+                    // every-10-segments batching in
+                    // setWrittenSegment. Persist from here only
+                    // when the checkpoint advanced >= 10 segments
+                    // since the last persist (from any path) or on
+                    // a terminal state; close() and the type setter
+                    // still persist unconditionally, so the
+                    // Audit-4 #1 resume guarantee is unchanged.
+                    val advanced = hlsCheckpoint.first - lastPersistedHlsIndex
+                    if (advanced >= 10 ||
+                        snapshot.type == DownloadType.IsStopped ||
+                        snapshot.type == DownloadType.IsFailed
+                    ) {
+                        updateFileInfo()
+                    }
                 }
 
                 if (snapshot.type == DownloadType.IsStopped || snapshot.type == DownloadType.IsFailed) {
