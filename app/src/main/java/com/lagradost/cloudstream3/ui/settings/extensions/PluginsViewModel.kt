@@ -60,7 +60,18 @@ class PluginsViewModel : ViewModel() {
     private var currentQuery: String? = null
 
     companion object {
-        private val repositoryCache: MutableMap<String, List<PluginWrapper>> = mutableMapOf()
+        // Audit-6 #14: entries carry their fetch time and expire
+        // after 15 minutes (the same lifetime as the HTTP cache
+        // for repository manifests). The cache used to live for
+        // the whole process — on an always-on STB, plugins a
+        // repository added or updated stayed invisible for days,
+        // until the app was force-stopped. Access is synchronized:
+        // the plain HashMap was mutated from parallel ioSafe
+        // coroutines with a check-then-act read.
+        private const val REPOSITORY_CACHE_TTL_MS = 15 * 60 * 1000L
+
+        private val repositoryCache: MutableMap<String, Pair<Long, List<PluginWrapper>>> =
+            java.util.Collections.synchronizedMap(mutableMapOf())
         const val TAG = "PLG"
 
         private fun isDownloaded(
@@ -76,14 +87,25 @@ class PluginsViewModel : ViewModel() {
             canUseCache: Boolean = true
         ): List<PluginWrapper> {
             Log.i(TAG, "getPlugins = $repository")
-            if (canUseCache && repositoryCache.containsKey(repository.url)) {
-                repositoryCache[repository.url]?.let {
-                    return it
+            if (canUseCache) {
+                synchronized(repositoryCache) {
+                    repositoryCache[repository.url]?.let { (storedAt, cached) ->
+                        if (System.currentTimeMillis() - storedAt <=
+                            REPOSITORY_CACHE_TTL_MS
+                        ) {
+                            return cached
+                        }
+                    }
                 }
             }
 
             return RepositoryManager.getRepoPlugins(repository)
-                ?.also { repositoryCache[repository.url] = it } ?: emptyList()
+                ?.also {
+                    synchronized(repositoryCache) {
+                        repositoryCache[repository.url] =
+                            System.currentTimeMillis() to it
+                    }
+                } ?: emptyList()
         }
 
         /**
