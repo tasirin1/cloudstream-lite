@@ -226,31 +226,6 @@ class SettingsUpdates : BasePreferenceFragmentCompat() {
             return@setOnPreferenceClickListener true
         }
 
-        getPref(R.string.manual_check_update_key)?.let { pref ->
-            pref.summary = BuildConfig.VERSION_NAME
-            pref.setOnPreferenceClickListener {
-                ioSafe {
-                    if (activity?.runAutoUpdate(false) == false) {
-                        activity?.runOnUiThread {
-                            showToast(
-                                R.string.no_update_found,
-                                Toast.LENGTH_SHORT
-                            )
-                        }
-                    }
-                }
-                return@setOnPreferenceClickListener true
-            }
-        }
-
-        getPref(R.string.install_prerelease_key)?.let { pref ->
-            pref.isVisible = BuildConfig.FLAVOR.startsWith("stable") // Fork fix (audit #49)
-            pref.setOnPreferenceClickListener {
-                activity?.installPreReleaseIfNeeded()
-                return@setOnPreferenceClickListener true
-            }
-        }
-
         getPref(R.string.auto_download_plugins_key)?.setOnPreferenceClickListener {
             val prefNames = resources.getStringArray(R.array.auto_download_plugin)
             val prefValues =

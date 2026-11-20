@@ -81,32 +81,6 @@ object SettingsUpdatesScreen : SearchableSettings {
             Preference.PreferenceGroup(
                 title = stringResource(R.string.pref_category_app_updates),
                 preferenceItems = persistentListOf(
-                    Preference.PreferenceItem.TextPreference(
-                        title = stringResource(R.string.check_for_update),
-                        subtitle = BuildConfig.VERSION_NAME,
-                        icon = painterResource(R.drawable.mobile_arrow_down_24px),
-                        onClick = {
-                            /*ioSafe {
-                                if (activity?.runAutoUpdate(false) == false) {
-                                    activity?.runOnUiThread {
-                                        showToast(
-                                            R.string.no_update_found,
-                                            Toast.LENGTH_SHORT
-                                        )
-                                    }
-                                }
-                            }*/
-                        }
-                    ),
-                    Preference.PreferenceItem.TextPreference(
-                        title = stringResource(R.string.install_prerelease),
-                        icon = painterResource(R.drawable.mobile_code_24px),
-                        enabled = BuildConfig.FLAVOR.startsWith("stable"), // Fork fix (audit #49)
-                        onClick = {
-                            activity?.installPreReleaseIfNeeded()
-                        }
-                    ),
-
                     Preference.PreferenceItem.ListPreference(
                         title = stringResource(R.string.apk_installer_settings),
                         subtitle = stringResource(R.string.apk_installer_settings_des),
