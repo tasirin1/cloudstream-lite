@@ -222,6 +222,7 @@ private enum class TT {
     NUMBER, STRING, IDENT, PLUS, MINUS, STAR, SLASH, PERCENT, POW, EQ, EQEQ, EQEQEQ,
     NEQ, NEQEQ, LT, LTEQ, GT, GTEQ, AND, OR, NOT, AMP, PIPE, CARET, TILDE,
     LSHIFT, RSHIFT, URSHIFT, PLUSEQ, MINUSEQ, STAREQ, SLASHEQ, PERCENTEQ, POWEQ,
+    ANDEQ, OREQ, CARETEQ, LSHIFTEQ, RSHIFTEQ, URSHIFTEQ,
     PLUSPLUS, MINUSMINUS, DOT, COMMA, SEMI, COLON, QUESTION, LPAREN, RPAREN,
     LBRACE, RBRACE, LBRACKET, RBRACKET, EOF
 }
@@ -364,11 +365,11 @@ private class Lexer(private val src: String) {
             '%' -> if (next == '=') adv(TT.PERCENTEQ, 1) else Token(TT.PERCENT, "%", start)
             '=' -> when { next == '=' && nn == '=' -> adv(TT.EQEQEQ, 2); next == '=' -> adv(TT.EQEQ, 1); else -> Token(TT.EQ, "=", start) }
             '!' -> when { next == '=' && nn == '=' -> adv(TT.NEQEQ, 2); next == '=' -> adv(TT.NEQ, 1); else -> Token(TT.NOT, "!", start) }
-            '<' -> when { next == '<' -> adv(TT.LSHIFT, 1); next == '=' -> adv(TT.LTEQ, 1); else -> Token(TT.LT, "<", start) }
-            '>' -> when { next == '>' && nn == '>' -> adv(TT.URSHIFT, 2); next == '>' -> adv(TT.RSHIFT, 1); next == '=' -> adv(TT.GTEQ, 1); else -> Token(TT.GT, ">", start) }
-            '&' -> if (next == '&') adv(TT.AND, 1) else Token(TT.AMP, "&", start)
-            '|' -> if (next == '|') adv(TT.OR, 1) else Token(TT.PIPE, "|", start)
-            '^' -> Token(TT.CARET, "^", start)
+            '<' -> when { next == '<' && nn == '=' -> adv(TT.LSHIFTEQ, 2); next == '<' -> adv(TT.LSHIFT, 1); next == '=' -> adv(TT.LTEQ, 1); else -> Token(TT.LT, "<", start) }
+            '>' -> when { next == '>' && nn == '>' && src.getOrNull(pos + 2) == '=' -> adv(TT.URSHIFTEQ, 3); next == '>' && nn == '=' -> adv(TT.RSHIFTEQ, 2); next == '>' && nn == '>' -> adv(TT.URSHIFT, 2); next == '>' -> adv(TT.RSHIFT, 1); next == '=' -> adv(TT.GTEQ, 1); else -> Token(TT.GT, ">", start) }
+            '&' -> when { next == '&' -> adv(TT.AND, 1); next == '=' -> adv(TT.ANDEQ, 1); else -> Token(TT.AMP, "&", start) }
+            '|' -> when { next == '|' -> adv(TT.OR, 1); next == '=' -> adv(TT.OREQ, 1); else -> Token(TT.PIPE, "|", start) }
+            '^' -> if (next == '=') adv(TT.CARETEQ, 1) else Token(TT.CARET, "^", start)
             '~' -> Token(TT.TILDE, "~", start)
             '.' -> Token(TT.DOT, ".", start)
             ',' -> Token(TT.COMMA, ",", start)
@@ -601,6 +602,7 @@ private class Parser(private val lex: Lexer) {
         val left = parseTernary()
         val op = when (lex.peek().type) {
             TT.EQ -> "="; TT.PLUSEQ -> "+="; TT.MINUSEQ -> "-="; TT.STAREQ -> "*="; TT.SLASHEQ -> "/="; TT.PERCENTEQ -> "%="; TT.POWEQ -> "**="
+            TT.ANDEQ -> "&="; TT.OREQ -> "|="; TT.CARETEQ -> "^="; TT.LSHIFTEQ -> "<<="; TT.RSHIFTEQ -> ">>="; TT.URSHIFTEQ -> ">>>="
             else -> return left
         }
         lex.consume()
@@ -1549,6 +1551,17 @@ private class JsInterpreter(
                 "/=" -> toNumber(left) / toNumber(right)
                 "%=" -> toNumber(left) % toNumber(right)
                 "**=" -> toNumber(left).pow(toNumber(right))
+                // Audit-19 #3: compound bitwise/shift
+                // assignment — the lexer did not even know
+                // these tokens, so any script using one
+                // failed to evaluate at all. Same ToInt32
+                // semantics as the binary operators.
+                "&=" -> (toInt32(left) and toInt32(right)).toDouble()
+                "|=" -> (toInt32(left) or toInt32(right)).toDouble()
+                "^=" -> (toInt32(left) xor toInt32(right)).toDouble()
+                "<<=" -> (toInt32(left) shl (toUint32(right) and 31L).toInt()).toDouble()
+                ">>=" -> (toInt32(left) shr (toUint32(right) and 31L).toInt()).toDouble()
+                ">>>=" -> (toUint32(left) ushr (toUint32(right) and 31L).toInt()).toDouble()
                 else -> right
             }
         }
