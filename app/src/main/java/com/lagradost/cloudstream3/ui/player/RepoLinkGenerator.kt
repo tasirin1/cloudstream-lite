@@ -160,7 +160,13 @@ class RepoLinkGenerator(
         )
 
         synchronized(currentCache) {
-            currentCache.saturated = currentCache.linkCache.isNotEmpty()
+            // Audit-13 #2: `result` was never consulted — a
+            // loadLinks that emitted one link and then FAILED
+            // still marked the cache saturated, so the partial
+            // source list was served as complete for the whole
+            // cache lifetime (20 min) with no retry. Only a
+            // successful load may saturate.
+            currentCache.saturated = result && currentCache.linkCache.isNotEmpty()
             currentCache.lastCachedTimestamp = unixTime
         }
 
