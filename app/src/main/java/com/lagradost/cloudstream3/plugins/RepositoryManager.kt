@@ -1,6 +1,7 @@
 package com.lagradost.cloudstream3.plugins
 
 import android.content.Context
+import android.util.Log
 import androidx.annotation.WorkerThread
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.CloudStreamApp.Companion.context
@@ -281,6 +282,21 @@ object RepositoryManager {
      */
     suspend fun getRepoPlugins(repositoryData: RepositoryData): List<PluginWrapper>? {
         val repo = parseRepository(repositoryData.url) ?: return null
+        // Audit-6 #8: the Compose path caps a manifest at 10
+        // plugin lists; this legacy path never did, and amap
+        // fetches every list URL in parallel — a crafted or
+        // compromised manifest with hundreds of lists would fire
+        // hundreds of simultaneous fetches (each body-capped at
+        // 10 MB by Audit-5 #12, but unbounded in count) and can
+        // freeze or OOM the STB. Refuse the repository, matching
+        // this function's null-on-failure contract.
+        if (repo.pluginLists.size > 10) {
+            Log.e(
+                "RepositoryManager",
+                "Refusing repository with ${repo.pluginLists.size} plugin lists (max 10)"
+            )
+            return null
+        }
         val list = repo.pluginLists.amap { url ->
             parsePlugins(url).map {
                 // Audit-4 #6: upgrade the plugin file URL itself;
