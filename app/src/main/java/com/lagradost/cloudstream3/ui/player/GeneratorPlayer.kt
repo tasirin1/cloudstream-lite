@@ -175,6 +175,21 @@ class GeneratorPlayer : FullScreenPlayer() {
             }
         }
 
+        // Audit-7 #12: eviction was pure insertion order — a
+        // fragment read its generator in onBindingCreated
+        // without refreshing its place, so the OLDEST session
+        // was evicted first even when it was the one the user
+        // just returned to in the backstack. Reading counts as
+        // use: move the entry to the tail.
+        fun touchGenerator(uuid: String?) {
+            if (uuid == null) return
+            synchronized(generatorOrder) {
+                if (generatorOrder.remove(uuid)) {
+                    generatorOrder.addLast(uuid)
+                }
+            }
+        }
+
         fun newInstance(
             generator: VideoGenerator<*>,
             index: Int,
@@ -1767,7 +1782,24 @@ class GeneratorPlayer : FullScreenPlayer() {
         // and recreates the fragment with the same arguments, and
         // the recreated instance must find its generator again —
         // so only release when not changing configurations.
-        if (activity?.isChangingConfigurations != true) {
+        //
+        // Audit-7 #11: the activity's isChangingConfigurations
+        // flag alone misjudges both directions — a fragment
+        // popped for good DURING a configuration change skipped
+        // its release (orphan), and an activity destroyed with
+        // saved state for restoration (but no config change)
+        // released a generator its restored fragment then
+        // missed. Keep the generator only for a config change,
+        // or for a state-saved destruction where this fragment
+        // is neither being removed nor finishing.
+        val keepForConfigChange = activity?.isChangingConfigurations == true
+        val keepForRestore = isStateSaved && !isRemoving &&
+            activity?.isFinishing != true
+        if (!keepForConfigChange && !keepForRestore) {
+            releaseGenerator(arguments?.getString("uuid"))
+        } else if (keepForConfigChange && isRemoving) {
+            // Popped for good while the activity happens to be
+            // changing configurations: still gone for good.
             releaseGenerator(arguments?.getString("uuid"))
         }
         super.onDestroy()
@@ -2300,6 +2332,10 @@ class GeneratorPlayer : FullScreenPlayer() {
         val uuid = savedInstanceState?.getString("uuid") ?: arguments?.getString("uuid")
         val index = savedInstanceState?.getInt("index") ?: arguments?.getInt("index")
         val generator = generators[uuid]
+        // Audit-7 #12: mark this session as most-recently-used
+        // so the eviction backstop cannot drop it under a
+        // fragment that is alive in the backstack.
+        if (generator != null) touchGenerator(uuid)
 
         unwrapBundle(savedInstanceState)
         unwrapBundle(arguments)
