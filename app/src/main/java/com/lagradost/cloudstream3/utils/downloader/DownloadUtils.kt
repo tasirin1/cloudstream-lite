@@ -140,6 +140,20 @@ object DownloadUtils {
             )
     }
 
+    // Audit-16 #11: in-flight single-subtitle downloads by
+    // episode id. This entry point used to discard the job
+    // handle entirely — nothing could stop it, so deleting
+    // the episode mid-flight let the subtitle write its file
+    // back after the delete had cleaned it up.
+    private val singleSubtitleJobs = mutableMapOf<Int, Job>()
+
+    /** Cancels an in-flight single-subtitle download (episode deleted). */
+    fun cancelSingleSubtitleDownload(episodeId: Int) {
+        synchronized(singleSubtitleJobs) {
+            singleSubtitleJobs.remove(episodeId)
+        }?.cancel()
+    }
+
     fun downloadSubtitle(
         context: Context?,
         link: SubtitleData,
@@ -151,13 +165,23 @@ object DownloadUtils {
         context?.let { ctx ->
             val fileName = getFileName(ctx, meta)
             val folder = getFolder(meta.type ?: return, meta.mainName)
-            ioSafe {
+            val job = ioSafe {
                 downloadSubtitle(
                     ctx,
                     ExtractorSubtitleLink(link.name, link.url, "", link.headers),
                     fileName,
                     folder
                 )
+            }
+            synchronized(singleSubtitleJobs) {
+                singleSubtitleJobs[meta.id] = job
+            }
+            job.invokeOnCompletion {
+                synchronized(singleSubtitleJobs) {
+                    if (singleSubtitleJobs[meta.id] === job) {
+                        singleSubtitleJobs.remove(meta.id)
+                    }
+                }
             }
         }
     }

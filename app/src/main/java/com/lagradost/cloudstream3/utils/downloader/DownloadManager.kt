@@ -2105,6 +2105,10 @@ object VideoDownloadManager {
     }
 
     private fun deleteFileAndUpdateSettings(context: Context, id: Int): Boolean {
+        // Audit-16 #11: stop an in-flight single-subtitle
+        // download for this episode first, so it cannot write
+        // its file back after the delete below removes it.
+        DownloadUtils.cancelSingleSubtitleDownload(id)
         val success = deleteFile(context, id)
         if (success) context.removeKey(KEY_DOWNLOAD_INFO, id.toString())
         // Audit-4 #39: never serve a deleted file from the cache.
