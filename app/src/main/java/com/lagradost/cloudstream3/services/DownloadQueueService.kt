@@ -278,10 +278,12 @@ class DownloadQueueService : Service() {
     queueJob = myJob
     activeQueueJob = myJob
 
-    // Stop self regardless of job outcome — unless work arrived
-    // while the collector was draining (Audit-5 #10).
+    // Stop self when the collector ends — unless work arrived
+    // while it was draining (Audit-5 #10).
     myJob.invokeOnCompletion { throwable ->
-        if (throwable != null) {
+        if (throwable != null &&
+            throwable !is kotlinx.coroutines.CancellationException
+        ) {
             logError(throwable)
         }
         safe {
@@ -293,12 +295,34 @@ class DownloadQueueService : Service() {
             // started until the next app launch. If work is
             // waiting at completion time, relaunch the collector
             // instead of stopping.
-            if (DownloadQueueManager.queue.value.isNotEmpty() ||
-                _downloadInstances.value.isNotEmpty()
-            ) {
-                launchQueueCollector(context)
-            } else {
-                stopSelf()
+            //
+            // Audit-6 #1: the Audit-5 handler fired for EVERY
+            // completion, including cancellation — and a cancelled
+            // job was cancelled on purpose. onDestroy cancels
+            // while the persisted queue is still non-empty, so
+            // the handler relaunched a collector bound to the
+            // dead service; takeWhile { isRunning } ended it at
+            // once, its handler relaunched again — an endless
+            // launch/complete loop draining the STB. A successor
+            // instance's launch also cancels the old job, and the
+            // old handler then cancelled the SUCCESSOR's
+            // collector via launchQueueCollector's unconditional
+            // activeQueueJob cancel. Only a natural completion of
+            // the still-active collector of a still-running
+            // service may decide what happens next; cancellation
+            // means the canceller already decided.
+            if (isRunning && activeQueueJob === myJob) {
+                when {
+                    throwable == null && lastError == null &&
+                        (DownloadQueueManager.queue.value.isNotEmpty() ||
+                            _downloadInstances.value.isNotEmpty()) ->
+                        launchQueueCollector(context)
+
+                    throwable !is kotlinx.coroutines.CancellationException ->
+                        stopSelf()
+                    // Cancellation: do nothing — onDestroy or the
+                    // successor's launch owns what happens next.
+                }
             }
         }
     }
