@@ -115,7 +115,7 @@ class Videa : ExtractorApi() {
 
         // Extract nonce and generate tokens
         val nonceMatch = hoistedRegex5.find(playerHtml) ?: return null
-        val (s, t, key) = generateTokens(nonceMatch.groupValues[1])
+        val (s, t, key) = generateTokens(nonceMatch.groupValues[1]) ?: return null
 
         // Extract video parameter
         val videoParam = when {
@@ -127,14 +127,22 @@ class Videa : ExtractorApi() {
         return "$mainUrl/player/xml?platform=desktop&$videoParam&_s=$s&_t=$t"
     }
 
-    private fun generateTokens(nonce: String): Triple<String, String, String> {
+    private fun generateTokens(nonce: String): Triple<String, String, String>? {
+        // Audit-4 #17: the nonce comes from the remote page and was
+        // indexed unchecked — a short or unexpected nonce threw
+        // StringIndexOutOfBounds (surfaced upstream as a silently
+        // missing link). The token math needs 32 + 32 characters
+        // and every derived index inside s.
+        if (nonce.length < 64) return null
         val lo = nonce.take(32)
         val s = nonce.substring(32)
         var result = ""
 
         for (i in 0 until 32) {
             val index = videaSecret.indexOf(lo[i]) - 31
-            result += s[i - index]
+            val sIndex = i - index
+            if (sIndex !in s.indices) return null
+            result += s[sIndex]
         }
 
         // Generate random seed
