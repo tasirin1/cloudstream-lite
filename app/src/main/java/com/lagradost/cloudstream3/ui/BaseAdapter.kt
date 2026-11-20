@@ -115,7 +115,25 @@ abstract class BaseAdapter<
      *
      * Use `submitList` for general use, as that can reuse old views.
      * */
+    // Audit-4 #45: the last list given to submitIncomparableList.
+    private var lastIncomparableList: List<T>? = null
+
     open fun submitIncomparableList(list: List<T>?, commitCallback : Runnable? = null) {
+        // Audit-4 #45: the only caller (home rows) resubmits the
+        // exact same list instance on every rebind — the
+        // HomeFragment snapshot is created once per emission —
+        // and the double submit below forces a full rebind of
+        // every child view each time, which is very visible when
+        // focus-scrolling on the STB. Same instance means the
+        // same content under this function's documented contract
+        // (submitted lists are fresh snapshots, never mutated in
+        // place), so skip straight to the callback; a new
+        // instance always takes the full path.
+        if (list === lastIncomparableList) {
+            commitCallback?.run()
+            return
+        }
+        lastIncomparableList = list
         // This leverages a quirk in the submitList function that has a fast case for null arrays
         // What this implies is that as long as we do a double submit we can ensure no pop-ins,
         // as the changes are the entire list instead of calculating deltas
