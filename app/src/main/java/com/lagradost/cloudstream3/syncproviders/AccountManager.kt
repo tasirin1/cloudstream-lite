@@ -211,6 +211,12 @@ abstract class AccountManager {
                     remove("${ACCOUNT_TOKEN}/${prefix}/${accountIndex}")
                 }
                 removeKey(ACCOUNT_IDS, "${prefix}/${accountIndex}")
+                // Audit-15 #12: the names store (Audit-14
+                // #32) was added after this purge and never
+                // joined it — a profile reusing the index
+                // inherited the deleted profile's provider
+                // account names.
+                removeKey(ACCOUNT_ID_NAMES, "${prefix}/${accountIndex}")
             }
         }
 
