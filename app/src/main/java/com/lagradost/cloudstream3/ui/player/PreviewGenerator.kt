@@ -357,9 +357,14 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
     private var loadGeneration: Int = 0
 
     fun load(url: String, headers: Map<String, String>) {
+        // Audit-14 #24: bump the generation BEFORE clearing —
+        // the cancelled job could still reach its publish block
+        // in the window between clear() and the increment, see
+        // its generation as current, and write the OLD file's
+        // frames into the fresh state.
+        val generation = ++loadGeneration
         currentJob?.cancel()
         clear()
-        val generation = ++loadGeneration
         currentJob = ioSafe {
             withContext(Dispatchers.IO) {
                 Log.i(TAG, "Loading with url = $url headers = $headers")
