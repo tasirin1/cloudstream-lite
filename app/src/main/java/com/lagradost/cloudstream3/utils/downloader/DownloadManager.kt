@@ -1956,6 +1956,13 @@ object VideoDownloadManager {
 
                 else -> throw IllegalArgumentException("Unsupported download type")
             }
+        } catch (e: CancellationException) {
+            // Audit-13 #17: a cancelled scope (service
+            // teardown) is not a failed download — converting
+            // it to DOWNLOAD_FAILED gave it retry semantics,
+            // so the mirror loop kept spinning during shutdown
+            // and the download ended up marked failed.
+            throw e
         } catch (_: Throwable) {
             return DOWNLOAD_FAILED
         } finally {
