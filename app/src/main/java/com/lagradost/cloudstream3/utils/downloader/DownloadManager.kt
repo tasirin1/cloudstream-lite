@@ -1208,8 +1208,19 @@ object VideoDownloadManager {
             // too short file, treat it as a invalid link
             if (items.totalLength != null && items.totalLength < minimumSize) {
                 fileStream.closeQuietly()
-                metadata.onDelete()
-                stream.delete()
+                // Audit-5 #8: on a RESUME, the partial file belongs
+                // to the download, not to this mirror — a mirror
+                // answering HEAD with a tiny Content-Length (error
+                // or geo-block page) must not destroy it. Skip the
+                // delete/onDelete so the next mirror can resume
+                // the same partial (DOWNLOAD_INVALID_INPUT has
+                // tryNext = true). Fresh downloads keep the
+                // cleanup: their just-created stub should not
+                // linger.
+                if (stream.startAt <= 0) {
+                    metadata.onDelete()
+                    stream.delete()
+                }
                 return@withContext DOWNLOAD_INVALID_INPUT
             }
 
