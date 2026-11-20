@@ -79,7 +79,13 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
             .setSmallIcon(R.drawable.baseline_sync_24)
             .setProgress(0, 0, true)
 
-    private val updateNotificationBuilder =
+    // Audit-14 #15: this was a shared val mutated by the
+    // parallel amap children below (setContentTitle/Text/
+    // Intent/LargeIcon/build) — NotificationCompat.Builder is
+    // not thread-safe, so one show's notification could ship
+    // with another show's title, icon and intent. Build a
+    // fresh builder per notification instead.
+    private fun updateNotificationBuilder() =
         NotificationCompat.Builder(context, SUBSCRIPTION_CHANNEL_ID)
             .setColorized(true)
             .setOnlyAlertOnce(true)
@@ -92,11 +98,16 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     private fun updateProgress(max: Int, progress: Int, indeterminate: Boolean) {
-        notificationManager.notify(
-            SUBSCRIPTION_NOTIFICATION_ID, progressNotificationBuilder
-                .setProgress(max, progress, indeterminate)
-                .build()
-        )
+        // Audit-14 #15: same shared-builder race as above —
+        // updateProgress is called from the parallel children
+        // too, so serialize the mutate+build+notify.
+        synchronized(progressNotificationBuilder) {
+            notificationManager.notify(
+                SUBSCRIPTION_NOTIFICATION_ID, progressNotificationBuilder
+                    .setProgress(max, progress, indeterminate)
+                    .build()
+            )
+        }
     }
 
     override suspend fun doWork(): Result {
@@ -200,7 +211,7 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
                         }
 
                         val updateNotification =
-                            updateNotificationBuilder.setContentTitle(updateHeader)
+                            updateNotificationBuilder().setContentTitle(updateHeader)
                                 .setContentText(updateDescription)
                                 .setContentIntent(pendingIntent)
                                 .setLargeIcon(poster)
