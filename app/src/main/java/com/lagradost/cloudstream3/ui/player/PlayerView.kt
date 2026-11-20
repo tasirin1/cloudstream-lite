@@ -758,9 +758,14 @@ class PlayerView @JvmOverloads constructor(
     }
 
     fun resize(resize: Int, showToast: Boolean) {
+        // Audit-14 #27: the stored mode is a raw Int from
+        // preferences — a value from another version (or a
+        // corrupt store) indexed the entries array unchecked
+        // and crashed initialize() before any video played.
+        val safeResize = resize.coerceIn(0, PlayerResize.entries.lastIndex)
         // Clear all zoom state before applying the new resize mode
         gestureHelper.clearZoomState()
-        resize(PlayerResize.entries[resize], showToast)
+        resize(PlayerResize.entries[safeResize], showToast)
     }
 
     fun resize(resize: PlayerResize, showToast: Boolean) {
