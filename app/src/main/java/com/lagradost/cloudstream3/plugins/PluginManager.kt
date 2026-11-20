@@ -226,6 +226,7 @@ object PluginManager {
 
     private val LOCAL_PLUGINS_PATH = CLOUD_STREAM_FOLDER + "plugins"
 
+    @Volatile
     var currentlyLoading: String? = null
 
     // Maps filepath to plugin
@@ -669,6 +670,17 @@ object PluginManager {
             Log.w(TAG, "Loading online plugin $fileName without a stored integrity anchor")
         }
 
+        // Audit-3 #14: refuse a duplicate load BEFORE instantiating
+        // the plugin. The old flow instantiated + registered data
+        // first and only then checked, outside the plugins lock, so
+        // two parallel loads of the same file could both run the
+        // plugin's constructor and load() side effects.
+        if (synchronized(plugins) { plugins.containsKey(filePath) }) {
+            Log.i(TAG, "Plugin already loaded, skipping: $fileName")
+            currentlyLoading = null
+            return true
+        }
+
         var loadedInstance: BasePlugin? = null
         return try {
             // In case of Android 14+ then
@@ -714,7 +726,7 @@ object PluginManager {
             // Sets with the proper version
             setPluginData(data.copy(version = version))
 
-            if (plugins.containsKey(filePath)) {
+            if (synchronized(plugins) { plugins.containsKey(filePath) }) {
                 Log.i(TAG, "Plugin with name $name already exists")
                 currentlyLoading = null
                 return true
