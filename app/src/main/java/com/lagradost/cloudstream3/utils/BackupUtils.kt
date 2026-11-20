@@ -68,6 +68,14 @@ object BackupUtils {
         AccountManager.ACCOUNT_TOKEN,
         AccountManager.ACCOUNT_IDS,
 
+        // Audit-10 #6: the accounts array (DataStoreHelper's
+        // "data_store_helper/account") embeds every profile's
+        // lockPin. Restoring someone else's backup could plant
+        // unknown PINs on all profiles — or strip the owner's
+        // PINs on a shared device. Same reasoning as
+        // biometric_key below.
+        "data_store_helper/account",
+
         // TODO proper getter for string res keys to ensure that they are updated
         "biometric_key", // can lock down users if backup is shared on a incompatible device
         "nginx_user", // Nginx user key
