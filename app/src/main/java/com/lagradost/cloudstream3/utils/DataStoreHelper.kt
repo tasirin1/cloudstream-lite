@@ -712,6 +712,10 @@ object DataStoreHelper {
      */
     fun setViewPosAndResume(id: Int?, position: Long, duration: Long, currentEpisode: Any?, nextEpisode: Any?) {
         setViewPos(id, position, duration)
+        // Audit-3 #37: the percentage below divides by duration;
+        // setViewPos guards short durations for its own store, but
+        // this function went on to divide by a possible 0.
+        if (duration <= 0) return
         if (id != null) {
             when (val meta = currentEpisode) {
                 is ResultEpisode -> {
