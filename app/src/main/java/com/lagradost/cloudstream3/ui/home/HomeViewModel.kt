@@ -258,7 +258,12 @@ class HomeViewModel : ViewModel() {
                                 }
 
                                 this.list.list += newList.list
-                                this.list.list.distinctBy { it.url } // just to be sure we are not adding the same shit for some reason
+                                // Audit-5 #13: distinctBy returns a
+                                // NEW list — the result used to be
+                                // discarded here, so the dedup did
+                                // nothing and overlapping pages
+                                // accumulated duplicate posters.
+                                this.list.list = this.list.list.distinctBy { it.url }
                             } ?: debugWarning {
                                 "Expanded an item not in main load named $key, current list is ${expandable.keys}"
                             }
