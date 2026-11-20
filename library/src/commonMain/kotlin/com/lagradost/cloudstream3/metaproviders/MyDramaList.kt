@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.APIHolder.unixTimeMS
 import com.lagradost.cloudstream3.Actor
 import com.lagradost.cloudstream3.ActorData
 import com.lagradost.cloudstream3.Episode
+import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
@@ -76,13 +77,17 @@ abstract class MyDramaListAPI : MainAPI() {
         "$API_HOST/titles/upcoming?type=movies" to "Upcoming Movies",
     )
 
+    // Audit-8 #20: every .parsed<>() in this file threw raw
+    // SerializationException on a non-JSON API response (error
+    // page, rate limit) instead of failing cleanly — all six
+    // sites now use parsedSafe with a per-site fallback.
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val list = app.get(
             url = "${request.data}&limit=20&page=$page&lang=en-US",
             interceptor = headerInterceptor
-        ).parsed<ArrayList<MediaSummary>>().map { element ->
+        ).parsedSafe<ArrayList<MediaSummary>>()?.map { element ->
             element.toSearchResponse()
-        }
+        } ?: emptyList()
         return newHomePageResponse(request.name, list)
     }
 
@@ -91,7 +96,7 @@ abstract class MyDramaListAPI : MainAPI() {
             url = "$API_HOST/search/titles",
             data = mapOf("q" to query),
             interceptor = headerInterceptor
-        ).parsed<ArrayList<MediaSummary>>().map { element ->
+        ).parsedSafe<ArrayList<MediaSummary>>()?.map { element ->
             element.toSearchResponse()
         }
     }
@@ -131,7 +136,8 @@ abstract class MyDramaListAPI : MainAPI() {
         return app.get(
             url = "$API_HOST/titles/${data.media?.id}",
             interceptor = headerInterceptor
-        ).parsed<Media>().toLoadResponse(data)
+        ).parsedSafe<Media>()?.toLoadResponse(data)
+            ?: throw ErrorLoadingException("Failed to load title")
     }
 
     private suspend fun Media.toLoadResponse(data: Data): LoadResponse {
@@ -281,7 +287,7 @@ abstract class MyDramaListAPI : MainAPI() {
             val actors = app.get(
                 url = "$API_HOST/titles/$id/credits",
                 interceptor = headerInterceptor
-            ).parsed<Credits>().cast.map {
+            ).parsedSafe<Credits>()?.cast?.map {
                 ActorData(
                     Actor(
                         name = it.name,
@@ -289,7 +295,7 @@ abstract class MyDramaListAPI : MainAPI() {
                     ),
                     roleString = it.characterName
                 )
-            }
+            } ?: emptyList()
             return actors
         }
 
@@ -297,7 +303,7 @@ abstract class MyDramaListAPI : MainAPI() {
             return app.get(
                 url = "$API_HOST/titles/$id/recommendations",
                 interceptor = headerInterceptor
-            ).parsed<ArrayList<MediaSummary>>()
+            ).parsedSafe<ArrayList<MediaSummary>>() ?: arrayListOf()
         }
 
         suspend fun fetchTrailer(): String? {
@@ -322,9 +328,9 @@ abstract class MyDramaListAPI : MainAPI() {
         return app.get(
             url = "$API_HOST/titles/${this.id}/episodes",
             interceptor = headerInterceptor
-        ).parsed<ArrayList<ShowEpisodesItem>>().map {
+        ).parsedSafe<ArrayList<ShowEpisodesItem>>()?.map {
             it.episodes
-        }.flatten().map { ep ->
+        }?.flatten()?.map { ep ->
             val link = LinkData(
                 id = id,
                 type = "Series",
@@ -348,7 +354,7 @@ abstract class MyDramaListAPI : MainAPI() {
                 runTime = null
                 addDate(ep.releasedAt)
             }
-        }
+        } ?: emptyList()
     }
 
     @Serializable
