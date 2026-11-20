@@ -255,7 +255,12 @@ open class TraktProvider : MainAPI() {
                             this.score = Score.from10(episode.rating)
 
                             this.addDate(episode.firstAired, "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
-                            if (nextAir == null && this.date != null && this.date!! > unixTimeMS && this.season != 0) {
+                            // Audit-9 #12: this.episode comes from
+                            // the model's nullable number — a
+                            // future-dated episode without a number
+                            // used to NPE the whole load() on the
+                            // !! below; just skip next-airing then.
+                            if (nextAir == null && this.date != null && this.date!! > unixTimeMS && this.season != 0 && this.episode != null) {
                                 nextAir = NextAiring(
                                     episode = this.episode!!,
                                     unixTime = this.date!!.div(1000L),
