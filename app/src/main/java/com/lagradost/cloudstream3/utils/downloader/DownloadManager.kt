@@ -949,6 +949,7 @@ object VideoDownloadManager {
             val requestStream = request.body.byteStream()
 
             var read: Int
+            var writeFailure: Throwable? = null
 
             try {
                 while (requestStream.read(buffer, 0, bufferSize).also { read = it } >= 0) {
@@ -956,12 +957,38 @@ object VideoDownloadManager {
                     currentByte += read.toLong()
 
                     // this stops overflow
-                    if (currentByte >= stopAt) {
-                        callback(LazyStreamDownloadResponse(buffer, start, stopAt))
-                        break
+                    val response = if (currentByte >= stopAt) {
+                        LazyStreamDownloadResponse(buffer, start, stopAt)
                     } else {
-                        callback(LazyStreamDownloadResponse(buffer, start, currentByte))
+                        LazyStreamDownloadResponse(buffer, start, currentByte)
                     }
+                    try {
+                        callback(response)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (t: Throwable) {
+                        // Audit-5 #1: the callback writes to the
+                        // file (and drains the pending queue). A
+                        // failure there — disk full, SAF provider
+                        // error — is NOT a network EOF, but the
+                        // catch-all below used to swallow it as
+                        // one: currentByte had already advanced
+                        // past the unwritten bytes, so resolveSafe
+                        // reported the chunk done, later data piled
+                        // into pendingData behind the permanent
+                        // gap, and the download either hung on the
+                        // 16 MB throttle forever or was declared
+                        // IsDone over a corrupt file (the final
+                        // check compares bytesDownloaded, which the
+                        // callback increments before writing, never
+                        // bytesWritten). Fail the chunk instead:
+                        // resolveSafe maps IllegalStateException to
+                        // a failed chunk with no retries, and the
+                        // partial file is kept for resume.
+                        writeFailure = t
+                        break
+                    }
+                    if (currentByte >= stopAt) break
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -969,6 +996,10 @@ object VideoDownloadManager {
                 logError(t)
             } finally {
                 requestStream.closeQuietly()
+            }
+
+            writeFailure?.let {
+                throw IllegalStateException("Download write callback failed", it)
             }
 
             return@withContext currentByte
