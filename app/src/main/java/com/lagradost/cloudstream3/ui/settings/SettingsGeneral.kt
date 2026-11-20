@@ -149,16 +149,10 @@ fun Pair<String, String>.nameNextToFlagEmoji(): String {
     return "$flag\u00a0${this.first}" // \u00a0 non-breaking space
 }
 
-class SettingsGeneral : BasePreferenceFragmentCompat() {
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setUpToolbar(R.string.category_general)
-        setPaddingBottom()
-        setToolBarScrollFlags()
-    }
-
-    @OptIn(ExperimentalSerializationApi::class) // JsonNames is an experimental annotation for now
-    @Serializable
+class SettingsGeneral {
+    // Audit-14 #43: fragment body dead (navigation routes
+    // to SettingsGeneral2); CustomSite + companion
+    // (pickDownloadPath) are live.
     data class CustomSite(
         @JsonProperty("parentClassName") @JsonAlias("parentJavaClass")
         @SerialName("parentClassName") @JsonNames("parentJavaClass")
@@ -167,6 +161,7 @@ class SettingsGeneral : BasePreferenceFragmentCompat() {
         @JsonProperty("url") @SerialName("url") val url: String,
         @JsonProperty("lang") @SerialName("lang") val lang: String,
     )
+
 
     companion object {
         fun Fragment.pickDownloadPath(uri: Uri?, path: String?) {
@@ -273,183 +268,5 @@ class SettingsGeneral : BasePreferenceFragmentCompat() {
 
     private val pathPicker = getChooseFolderLauncher { uri, path ->
         pickDownloadPath(uri, path)
-    }
-
-    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        hideKeyboard()
-        setPreferencesFromResource(R.xml.settings_general, rootKey)
-        val settingsManager = PreferenceManager.getDefaultSharedPreferences(requireContext())
-
-
-        getPref(R.string.locale_key)?.setOnPreferenceClickListener { pref ->
-            val current = getCurrentLocale(pref.context)
-            val languageTagsIETF = appLanguages.map { it.second }
-            val languageNames = appLanguages.map { it.nameNextToFlagEmoji() }
-            val currentIndex = languageTagsIETF.indexOf(current)
-
-            activity?.showDialog(
-                languageNames, currentIndex, getString(R.string.app_language), true, { }
-            ) { selectedLangIndex ->
-                try {
-                    val langTagIETF = languageTagsIETF[selectedLangIndex]
-                    CommonActivity.setLocale(activity, langTagIETF)
-                    settingsManager.edit {
-                        putString(getString(R.string.locale_key), langTagIETF)
-                    }
-                    activity?.recreate()
-                } catch (e: Exception) {
-                    logError(e)
-                }
-            }
-            return@setOnPreferenceClickListener true
-        }
-
-        getPref(R.string.battery_optimisation_key)?.hideOn(TV or EMULATOR)?.setOnPreferenceClickListener {
-            val ctx = context ?: return@setOnPreferenceClickListener false
-
-            if (isAppRestricted(ctx)) {
-                ctx.showBatteryOptimizationDialog()
-            } else {
-                showToast(R.string.app_unrestricted_toast)
-            }
-
-            true
-        }
-
-
-
-        getPref(R.string.override_site_key)?.setOnPreferenceClickListener { _ ->
-
-            if (getCurrent().isEmpty()) {
-                showAdd()
-            } else {
-                showAddOrDelete()
-            }
-
-            return@setOnPreferenceClickListener true
-        }
-
-        getPref(R.string.legal_notice_key)?.setOnPreferenceClickListener {
-            val builder: AlertDialog.Builder =
-                AlertDialog.Builder(it.context, R.style.AlertDialogCustom)
-            builder.setTitle(R.string.legal_notice)
-            builder.setMessage(R.string.legal_notice_text)
-            builder.show()
-            return@setOnPreferenceClickListener true
-        }
-
-        getPref(R.string.dns_key)?.setOnPreferenceClickListener {
-            val prefNames = resources.getStringArray(R.array.dns_pref)
-            val prefValues = resources.getIntArray(R.array.dns_pref_values)
-
-            val currentDns =
-                settingsManager.getInt(getString(R.string.dns_key), 0)
-
-            activity?.showBottomDialog(
-                prefNames.toList(),
-                prefValues.indexOf(currentDns),
-                getString(R.string.dns_pref),
-                true,
-                {}) {
-                settingsManager.edit { putInt(getString(R.string.dns_key), prefValues[it]) }
-                (context ?: CloudStreamApp.context)?.let { ctx -> app.initClient(ctx) }
-            }
-            return@setOnPreferenceClickListener true
-        }
-
-        fun getDownloadDirs(): List<String> {
-            return safe {
-                context?.let { ctx ->
-                    val defaultDir = DownloadFileManagement.getDefaultDir(ctx)?.filePath()
-
-                    val first = listOf(defaultDir)
-                    (try {
-                        val currentDir = ctx.getBasePath().let { it.first?.filePath() ?: it.second }
-
-                        (first +
-                                ctx.getExternalFilesDirs("").mapNotNull { it.path } +
-                                currentDir)
-                    } catch (_: Exception) {
-                        first
-                    }).filterNotNull().distinct()
-                }
-            } ?: emptyList()
-        }
-
-        settingsManager.edit { putBoolean(getString(R.string.jsdelivr_proxy_key), getKey<Boolean>(getString(R.string.jsdelivr_proxy_key), false) ?: false) }
-        getPref(R.string.jsdelivr_proxy_key)?.setOnPreferenceChangeListener { _, newValue ->
-            setKey(getString(R.string.jsdelivr_proxy_key), newValue)
-            return@setOnPreferenceChangeListener true
-        }
-
-        getPref(R.string.download_parallel_key)?.setOnPreferenceChangeListener { _, _ ->
-            // Notify that the queue logic has been changed
-            DownloadQueueManager.forceRefreshQueue()
-            return@setOnPreferenceChangeListener true
-        }
-
-        getPref(R.string.download_path_key)?.setOnPreferenceClickListener {
-            val dirs = getDownloadDirs()
-
-            val currentDir =
-                settingsManager.getString(getString(R.string.download_path_key_visual), null)
-                    ?: context?.let { ctx -> DownloadFileManagement.getDefaultDir(ctx)?.filePath() }
-
-            activity?.showBottomDialog(
-                dirs + listOf(getString(R.string.custom)),
-                dirs.indexOf(currentDir),
-                getString(R.string.download_path_pref),
-                true,
-                {}) {
-                // Last = custom
-                if (it == dirs.size) {
-                    pathPicker.launchSafe(Uri.EMPTY)
-                } else {
-                    // Sets both visual and actual paths.
-                    // key = used path
-                    // visual = visual path
-                    settingsManager.edit {
-                        putString(getString(R.string.download_path_key), dirs[it])
-                        putString(getString(R.string.download_path_key_visual), dirs[it])
-                    }
-                }
-            }
-            return@setOnPreferenceClickListener true
-        }
-
-        try {
-            beneneCount =
-                settingsManager.getInt(getString(R.string.benene_count), 0)
-            getPref(R.string.benene_count)?.let { pref ->
-                pref.summary =
-                    if (beneneCount <= 0) getString(R.string.benene_count_text_none) else getString(
-                        R.string.benene_count_text
-                    ).format(
-                        beneneCount
-                    )
-
-                pref.setOnPreferenceClickListener {
-                    try {
-                        beneneCount++
-                        if (beneneCount%20 == 0) {
-                            activity?.navigate(R.id.action_navigation_settings_general_to_easterEggMonkeFragment)
-                        }
-                        settingsManager.edit {
-                            putInt(
-                                getString(R.string.benene_count),
-                                beneneCount
-                            )
-                        }
-                        it.summary = getString(R.string.benene_count_text).format(beneneCount)
-                    } catch (e: Exception) {
-                        logError(e)
-                    }
-
-                    return@setOnPreferenceClickListener true
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }

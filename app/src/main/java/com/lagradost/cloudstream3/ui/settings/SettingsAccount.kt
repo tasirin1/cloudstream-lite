@@ -67,7 +67,10 @@ import com.lagradost.cloudstream3.utils.setText
 import com.lagradost.cloudstream3.utils.txt
 import qrcode.QRCode
 
-class SettingsAccount : BasePreferenceFragmentCompat(), BiometricCallback {
+class SettingsAccount {
+    // Audit-14 #43: fragment body dead (navigation routes
+    // to SettingsAccount2); companion (addAccount,
+    // showLoginInfo) is live via SettingsAccountScreen.
     companion object {
         /** Used by nginx plugin too */
         @SuppressLint("StringFormatInvalid")
@@ -426,79 +429,5 @@ class SettingsAccount : BasePreferenceFragmentCompat(), BiometricCallback {
             putBoolean(biometricKey, enabled)
         }
         findPreference<SwitchPreference>(biometricKey)?.isChecked = enabled
-    }
-
-    override fun onAuthenticationError() {
-        updateAuthPreference(!isAuthEnabled(context ?: return))
-    }
-
-    override fun onAuthenticationSuccess() {
-        if (isAuthEnabled(context ?: return)) {
-            updateAuthPreference(true)
-            BackupUtils.backup(activity)
-            activity?.showBottomDialogText(
-                getString(R.string.biometric_setting),
-                getString(R.string.biometric_warning).html()
-            ) { onDialogDismissedEvent }
-        } else {
-            updateAuthPreference(false)
-        }
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setUpToolbar(R.string.category_account)
-        setPaddingBottom()
-        setToolBarScrollFlags()
-    }
-
-    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-        hideKeyboard()
-        setPreferencesFromResource(R.xml.settings_account, rootKey)
-
-        //Hides the security  category on TV as it's only Biometric for now
-        getPref(R.string.pref_category_security_key)?.hideOn(TV or EMULATOR)
-
-        getPref(R.string.biometric_key)?.hideOn(TV or EMULATOR)?.setOnPreferenceClickListener {
-            val ctx = context ?: return@setOnPreferenceClickListener false
-
-            if (deviceHasPasswordPinLock(ctx)) {
-                startBiometricAuthentication(
-                    activity ?: return@setOnPreferenceClickListener false,
-                    R.string.biometric_authentication_title,
-                    false
-                )
-                promptInfo?.let {
-                    authCallback = this
-                    biometricPrompt?.authenticate(it)
-                }
-            }
-
-            false
-        }
-
-        val syncApis =
-            listOf(
-                R.string.opensubtitles_key to SubtitleRepo(openSubtitlesApi),
-                R.string.subdl_key to SubtitleRepo(subDlApi),
-                R.string.animeskip_key to PlainAuthRepo(animeSkipApi),
-            )
-
-        for ((key, api) in syncApis) {
-            getPref(key)?.apply {
-                title = api.name
-                setOnPreferenceClickListener {
-                    val activity = activity ?: return@setOnPreferenceClickListener false
-                    val info = api.authUser()
-                    val index = api.accounts.indexOfFirst { account -> account.user.id == info?.id }
-                    if (api.accounts.isNotEmpty()) {
-                        showLoginInfo(activity, api, info, index)
-                    } else {
-                        addAccount(activity, api)
-                    }
-                    return@setOnPreferenceClickListener true
-                }
-            }
-        }
     }
 }
