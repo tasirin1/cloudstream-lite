@@ -245,6 +245,16 @@ class HomeViewModel : ViewModel() {
         MutableLiveData<Resource<Map<String, ExpandableHomepageList>>>(Resource.Loading())
     val page: LiveData<Resource<Map<String, ExpandableHomepageList>>> = _page
 
+    // Audit-8 #7: home-load generation. load() clears and
+    // rebuilds the expandable map on provider/account switch or
+    // plugin reload; an in-flight load-more from the PREVIOUS
+    // home used to resume into the new map, injecting the old
+    // provider's page-2 items and overwriting the new section's
+    // page counter. expandAndReturn captures this and drops
+    // stale results (same pattern as SearchViewModel, Audit-8
+    // #6).
+    private var homeLoadIndex = 0
+
     // Audit-6 #12: synchronized so the claim in expandAndReturn
     // (Set.add returning false when already present) is atomic.
     val lock: MutableSet<String> =
@@ -259,6 +269,7 @@ class HomeViewModel : ViewModel() {
         // load-more until app restart. Claim atomically; release
         // in finally.
         if (!lock.add(name)) return null
+        val loadIndex = homeLoadIndex
 
         try {
         repo?.apply {
@@ -271,6 +282,9 @@ class HomeViewModel : ViewModel() {
 
                 val nextPage = current.currentPage + 1
                 val next = getMainPage(nextPage, mainPage.indexOfFirst { it.name == name })
+                // Audit-8 #7: home was reloaded while this page
+                // was loading — drop the stale page entirely.
+                if (loadIndex != homeLoadIndex) return null
                 if (next is Resource.Success) {
                     next.value.filterNotNull().forEach { main ->
                         main.items.forEach { newList ->
@@ -377,6 +391,7 @@ class HomeViewModel : ViewModel() {
         when (val data = repo?.getMainPage(1, null)) {
             is Resource.Success -> {
                 try {
+                    homeLoadIndex++
                     expandable.clear()
                     data.value.forEach { home ->
                         home?.items?.forEach { list ->
