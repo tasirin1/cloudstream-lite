@@ -345,7 +345,15 @@ object AccountScreen {
         AlertDialog(
             containerColor = MaterialTheme.colorScheme.background,
             confirmButton = {
-                if (exists) {
+                // Audit-13 #9: no Delete for the default profile
+                // (keyIndex 0) — the handler wipes its whole
+                // "0/..." namespace and provider logins, then
+                // re-adds the profile EMPTY because a default
+                // must always exist: pure data destruction with
+                // none of the expected effect. The lock switch
+                // in this same dialog already special-cases
+                // keyIndex 0; Delete was missed.
+                if (exists && account.keyIndex != 0) {
                     WhiteButton(text = stringResource(R.string.delete)) {
                         pendingDialog = WaitForDialogType.DeleteAccount
                     }
