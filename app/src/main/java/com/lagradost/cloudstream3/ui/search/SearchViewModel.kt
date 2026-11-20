@@ -62,7 +62,17 @@ class SearchViewModel : ViewModel() {
     /** Save which providers can searched again and which search result page they are on.
      * Maps provider name to search list.
      * @see [HomeViewModel.expandable] */
-    private val expandableSearches: MutableMap<String, ExpandableSearchList> = mutableMapOf()
+    // Audit-6 #10: synchronized — search() writes this map from
+    // parallel amap IO threads, and the SAME live instance used
+    // to be posted to LiveData, so the UI iterated it while IO
+    // mutated it (the fragments already carry defensive
+    // try/catch + locks against the resulting CME). Writes go
+    // through the synchronized map; readers get snapshots.
+    private val expandableSearches: MutableMap<String, ExpandableSearchList> =
+        java.util.Collections.synchronizedMap(mutableMapOf())
+
+    private fun expandableSearchesSnapshot(): Map<String, ExpandableSearchList> =
+        synchronized(expandableSearches) { LinkedHashMap(expandableSearches) }
 
     private var currentSearchIndex = 0
     private var onGoingSearch: Job? = null
@@ -155,8 +165,8 @@ class SearchViewModel : ViewModel() {
                 current.hasNext = false
             }
 
-            _searchResponse.postValue(Resource.Success(bundleSearch(expandableSearches)))
-            _currentSearch.postValue(expandableSearches)
+            _searchResponse.postValue(Resource.Success(bundleSearch(expandableSearchesSnapshot())))
+            _currentSearch.postValue(expandableSearchesSnapshot())
         }
 
         lock -= name
@@ -169,7 +179,7 @@ class SearchViewModel : ViewModel() {
         )
     }
 
-    private fun bundleSearch(lists: MutableMap<String, ExpandableSearchList>): ExpandableSearchList {
+    private fun bundleSearch(lists: Map<String, ExpandableSearchList>): ExpandableSearchList {
         if (lists.size == 1) {
             return lists.values.first()
         }
@@ -240,13 +250,13 @@ class SearchViewModel : ViewModel() {
                             ExpandableSearchList(searchValue.items, 1, searchValue.hasNext)
                     }
 
-                    _currentSearch.postValue(expandableSearches)
+                    _currentSearch.postValue(expandableSearchesSnapshot())
                 }
 
                 if (currentSearchIndex != currentIndex) return@withContext // this should prevent rewrite of existing data bug
 
-                _currentSearch.postValue(expandableSearches)
-                val list = bundleSearch(expandableSearches)
+                _currentSearch.postValue(expandableSearchesSnapshot())
+                val list = bundleSearch(expandableSearchesSnapshot())
 
                 _searchResponse.postValue(Resource.Success(list))
             }
