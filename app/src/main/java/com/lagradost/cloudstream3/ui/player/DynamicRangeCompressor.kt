@@ -96,11 +96,16 @@ class DynamicRangeCompressor : AudioProcessor {
 
     fun restoreSavedSettings() {
         enabled = getKey<Boolean>(COMPRESSOR_ENABLED_KEY) ?: false
-        threshold = getKey<Float>(COMPRESSOR_THRESHOLD_KEY) ?: -24f
-        ratio = getKey<Float>(COMPRESSOR_RATIO_KEY) ?: 8f
-        attackMs = getKey<Float>(COMPRESSOR_ATTACK_KEY) ?: 5f
-        releaseMs = getKey<Float>(COMPRESSOR_RELEASE_KEY) ?: 400f
-        makeupGain = getKey<Float>(COMPRESSOR_MAKEUP_KEY) ?: 12f
+        // Audit-14 #45: clamp to the documented ranges — the
+        // stored floats were trusted raw, and ratio = 0 made
+        // computeGain divide by zero (1f / 0f = +Inf gain,
+        // destroying the whole audio path). A corrupt or
+        // hand-edited store can hold anything.
+        threshold = (getKey<Float>(COMPRESSOR_THRESHOLD_KEY) ?: -24f).coerceIn(-30f, 0f)
+        ratio = (getKey<Float>(COMPRESSOR_RATIO_KEY) ?: 8f).coerceIn(1f, 20f)
+        attackMs = (getKey<Float>(COMPRESSOR_ATTACK_KEY) ?: 5f).coerceIn(1f, 400f)
+        releaseMs = (getKey<Float>(COMPRESSOR_RELEASE_KEY) ?: 400f).coerceIn(2f, 800f)
+        makeupGain = (getKey<Float>(COMPRESSOR_MAKEUP_KEY) ?: 12f).coerceIn(0f, 24f)
     }
 
     private var format       = AudioFormat.NOT_SET
