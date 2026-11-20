@@ -132,6 +132,11 @@ const val toleranceAfterUs = 300_000L
 @OptIn(UnstableApi::class)
 class CS3IPlayer : IPlayer {
     private var playerListener: Player.Listener? = null
+
+    // Audit-5 #24: the one-shot Play-from-IDLE resume listener,
+    // kept so a new Play can replace (not stack) a previous one
+    // whose STATE_READY never arrived.
+    private var idleResumeListener: Player.Listener? = null
     private var isPlaying = false
     private var exoPlayer: ExoPlayer? = null
         set(value) {
@@ -1110,15 +1115,32 @@ class CS3IPlayer : IPlayer {
                         // then resume to the current position once we are in STATE_READY again.
                         if (playbackState == Player.STATE_IDLE) {
                             val seekPosition = currentPosition
-                            exoPlayer?.addListener(object : Player.Listener {
+                            // Audit-5 #24: the listener used to
+                            // remove itself only on STATE_READY —
+                            // when READY never came (prepare error,
+                            // another stop) it stayed registered
+                            // and every Play-from-IDLE stacked
+                            // another one. Replace any pending
+                            // predecessor, and also self-remove on
+                            // player error.
+                            idleResumeListener?.let { exoPlayer?.removeListener(it) }
+                            val resumeListener = object : Player.Listener {
                                 private var seekApplied = false
                                 override fun onPlaybackStateChanged(playbackState: Int) {
                                     if (seekApplied || playbackState != Player.STATE_READY) return
                                     seekApplied = true
                                     exoPlayer?.seekTo(currentWindow, seekPosition)
                                     exoPlayer?.removeListener(this)
+                                    if (idleResumeListener === this) idleResumeListener = null
                                 }
-                            })
+
+                                override fun onPlayerError(error: PlaybackException) {
+                                    exoPlayer?.removeListener(this)
+                                    if (idleResumeListener === this) idleResumeListener = null
+                                }
+                            }
+                            idleResumeListener = resumeListener
+                            exoPlayer?.addListener(resumeListener)
                             prepare()
                         }
                         play()
