@@ -132,6 +132,12 @@ data class VideoState(
         }.also { value -> sortedLinks[qualityProfile] = value }
     }
 
+    // Audit-14 #61: eight add/set overloads that no caller
+    // used (add(VideoSkipStamp), add(Collection<VideoLink>),
+    // add(Collection<VideoSkipStamp>), set(SubtitleData),
+    // set(VideoLink), set(VideoSkipStamp),
+    // set(Collection<SubtitleData>), set(Collection<VideoLink>))
+    // removed — only the overloads below have call sites.
     @Contract(pure = true)
     fun add(item: SubtitleData): VideoState =
         inheritSortedLinksCache(copy(subtitles = subtitles.add(item)))
@@ -139,43 +145,10 @@ data class VideoState(
     @Contract(pure = true)
     fun add(item: VideoLink): VideoState = copy(links = links.add(item))
 
-    @Contract(pure = true)
-    fun add(item: VideoSkipStamp): VideoState =
-        inheritSortedLinksCache(copy(stamps = stamps.add(item)))
-
     @JvmName("addSubtitleData")
     @Contract(pure = true)
     fun add(items: Collection<SubtitleData>): VideoState =
         inheritSortedLinksCache(copy(subtitles = subtitles.addAll(items)))
-
-    @JvmName("addVideoLink")
-    @Contract(pure = true)
-    fun add(items: Collection<VideoLink>): VideoState = copy(links = links.addAll(items))
-
-    @JvmName("addVideoSkipStamp")
-    @Contract(pure = true)
-    fun add(items: Collection<VideoSkipStamp>): VideoState =
-        inheritSortedLinksCache(copy(stamps = stamps.addAll(items)))
-
-    @Contract(pure = true)
-    fun set(item: SubtitleData): VideoState =
-        inheritSortedLinksCache(copy(subtitles = persistentSetOf(item)))
-
-    @Contract(pure = true)
-    fun set(item: VideoLink): VideoState = copy(links = persistentSetOf(item))
-
-    @Contract(pure = true)
-    fun set(item: VideoSkipStamp): VideoState =
-        inheritSortedLinksCache(copy(stamps = persistentListOf(item)))
-
-    @JvmName("setSubtitleData")
-    @Contract(pure = true)
-    fun set(items: Collection<SubtitleData>): VideoState =
-        inheritSortedLinksCache(copy(subtitles = items.toPersistentSet()))
-
-    @JvmName("setVideoLink")
-    @Contract(pure = true)
-    fun set(items: Collection<VideoLink>): VideoState = copy(links = items.toPersistentSet())
 
     @JvmName("setVideoSkipStamp")
     @Contract(pure = true)
