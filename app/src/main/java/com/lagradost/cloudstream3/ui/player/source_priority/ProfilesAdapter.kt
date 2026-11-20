@@ -28,6 +28,11 @@ class ProfilesAdapter(
     })) {
 
     companion object {
+        // Audit-14 #48: the art set is fixed, so a drawable's
+        // palette color is a constant — compute it once, not
+        // per bind.
+        private val paletteColorCache = mutableMapOf<Int, Int>()
+
         private val art = arrayOf(
             R.drawable.profile_bg_teal,
             R.drawable.profile_bg_blue,
@@ -92,12 +97,25 @@ class ProfilesAdapter(
         val drawableResId = art[position % art.size]
         profileBg.loadImage(drawableResId)
 
-        val drawable = ContextCompat.getDrawable(itemView.context, drawableResId)
-        if (drawable != null) {
-            // Convert Drawable to Bitmap
-            val bitmap = drawableToBitmap(drawable)
+        val applyProfileColor = { color: Int ->
+            wifiText.backgroundTintList = ColorStateList.valueOf(color)
+            dataText.backgroundTintList = ColorStateList.valueOf(color)
+            downloadText.backgroundTintList = ColorStateList.valueOf(color)
+        }
+        // Audit-14 #48: this used to convert the drawable to a
+        // bitmap synchronously on every bind (main thread) and
+        // the async Palette callback painted into the holder
+        // with no recycling guard — a recycled holder could get
+        // the previous profile's colors. Cache per drawable and
+        // verify the holder is still bound to the same position.
+        val cachedColor = paletteColorCache[drawableResId]
+        if (cachedColor != null) {
+            applyProfileColor(cachedColor)
+        } else {
+            val drawable = ContextCompat.getDrawable(itemView.context, drawableResId)
+            val bitmap = drawable?.let { drawableToBitmap(it) }
             if (bitmap != null) {
-                // Use Palette to extract colors from the bitmap
+                val boundPosition = position
                 Palette.from(bitmap).generate { palette ->
                     val color = palette?.getDarkVibrantColor(
                         ContextCompat.getColor(
@@ -105,11 +123,11 @@ class ProfilesAdapter(
                             R.color.dubColorBg
                         )
                     )
-
                     if (color != null) {
-                        wifiText.backgroundTintList = ColorStateList.valueOf(color)
-                        dataText.backgroundTintList = ColorStateList.valueOf(color)
-                        downloadText.backgroundTintList = ColorStateList.valueOf(color)
+                        paletteColorCache[drawableResId] = color
+                        if (bindingAdapterPosition == boundPosition) {
+                            applyProfileColor(color)
+                        }
                     }
                 }
             }
