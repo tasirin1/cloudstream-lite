@@ -218,7 +218,10 @@ class GeneratorPlayer : FullScreenPlayer() {
 
 
     private var limitTitle = 0
-    private var showTitle = false
+    // Audit-14 #59: a showTitle flag used to sit here — it
+    // was never assigned anywhere, so the title segment of
+    // the info line below was permanently dead. Removed;
+    // the title itself is shown by the header as before.
     private var showName = false
     private var showResolution = false
     private var showMediaInfo = false
@@ -2117,10 +2120,8 @@ class GeneratorPlayer : FullScreenPlayer() {
     fun setPlayerDimen(widthHeight: Pair<Int, Int>?) {
         val resolution = widthHeight?.let { "${it.first}x${it.second}" }
         val name = currentSelectedLink?.first?.name ?: currentSelectedLink?.second?.name
-        val title = getHeaderName()
 
         val result = listOfNotNull(
-            title?.takeIf { showTitle && it.isNotBlank() },
             name?.takeIf { showName && it.isNotBlank() },
             resolution?.takeIf { showResolution && it.isNotBlank() },
         ).joinToString(" - ")
