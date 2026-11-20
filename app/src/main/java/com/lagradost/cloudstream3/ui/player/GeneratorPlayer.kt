@@ -158,7 +158,22 @@ class GeneratorPlayer : FullScreenPlayer() {
         // recreated fragment re-reads its own (recent) uuid, so
         // retaining the few most recent entries is enough.
         private val generatorOrder = ArrayDeque<String>()
-        private const val MAX_RETAINED_GENERATORS = 3
+        // Audit-6 #20: raised from 3 — with releaseGenerator()
+        // below, the map tracks live sessions (a fragment
+        // releases its entry when truly destroyed), so this cap
+        // is only a backstop against pathological stacking. At 3
+        // it evicted generators whose fragments were still alive
+        // in the backstack; returning to such a fragment found
+        // null and the player exited itself.
+        private const val MAX_RETAINED_GENERATORS = 10
+
+        fun releaseGenerator(uuid: String?) {
+            if (uuid == null) return
+            generators.remove(uuid)
+            synchronized(generatorOrder) {
+                generatorOrder.remove(uuid)
+            }
+        }
 
         fun newInstance(
             generator: VideoGenerator<*>,
@@ -1747,6 +1762,14 @@ class GeneratorPlayer : FullScreenPlayer() {
     override fun onDestroy() {
         ResultFragment.updateUI()
         currentVerifyLink?.cancel()
+        // Audit-6 #20: release this session's generator when the
+        // fragment is truly gone. A configuration change destroys
+        // and recreates the fragment with the same arguments, and
+        // the recreated instance must find its generator again —
+        // so only release when not changing configurations.
+        if (activity?.isChangingConfigurations != true) {
+            releaseGenerator(arguments?.getString("uuid"))
+        }
         super.onDestroy()
     }
 
