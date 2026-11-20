@@ -2173,6 +2173,10 @@ object VideoDownloadManager {
         /** isCompleted just means the download should not be retried.
          * It includes stopped by user AND completion of file download.
          * */
+        // Audit-14 #11: written from service/UI threads, read
+        // from IO coroutines — without @Volatile the reader can
+        // spin on a stale value (same class as Audit-13 #6).
+        @Volatile
         var isCompleted = false
             set(value) {
                 field = value
@@ -2240,6 +2244,7 @@ object VideoDownloadManager {
             DownloadQueueManager.forceRefreshQueue()
         }
 
+        @Volatile
         var isCancelled = false
             set(value) {
                 val oldField = field
@@ -2254,6 +2259,7 @@ object VideoDownloadManager {
 
         /** This failure can be both downloader and user initiated.
          * Do not automatically retry in case of failure. */
+        @Volatile
         var isFailed = false
             set(value) {
                 val oldField = field
