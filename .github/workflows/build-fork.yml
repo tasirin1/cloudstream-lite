@@ -52,6 +52,14 @@ jobs:
     # in the sign step below. NOTE: its signature differs from one
     # release to the next (throwaway CI key), so a new lite APK cannot
     # update an installed one in place; uninstall first.
+    # Audit-5 #27: run the library JVM tests (M3u8Helper hslLazy
+    # coverage for the Audit-4 #11 key-range branch, among others).
+    # Pushes to master otherwise never executed any test suite —
+    # only the PR workflow's `check` did, and this fork lands
+    # directly on master.
+    - name: Run library JVM tests
+      run: ./gradlew :library:jvmTest
+
     - name: Build lite release
       run: ./gradlew assemblePrereleaseRelease
 
