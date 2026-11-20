@@ -938,9 +938,20 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         }
 
         // ── Dialog lifecycle ───────────────────────────────────────────────
+        // Audit-13 #23: the sliders mutate the LIVE compressor,
+        // so a dismiss that is neither Apply nor Cancel (Back /
+        // outside tap) used to leave unsaved values in effect
+        // for the session. Treat it as Cancel: revert to the
+        // snapshot unless Apply was pressed.
+        var compressorApplied = false
         val dialog = AlertDialog.Builder(act, R.style.AlertDialogCustom)
             .setView(binding.root)
             .setOnDismissListener {
+                if (!compressorApplied) {
+                    compressor.enabled = snap.enabled
+                    compressor.threshold = snap.threshold
+                    compressor.makeupGain = snap.makeupGain
+                }
                 activity?.hideSystemUI()
                 selectCompressorDialog = null
             }
@@ -948,6 +959,7 @@ open class FullScreenPlayer : AbstractPlayerFragment<FragmentPlayerBinding>(
         selectCompressorDialog = dialog
 
         binding.applyBtt.setOnClickListener {
+            compressorApplied = true
             saveCompressorSettings(compressor)
             dialog.dismiss()
         }
