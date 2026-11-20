@@ -328,7 +328,18 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
         }
         Log.i(TAG, "Parse subtitle, current parser: $realDecoder")
         try {
-            val inputString = getStr(data).first
+            // Audit-5 #3: honor the (offset, length) window.
+            // media3 hands us the decoder buffer's full backing
+            // array, of which only [offset, offset+length) is this
+            // sample — decoding the whole array parsed the stale
+            // tail of a previous, larger sample as extra cues.
+            val windowEnd = minOf(data.size, offset + length)
+            val window = if (offset == 0 && windowEnd == data.size) {
+                data
+            } else {
+                data.copyOfRange(offset, windowEnd)
+            }
+            val inputString = getStr(window).first
             Log.i(TAG, "Subtitle preview: ${inputString.take(30)}") // Fork fix (audit #19)
             if (inputString.isNotBlank()) {
                 var str: String = trimStr(inputString)
@@ -349,10 +360,16 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
                     }
                 }
                 val array = str.toByteArray()
+                // Audit-5 #3: the inner parser gets the FULL
+                // re-encoded array. Passing the original length
+                // clamped to array.size truncated the content
+                // whenever re-encoding to UTF-8 expanded it
+                // (single-byte encodings like windows-1256 grow
+                // up to 2x), silently cutting off the later cues.
                 realDecoder?.parse(
                     array,
-                    minOf(array.size, offset),
-                    minOf(array.size, length),
+                    0,
+                    array.size,
                     outputOptions,
                     customOutput
                 )
