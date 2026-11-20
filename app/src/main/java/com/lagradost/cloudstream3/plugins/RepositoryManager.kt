@@ -118,6 +118,13 @@ object RepositoryManager {
     private val GH_REGEX =
         Regex("^https://raw.githubusercontent.com/([A-Za-z0-9-]+)/([A-Za-z0-9_.-]+)/(.*)$")
 
+    // Audit-4 #55: hoisted out of parseRepoUrl, which compiled
+    // them (via toRegex()) on every call.
+    private val REPO_URL_SCHEME_REGEX = Regex("^https?://")
+    private val REPO_SHORT_SCHEME_REGEX =
+        Regex("^(cloudstreamrepo://)|(https://cs\\.repo/\\??)")
+    private val REPO_SHORTCODE_REGEX = Regex("^[a-zA-Z0-9!_-]+$")
+
 
     /** Returns a SHA-256 string of the file content.
      * Example: "sha256-b70462c264cb7f90fc2860a8e58d7544ce747ff347d1d11fa093623901853573" **/
@@ -161,19 +168,19 @@ object RepositoryManager {
 
     suspend fun parseRepoUrl(url: String): String? {
         val fixedUrl = url.trim()
-        return if (fixedUrl.contains("^https?://".toRegex())) {
+        return if (fixedUrl.contains(REPO_URL_SCHEME_REGEX)) {
             // Audit-3 #11: a repository serves the plugin list AND
             // the hashes used to verify plugins; over plain HTTP a
             // network attacker can forge both together, so repo
             // URLs are upgraded to HTTPS.
             upgradeToHttps(fixedUrl)
-        } else if (fixedUrl.contains("^(cloudstreamrepo://)|(https://cs\\.repo/\\??)".toRegex())) {
-            fixedUrl.replace("^(cloudstreamrepo://)|(https://cs\\.repo/\\??)".toRegex(), "").let {
-                return@let if (!it.contains("^https?://".toRegex()))
+        } else if (fixedUrl.contains(REPO_SHORT_SCHEME_REGEX)) {
+            fixedUrl.replace(REPO_SHORT_SCHEME_REGEX, "").let {
+                return@let if (!it.contains(REPO_URL_SCHEME_REGEX))
                     "https://${it}"
                 else fixedUrl
             }
-        } else if (fixedUrl.matches("^[a-zA-Z0-9!_-]+$".toRegex())) {
+        } else if (fixedUrl.matches(REPO_SHORTCODE_REGEX)) {
             safeAsync {
                 if (fixedUrl.startsWith("!")) {
                     val response = app.get("https://py.md/${fixedUrl.removePrefix("!")}", allowRedirects = false)
