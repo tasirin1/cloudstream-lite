@@ -34,7 +34,7 @@ class Hexload: ExtractorApi() {
         }
         Log.d("requestArgs", requestArgs.toString())
         val streamResponse = app.post("$mainUrl/download", data = requestArgs)
-            .parsed<StreamResponse>()
+            .parsedSafe<StreamResponse>() ?: return // Audit-7 #44
 
         callback.invoke(newExtractorLink(
             name = name,

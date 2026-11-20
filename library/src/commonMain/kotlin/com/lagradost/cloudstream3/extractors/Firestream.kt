@@ -32,7 +32,7 @@ open class Firestream : ExtractorApi() {
         // with an NPE instead of yielding no link.
         val token = doc.selectFirst("script[id=token-blob]")?.data() ?: return
         val videoResponse = app.post("$mainUrl/api/videos/$id/resolve", json = mapOf("blob" to token))
-            .parsed<VideoResponse>()
+            .parsedSafe<VideoResponse>() ?: return // Audit-7 #44
 
         callback.invoke(
             newExtractorLink(

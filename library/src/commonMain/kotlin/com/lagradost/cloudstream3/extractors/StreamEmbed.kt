@@ -23,7 +23,7 @@ open class StreamEmbed : ExtractorApi() {
     ) {
         val jsonString = app.get(url, referer = mainUrl).text
             .substringAfter("var video = ").substringBefore(";")
-        val video = parseJson<Details>(jsonString)
+        val video = tryParseJson<Details>(jsonString) ?: return // Audit-7 #44
         M3u8Helper.generateM3u8(
             this.name,
             "$mainUrl/m3u8/${video.uid}/${video.md5}/master.txt?s=1&id=${video.id}&cache=${video.status}",

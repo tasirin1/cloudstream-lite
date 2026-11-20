@@ -32,7 +32,9 @@ open class GUpload: ExtractorApi() {
         val response = app.get(url, referer = referer).text
 
         val playerConfigString = response.substringAfter("const config = ").substringBefore(";")
-        val playerConfig = parseJson<VideoInfo>(playerConfigString)
+        // Audit-7 #44: safe parse — a changed page shape is a
+        // clean no-link, not a thrown SerializationException.
+        val playerConfig = tryParseJson<VideoInfo>(playerConfigString) ?: return
 
         callback.invoke(
             newExtractorLink(

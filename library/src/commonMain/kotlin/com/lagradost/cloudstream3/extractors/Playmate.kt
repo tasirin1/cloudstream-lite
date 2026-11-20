@@ -27,7 +27,7 @@ class Playmate : ExtractorApi() {
             "$mainUrl/api/s",
             json = mapOf("c" to id, "d" to "web"),
             headers = mapOf("User-Agent" to "Mozilla/5.0 (X11; Linux x86_64; rv:153.0) Gecko/20100101 Firefox/153.0")
-        ).parsed<StreamInfo>()
+        ).parsedSafe<StreamInfo>() ?: return // Audit-7 #44
 
         callback.invoke(newExtractorLink(source = name, name = name, url = resp.sx, type = ExtractorLinkType.M3U8))
     }

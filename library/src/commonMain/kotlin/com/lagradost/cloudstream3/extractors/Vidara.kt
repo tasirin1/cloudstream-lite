@@ -94,7 +94,7 @@ open class Vidara : ExtractorApi() {
                 "filecode" to fileCode,
                 "device" to "web"
             )
-        ).parsed<StreamUpFileInfo>()
+        ).parsedSafe<StreamUpFileInfo>() ?: return // Audit-7 #44
         callback.invoke(
             newExtractorLink(
                 source = name,

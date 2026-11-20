@@ -52,7 +52,7 @@ open class VinovoTo : ExtractorApi() {
             ),
             cookies = resp.cookies,
             referer = fixedUrl,
-        ).parsed<VinovoFileResp>()
+        ).parsedSafe<VinovoFileResp>() ?: return // Audit-7 #44
 
         val fileUrl = "$videoBaseUrl/stream/${streamInfo.token}"
         callback.invoke(

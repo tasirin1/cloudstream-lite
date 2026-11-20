@@ -30,7 +30,7 @@ open class Jeniusplay : ExtractorApi() {
             data = mapOf("hash" to hash, "r" to "$referer"),
             referer = url,
             headers = mapOf("X-Requested-With" to "XMLHttpRequest"),
-        ).parsed<ResponseSource>().videoSource
+        ).parsedSafe<ResponseSource>()?.videoSource ?: return // Audit-7 #44
 
         M3u8Helper.generateM3u8(
             this.name,

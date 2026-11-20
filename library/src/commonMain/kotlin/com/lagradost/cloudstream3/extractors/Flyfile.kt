@@ -23,7 +23,7 @@ open class Flyfile : ExtractorApi() {
     ) {
         val videoId = url.substringAfterLast("/")
         val videoInfo = app.get("$apiUrl/api/streaming/assign/$videoId")
-            .parsed<StreamInfo>()
+            .parsedSafe<StreamInfo>() ?: return // Audit-7 #44
 
         val streamUrl = "${videoInfo.url}/hls/${videoInfo.token}/master.m3u8"
         callback.invoke(

@@ -29,7 +29,7 @@ open class Vidoza : ExtractorApi() {
     ) {
         val response = app.get(url).document
         val script = response.selectFirst("script:containsData(sourcesCode)")?.data()
-            ?: throw RuntimeException("couldn't find script containing video data")
+            ?: return // Audit-7 #44: was a raw RuntimeException
 
         // e.g. sourcesCode: [{ src: "https://str38.vidoza.net/vod/v2/.../v.mp4", type: "video/mp4", label:"SD", res:"720"}],
         var sourcesArray = script.substringAfter("sourcesCode:").substringBefore("\n")
@@ -38,7 +38,7 @@ open class Vidoza : ExtractorApi() {
             sourcesArray = sourcesArray.replace(Regex(""""?$it"?:"""), """"$it":""")
         }
 
-        val videoData = parseJson<ArrayList<VinovoVideoData>>(sourcesArray)
+        val videoData = tryParseJson<ArrayList<VinovoVideoData>>(sourcesArray) ?: return // Audit-7 #44
         for (stream in videoData) {
             callback.invoke(
                 newExtractorLink(
