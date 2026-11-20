@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.subtitles.AbstractSubtitleEntities.SubtitleSea
 import com.lagradost.cloudstream3.syncproviders.AuthData
 import com.lagradost.cloudstream3.syncproviders.SubtitleAPI
 import com.lagradost.cloudstream3.TvType
+import com.lagradost.cloudstream3.utils.StringUtils.encodeUrl
 import com.lagradost.cloudstream3.utils.SubtitleHelper.fromTagToEnglishLanguageName
 
 class Addic7ed : SubtitleAPI() {
@@ -65,7 +66,10 @@ class Addic7ed : SubtitleAPI() {
             )
         }
 
-        val response = app.get(url = "$HOST/search.php?search=$searchQuery&Submit=Search")
+        // Audit-14 #9: encode the title — a raw "&" or "#"
+        // truncated it and injected fake parameters (same fix
+        // in OpenSubtitlesApi and Subdl).
+        val response = app.get(url = "$HOST/search.php?search=${searchQuery.encodeUrl()}&Submit=Search")
         val hostDocument = response.document
 
         // 1st case: found one movie or episode. Redirected to $HOST/movie/1234 or $HOST/serie/show-name/$seasonNum/$epNum/ep-name

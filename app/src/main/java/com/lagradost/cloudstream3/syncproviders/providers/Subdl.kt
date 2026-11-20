@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.subtitles.AbstractSubtitleEntities
 import com.lagradost.cloudstream3.subtitles.SubtitleResource
 import com.lagradost.cloudstream3.syncproviders.AuthData
+import com.lagradost.cloudstream3.utils.StringUtils.encodeUrl
 import com.lagradost.cloudstream3.syncproviders.AuthLoginRequirement
 import com.lagradost.cloudstream3.syncproviders.AuthLoginResponse
 import com.lagradost.cloudstream3.syncproviders.AuthToken
@@ -81,7 +82,7 @@ class SubDlApi : SubtitleAPI() {
 
         val searchQueryUrl = when (idQuery) {
             //Use imdb/tmdb id to search if its valid
-            null -> "$APIENDPOINT?api_key=${apiKey}&film_name=$queryText&languages=$langSubdlCode$epQuery$seasonQuery$yearQuery"
+            null -> "$APIENDPOINT?api_key=${apiKey}&film_name=${queryText.encodeUrl()}&languages=$langSubdlCode$epQuery$seasonQuery$yearQuery"
             else -> "$APIENDPOINT?api_key=${apiKey}$idQuery&languages=$langSubdlCode$epQuery$seasonQuery$yearQuery"
         }
 
