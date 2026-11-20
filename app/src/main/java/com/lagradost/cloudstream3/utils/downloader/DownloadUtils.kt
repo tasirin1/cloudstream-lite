@@ -145,13 +145,18 @@ object DownloadUtils {
     // handle entirely — nothing could stop it, so deleting
     // the episode mid-flight let the subtitle write its file
     // back after the delete had cleaned it up.
-    private val singleSubtitleJobs = mutableMapOf<Int, Job>()
+    // Audit-17 #7: a SET of jobs per episode — one slot per
+    // episode orphaned the first job when a second subtitle
+    // (another language) was started for the same episode:
+    // the delete-cancel then missed it and its file still
+    // resurrected after the delete.
+    private val singleSubtitleJobs = mutableMapOf<Int, MutableSet<Job>>()
 
-    /** Cancels an in-flight single-subtitle download (episode deleted). */
+    /** Cancels in-flight single-subtitle downloads (episode deleted). */
     fun cancelSingleSubtitleDownload(episodeId: Int) {
         synchronized(singleSubtitleJobs) {
             singleSubtitleJobs.remove(episodeId)
-        }?.cancel()
+        }?.forEach { it.cancel() }
     }
 
     fun downloadSubtitle(
@@ -174,11 +179,13 @@ object DownloadUtils {
                 )
             }
             synchronized(singleSubtitleJobs) {
-                singleSubtitleJobs[meta.id] = job
+                singleSubtitleJobs.getOrPut(meta.id) { mutableSetOf() }.add(job)
             }
             job.invokeOnCompletion {
                 synchronized(singleSubtitleJobs) {
-                    if (singleSubtitleJobs[meta.id] === job) {
+                    val jobs = singleSubtitleJobs[meta.id]
+                    jobs?.remove(job)
+                    if (jobs?.isEmpty() == true) {
                         singleSubtitleJobs.remove(meta.id)
                     }
                 }
