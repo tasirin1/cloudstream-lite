@@ -215,9 +215,15 @@ object RepositoryManager {
             upgradeToHttps(fixedUrl)
         } else if (fixedUrl.contains(REPO_SHORT_SCHEME_REGEX)) {
             fixedUrl.replace(REPO_SHORT_SCHEME_REGEX, "").let {
+                // Audit-15 #16: a deep link wrapping a FULL
+                // url (cloudstreamrepo://https://host/…)
+                // returned fixedUrl — still carrying the
+                // wrapper scheme, unusable as a repo URL.
+                // Return the stripped value, HTTPS-upgraded
+                // like the plain-URL branch above.
                 return@let if (!it.contains(REPO_URL_SCHEME_REGEX))
                     "https://${it}"
-                else fixedUrl
+                else upgradeToHttps(it)
             }
         } else if (fixedUrl.matches(REPO_SHORTCODE_REGEX)) {
             safeAsync {
