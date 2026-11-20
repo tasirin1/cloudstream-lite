@@ -2171,7 +2171,10 @@ object VideoDownloadManager {
     ) {
         private val TAG = "EpisodeDownloadInstance"
         private var subtitleDownloadJob: Job? = null
-        private var downloadJob: Job? = null
+        // Audit-15 #18: a downloadJob field used to sit here —
+        // written by both launch sites, read by nothing
+        // (cancellation runs through the metadata flags, not
+        // the job handle). Removed with its assignments.
         private var linkLoadingJob: Job? = null
 
         /** isCompleted just means the download should not be retried.
@@ -2453,10 +2456,7 @@ object VideoDownloadManager {
             Log.d(TAG, "Starting download ${downloadQueueWrapper.id}")
             setKey(KEY_RESUME_IN_QUEUE, downloadQueueWrapper.id.toString(), downloadQueueWrapper)
 
-            // Audit-7 #2: keep the job handle for every entry
-            // path — the resume path used to launch anonymously,
-            // leaving downloadJob null here.
-            downloadJob = ioSafe {
+            ioSafe {
                 if (downloadQueueWrapper.resumePackage != null) {
                     downloadFromResume()
                     // Load links if they are not already loaded
@@ -2527,7 +2527,7 @@ object VideoDownloadManager {
                 // DOWNLOAD VIDEO
                 val info = DownloadItem(src, folder, meta, links)
 
-                this.downloadJob = ioSafe {
+                ioSafe {
                     startDownload(info, null)
                 }
 
@@ -2572,7 +2572,7 @@ object VideoDownloadManager {
                 throw e
             } catch (e: Exception) {
                 // Audit-14 #13: the old guard only marked failure
-                // when downloadJob was still null, but this code
+                // when the job handle was still null, but this code
                 // always runs INSIDE the launched job, so the
                 // guard never fired — a setup exception (setKey,
                 // getFolder) left the queue entry hanging forever
