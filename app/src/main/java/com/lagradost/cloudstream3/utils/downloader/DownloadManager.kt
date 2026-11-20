@@ -926,6 +926,11 @@ object VideoDownloadManager {
         val chuckSize: Long,
         val bufferSize: Int,
         val isResumed: Boolean,
+        // Audit-7 #3: content validator (ETag, falling back to
+        // Last-Modified) seen by the probe, so a resume can tell
+        // whether the remote file is still the same content the
+        // partial bytes came from.
+        val contentValidator: String? = null,
     ) {
         val size get() = chuckStartByte.size
 
@@ -1178,7 +1183,11 @@ object VideoDownloadManager {
             chuckSize = chuckSize,
             bufferSize = bufferSize,
             // we have only resumed if we had a downloaded file and we can resume
-            isResumed = startByte > 0 && hasRangeSupport
+            isResumed = startByte > 0 && hasRangeSupport,
+            // Audit-7 #3: ETag is the strong validator; fall back
+            // to Last-Modified when the server sends no ETag.
+            contentValidator = headRequest.headers["ETag"]
+                ?: headRequest.headers["Last-Modified"]
         )
     }
 
@@ -1256,12 +1265,33 @@ object VideoDownloadManager {
                 return@withContext DOWNLOAD_INVALID_INPUT
             }
 
+            // Audit-7 #3: the validator stored by the previous
+            // run of this download (in the info's extraInfo as
+            // "v1:<etag-or-last-modified>"). A changed remote
+            // file at the same URL — re-upload, re-encode — used
+            // to be resumed blindly on byte offset alone, gluing
+            // the new tail onto the old head; the final byte
+            // count still matched, so the corrupt hybrid was
+            // marked done. The HLS side got its playlist
+            // fingerprint in Audit-5 #9; this is the plain-file
+            // counterpart.
+            val storedValidator = if (tryResume && stream.startAt > 0) {
+                parentId?.let { id ->
+                    context.getKey<DownloadedFileInfo>(
+                        KEY_DOWNLOAD_INFO, id.toString(), null
+                    )?.extraInfo?.removePrefix("v1:")?.takeIf { it.isNotEmpty() }
+                }
+            } else null
+            val validatorChanged = storedValidator != null &&
+                items.contentValidator != null &&
+                storedValidator != items.contentValidator
+
             // if we have an output stream that cant be resumed then we delete the entire file
             // and set up the stream again; the same applies when the
             // partial file is longer than the remote file is now —
             // the remote content changed since the partial download
             // and appending to it would produce a corrupt hybrid
-            if (stream.startAt > 0 && (!items.isResumed ||
+            if (stream.startAt > 0 && (!items.isResumed || validatorChanged ||
                         (items.totalLength != null && stream.startAt > items.totalLength))
             ) {
                 fileStream.closeQuietly()
@@ -1278,7 +1308,10 @@ object VideoDownloadManager {
                     totalBytes = metadata.approxTotalBytes,
                     relativePath = folder,
                     displayName = displayName,
-                    basePath = basePath
+                    basePath = basePath,
+                    // Audit-7 #3: persist the content validator so
+                    // the next resume can detect a replaced file.
+                    extraInfo = items.contentValidator?.let { "v1:$it" }
                 )
             )
 
@@ -2073,11 +2106,19 @@ object VideoDownloadManager {
             removeKey(KEY_RESUME_IN_QUEUE, downloadQueueWrapper.id.toString())
             val id = downloadQueueWrapper.id
 
-            // Delete subtitles on cancel
-            safe {
-                val info = context.getKey<DownloadedFileInfo>(KEY_DOWNLOAD_INFO, id.toString())
-                if (info != null) {
-                    deleteMatchingSubtitles(context, info)
+            // Delete subtitles on cancel — Audit-7 #4: ONLY on
+            // cancel. This cleanup also runs for failures (via
+            // the isFailed setter), and a failed video used to
+            // take its already-downloaded subtitles with it; the
+            // resume path has no subtitle job, so they were never
+            // fetched again and the finished download silently
+            // had no subtitles.
+            if (status == DownloadType.IsStopped) {
+                safe {
+                    val info = context.getKey<DownloadedFileInfo>(KEY_DOWNLOAD_INFO, id.toString())
+                    if (info != null) {
+                        deleteMatchingSubtitles(context, info)
+                    }
                 }
             }
 
