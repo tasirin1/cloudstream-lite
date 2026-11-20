@@ -179,11 +179,14 @@ object HlsPlaylistParser {
 
     @Throws(ParserException::class)
     private fun parseIntAttr(line: String, pattern: Regex): Int {
-        return parseStringAttr(line, pattern, emptyMap()).toInt()
+        // Audit-3 #19: a malformed numeric attribute from a server
+        // used to throw NumberFormatException out of parse(),
+        // killing every variant of the source. Treat it as 0.
+        return parseStringAttr(line, pattern, emptyMap()).toIntOrNull() ?: 0
     }
 
     private fun parseOptionalIntAttr(line: String, pattern: Regex, defaultValue: Int): Int =
-        pattern.find(line)?.groupValues?.get(1)?.toInt() ?: defaultValue
+        pattern.find(line)?.groupValues?.get(1)?.toIntOrNull() ?: defaultValue
 
     data class SchemeData(
         /**
@@ -1831,8 +1834,11 @@ object HlsPlaylistParser {
                 var height: Int
                 if (resolutionString != null) {
                     val widthAndHeight: Array<String> = Util.split(resolutionString, "x")
-                    width = widthAndHeight[0].toInt()
-                    height = widthAndHeight[1].toInt()
+                    // Audit-3 #19: same malformed-attribute guard as
+                    // parseIntAttr; a bad RESOLUTION must not abort
+                    // parsing the whole playlist.
+                    width = widthAndHeight.getOrNull(0)?.toIntOrNull() ?: Format.NO_VALUE
+                    height = widthAndHeight.getOrNull(1)?.toIntOrNull() ?: Format.NO_VALUE
                     if (width <= 0 || height <= 0) {
                         // Resolution string is invalid.
                         width = Format.NO_VALUE
