@@ -364,6 +364,7 @@ class CS3IPlayer : IPlayer {
             }
 
             loadOnlinePlayer(context, link)
+            reapplyTimeStampsIfSameEpisode(sameEpisode)
         } else if (data != null) {
             (imageGenerator as? PreviewGenerator)?.let { gen ->
                 if (preview) {
@@ -373,6 +374,7 @@ class CS3IPlayer : IPlayer {
                 }
             }
             loadOfflinePlayer(context, data)
+            reapplyTimeStampsIfSameEpisode(sameEpisode)
         } else {
             throw IllegalArgumentException("Requires link or uri")
         }
@@ -2075,6 +2077,19 @@ class CS3IPlayer : IPlayer {
         synchronized(timestampMessages) {
             timestampMessages.forEach { it.cancel() }
             timestampMessages.clear()
+        }
+    }
+
+    // Audit-18 #2: the stamp PlayerMessages are bound to
+    // the ExoPlayer instance that existed when they were
+    // added, and releasePlayer() (run by every loadPlayer)
+    // destroys them with it. Nothing re-installed them for
+    // a same-episode reload (mirror change, manual subtitle
+    // pick), so the skip button died until the episode
+    // changed. Re-apply the stored stamps to the new player.
+    private fun reapplyTimeStampsIfSameEpisode(sameEpisode: Boolean) {
+        if (sameEpisode && lastTimeStamps.isNotEmpty()) {
+            addTimeStamps(lastTimeStamps)
         }
     }
 
