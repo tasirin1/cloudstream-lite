@@ -275,7 +275,9 @@ object BackupUtils {
                             val input = activity.contentResolver.openInputStream(uri)
                                 ?: return@ioSafe
 
-                            val text = input.bufferedReader().readText()
+                            // Audit-3 #33: the stream was never
+                            // closed; read it inside use {}.
+                            val text = input.bufferedReader().use { it.readText() }
                             val restoredValue = parseJson<BackupFile>(text)
 
                             restore(
