@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.newSubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import kotlinx.coroutines.CancellationException
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.StringUtils.decodeUrl
 import com.lagradost.cloudstream3.utils.newExtractorLink
@@ -51,6 +52,12 @@ open class InternetArchive : ExtractorApi() {
                 val doc = app.get(url).document
                 archivedItems[url] = doc
                 doc
+            } catch (e: CancellationException) {
+                // Audit-11 #13: cancellation is not a load
+                // failure — rethrow it instead of logging a fake
+                // error and returning as if the page had no
+                // document (same class as Audit-10 #7/#13/#14).
+                throw e
             } catch (e: Exception) {
                 logError(e)
                 return
