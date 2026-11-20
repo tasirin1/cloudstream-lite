@@ -110,4 +110,14 @@ class TestViewModel : ViewModel() {
         scope?.cancel()
         scope = null
     }
+
+    // Audit-8 #12: the detached test scope was only ever
+    // cancelled by stopTest() — leaving the screen mid-run
+    // (Back) cleared the ViewModel but the scope kept testing
+    // every provider to completion in the background, retaining
+    // the ViewModel through its result callback.
+    override fun onCleared() {
+        stopTest()
+        super.onCleared()
+    }
 }
