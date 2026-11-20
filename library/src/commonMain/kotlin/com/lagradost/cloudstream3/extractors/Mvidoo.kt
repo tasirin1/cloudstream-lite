@@ -19,9 +19,22 @@ open class Mvidoo : ExtractorApi() {
     override val requiresReferer = true
 
     private fun String.decodeHex(): String {
-        require(length % 2 == 0) { "Must have an even length" }
+        // Audit-6 #34: the elements come from an array captured
+        // from the remote page; one malformed element (odd
+        // length, non-hex) used to throw via require()/toInt()
+        // and kill the whole chain. Skip bad chunks instead.
         return chunked(2)
-            .map { it.toInt(16).toByte() }
+            .mapNotNull { chunk ->
+                if (chunk.length != 2) {
+                    null
+                } else {
+                    try {
+                        chunk.toInt(16).toByte()
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }
             .toByteArray()
             .decodeToString()
     }

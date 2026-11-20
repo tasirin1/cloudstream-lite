@@ -153,9 +153,13 @@ open class StreamSB : ExtractorApi() {
     ) {
         val regexId =
             hoistedRegex1
+        // Audit-6 #36: .first() threw NoSuchElementException
+        // when the embed URL matched no known pattern (a host
+        // format change) — fail with the clean extractor error
+        // instead.
         val id = regexId.findAll(url).map {
             it.value.replace(hoistedRegex2, "")
-        }.first()
+        }.firstOrNull() ?: throw ErrorLoadingException("No id found in StreamSB url")
         val master = "$mainUrl/375664356a494546326c4b797c7c6e756577776778623171737/${encodeId(id)}"
         val headers = mapOf("watchsb" to "sbstream")
         val mapped = app.get(

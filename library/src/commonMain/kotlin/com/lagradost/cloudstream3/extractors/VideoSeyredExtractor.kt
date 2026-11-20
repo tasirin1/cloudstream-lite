@@ -26,7 +26,10 @@ open class VideoSeyred : ExtractorApi() {
         val videoUrl = "$mainUrl/playlist/$videoId.json"
         val responseRaw = app.get(videoUrl)
         val responseList = tryParseJson<List<VideoSeyredSource>>(responseRaw.text) ?: throw ErrorLoadingException("VideoSeyred")
-        val response = responseList[0]
+        // Audit-6 #35: a deleted video returns a VALID empty
+        // array — [0] threw a raw IndexOutOfBoundsException
+        // instead of this extractor's clean error.
+        val response = responseList.firstOrNull() ?: throw ErrorLoadingException("VideoSeyred")
         for (track in response.tracks) {
             if (track.label != null && track.kind == "captions") {
                 subtitleCallback.invoke(
