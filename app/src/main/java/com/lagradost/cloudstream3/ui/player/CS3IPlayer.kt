@@ -1685,14 +1685,40 @@ class CS3IPlayer : IPlayer {
             // entry (~first fragment, 3 s). On STATE_READY, re-seek to the actual saved position.
             // This may only be reproducible on large and fairly long fragmented MP4 files with
             // multiple sidx boxes.
-            if (onlineSource == null && playbackPosition > (exoPlayer?.duration ?: 0L)) {
+            //
+            // Audit-7 #10: the old guard compared the saved
+            // position against exoPlayer.duration right after
+            // prepare(), when duration is still TIME_UNSET (a
+            // huge negative) — so the listener was installed for
+            // EVERY offline load and its READY seek stomped any
+            // manual seek the user made while buffering. The
+            // corrective seek now only fires when there is a
+            // saved position at all, and never after the user
+            // seeked somewhere else themselves.
+            if (onlineSource == null && playbackPosition > 0L) {
                 exoPlayer?.addListener(object : Player.Listener {
                     private var seekApplied = false
+                    private var userSeeked = false
+
+                    override fun onPositionDiscontinuity(
+                        oldPosition: Player.PositionInfo,
+                        newPosition: Player.PositionInfo,
+                        reason: Int
+                    ) {
+                        if (reason == Player.DISCONTINUITY_REASON_SEEK &&
+                            newPosition.positionMs != playbackPosition
+                        ) {
+                            userSeeked = true
+                        }
+                    }
+
                     override fun onPlaybackStateChanged(playbackState: Int) {
                         if (seekApplied || playbackState != Player.STATE_READY) return
                         seekApplied = true
-                        exoPlayer?.seekTo(currentWindow, playbackPosition)
                         exoPlayer?.removeListener(this)
+                        if (!userSeeked) {
+                            exoPlayer?.seekTo(currentWindow, playbackPosition)
+                        }
                     }
                 })
             }
