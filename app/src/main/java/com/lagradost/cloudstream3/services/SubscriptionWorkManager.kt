@@ -171,19 +171,8 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
 
                     val latestEpisodes = response.getLatestEpisodes()
                     val latestPreferredEpisode = latestEpisodes[dubPreference]
-
-                    val (shouldUpdate, latestEpisode) = if (latestPreferredEpisode != null) {
-                        val latestSeenEpisode =
-                            savedData.lastSeenEpisodeCount[dubPreference] ?: Int.MIN_VALUE
-                        val shouldUpdate = latestPreferredEpisode > latestSeenEpisode
-                        shouldUpdate to latestPreferredEpisode
-                    } else {
-                        val latestEpisode = latestEpisodes[DubStatus.None] ?: Int.MIN_VALUE
-                        val latestSeenEpisode =
-                            savedData.lastSeenEpisodeCount[DubStatus.None] ?: Int.MIN_VALUE
-                        val shouldUpdate = latestEpisode > latestSeenEpisode
-                        shouldUpdate to latestEpisode
-                    }
+                    val latestEpisode = latestPreferredEpisode
+                        ?: (latestEpisodes[DubStatus.None] ?: Int.MIN_VALUE)
 
                     // Audit-15 #3: profile switched mid-run —
                     // do not write this profile's results into
@@ -192,11 +181,25 @@ class SubscriptionWorkManager(val context: Context, workerParams: WorkerParamete
                         return@amap null
                     }
 
-                    DataStoreHelper.updateSubscribedData(
+                    // Audit-16 #14: the notification decision
+                    // used to come from savedData — the
+                    // start-of-run snapshot. Base it on the
+                    // FRESH stored entry instead: unsubscribed
+                    // mid-run (fresh == null) means no
+                    // notification, and episodes the user
+                    // marked watched mid-run are not
+                    // re-announced.
+                    val fresh = DataStoreHelper.updateSubscribedData(
                         id,
                         savedData,
                         response
                     )
+                    val shouldUpdate = fresh != null && latestEpisode > (
+                        fresh.lastSeenEpisodeCount[
+                            if (latestPreferredEpisode != null) dubPreference
+                            else DubStatus.None
+                        ] ?: Int.MIN_VALUE
+                        )
 
                     if (shouldUpdate) {
                         val updateHeader = savedData.name

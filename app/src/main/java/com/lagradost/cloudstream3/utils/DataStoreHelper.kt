@@ -657,8 +657,11 @@ object DataStoreHelper {
     /**
      * Set new seen episodes and update time
      */
-    fun updateSubscribedData(id: Int?, data: SubscribedData?, episodeResponse: EpisodeResponse?) {
-        if (id == null || data == null || episodeResponse == null) return
+    // Audit-16 #14: returns the FRESH stored entry (null
+    // when the subscription is gone) so callers can base
+    // decisions on current state instead of their snapshot.
+    fun updateSubscribedData(id: Int?, data: SubscribedData?, episodeResponse: EpisodeResponse?): SubscribedData? {
+        if (id == null || data == null || episodeResponse == null) return null
         // Audit-15 #3: the caller's data is a snapshot taken
         // before a slow network load. Writing it back blindly
         // resurrected shows unsubscribed in the meantime.
@@ -667,12 +670,13 @@ object DataStoreHelper {
         // stale snapshot.
         val fresh = getKey<SubscribedData>(
             "$currentAccount/$RESULT_SUBSCRIBED_STATE_DATA", id.toString()
-        ) ?: return
+        ) ?: return null
         val newData = fresh.copy(
             latestUpdatedTime = unixTimeMS,
             lastSeenEpisodeCount = episodeResponse.getLatestEpisodes(),
         )
         setKey("$currentAccount/$RESULT_SUBSCRIBED_STATE_DATA", id.toString(), newData)
+        return fresh
     }
 
     fun setSubscribedData(id: Int?, data: SubscribedData) {
