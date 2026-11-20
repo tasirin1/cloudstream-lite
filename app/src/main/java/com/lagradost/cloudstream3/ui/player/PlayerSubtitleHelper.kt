@@ -100,10 +100,16 @@ class PlayerSubtitleHelper {
 
     companion object {
         fun String.toSubtitleMimeType(): String {
+            // Audit-14 #14: match on the path only — a signed
+            // URL (".../sub.en.vtt?sig=...") used to fall through
+            // to SUBRIP, and .ass/.ssa files were declared SUBRIP
+            // too, so the wrong parser silently garbled them.
+            val path = substringBefore('?').substringBefore('#')
             return when {
-                endsWith("vtt", true) -> MimeTypes.TEXT_VTT
-                endsWith("srt", true) -> MimeTypes.APPLICATION_SUBRIP
-                endsWith("xml", true) || endsWith("ttml", true) -> MimeTypes.APPLICATION_TTML
+                path.endsWith("vtt", true) -> MimeTypes.TEXT_VTT
+                path.endsWith("srt", true) -> MimeTypes.APPLICATION_SUBRIP
+                path.endsWith("xml", true) || path.endsWith("ttml", true) -> MimeTypes.APPLICATION_TTML
+                path.endsWith("ass", true) || path.endsWith("ssa", true) -> MimeTypes.TEXT_SSA
                 else -> MimeTypes.APPLICATION_SUBRIP
             }
         }
