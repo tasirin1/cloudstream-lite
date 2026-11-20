@@ -267,6 +267,9 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
     private var prefixSum: Array<Double> = arrayOf()
 
     // how many images has been generated
+    // Audit-7 #34: @Volatile like its siblings (Audit-6 #22
+    // covered totalImages/durationMs but missed this one).
+    @Volatile
     override var loadedImages: Int = 0
 
     // how many images we can generate in total, == hsl.size ?: 0
@@ -323,6 +326,11 @@ private class M3u8PreviewGenerator(override var params: ImageParams) : IPreviewG
             prefixSum = arrayOf()
             loadedImages = 0
             totalImages = 0
+            // Audit-7 #34: durationMs kept the PREVIOUS
+            // episode's duration after a clear, so position
+            // fractions were computed against the wrong length
+            // until the next load published.
+            durationMs = 0L
         }
     }
 
@@ -586,6 +594,9 @@ private class Mp4PreviewGenerator(override var params: ImageParams) : IPreviewGe
         // job's native calls.
     }
 
+    // Audit-7 #34: @Volatile — the M3U8 sibling got this in
+    // Audit-6 #22; a plain Long can be read torn on 32-bit.
+    @Volatile
     override var durationMs: Long = 0L
 
     @Throws
