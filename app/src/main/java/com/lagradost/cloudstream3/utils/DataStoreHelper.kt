@@ -830,17 +830,18 @@ object DataStoreHelper {
         setKey("$currentAccount/$RESULT_EPISODE", id.toString(), value)
     }
 
-    fun addSync(id: Int, idPrefix: String, url: String) {
-        setKey("${idPrefix}_sync", id.toString(), url)
-    }
+    // Audit-14 #37: addSync/getSync removed — no callers
+    // anywhere (SyncViewModel has its own addSync), and their
+    // keys were not account-namespaced.
 
-    fun getSync(id: Int, idPrefixes: List<String>): List<String?> {
-        return idPrefixes.map { idPrefix ->
-            getKey<String>("${idPrefix}_sync", id.toString())
-        }
-    }
-
+    // Audit-14 #38: pinnedProviders was the one user
+    // preference here NOT namespaced by account, so profile
+    // A's pin order showed up identically in profile B.
+    // Writes go to the namespaced key; reads fall back to the
+    // legacy global key once so existing pins survive.
     var pinnedProviders: Array<String>
-        get() = getKey<Array<String>>(USER_PINNED_PROVIDERS) ?: emptyArray<String>()
-        set(value) = setKey(USER_PINNED_PROVIDERS, value)
+        get() = getKey<Array<String>>("$currentAccount/$USER_PINNED_PROVIDERS")
+            ?: getKey<Array<String>>(USER_PINNED_PROVIDERS)
+            ?: emptyArray<String>()
+        set(value) = setKey("$currentAccount/$USER_PINNED_PROVIDERS", value)
 }
