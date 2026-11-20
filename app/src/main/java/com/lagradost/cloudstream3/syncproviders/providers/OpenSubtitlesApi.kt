@@ -18,6 +18,7 @@ import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.utils.AppUtils
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
+import com.lagradost.cloudstream3.utils.StringUtils.encodeUrl
 import com.lagradost.cloudstream3.utils.SubtitleHelper.fromCodeToLangTagIETF
 import com.lagradost.cloudstream3.utils.SubtitleHelper.fromCodeToOpenSubtitlesTag
 import kotlinx.serialization.SerialName
@@ -121,7 +122,7 @@ class OpenSubtitlesApi : SubtitleAPI() {
         val searchQueryUrl = when (imdbId > 0) {
             //Use imdb_id to search if its valid
             true -> "$HOST/subtitles?imdb_id=$imdbId&languages=${langOpenSubTag}$yearQuery$epQuery$seasonQuery"
-            false -> "$HOST/subtitles?query=${queryText}&languages=${langOpenSubTag}$yearQuery$epQuery$seasonQuery"
+            false -> "$HOST/subtitles?query=${queryText.encodeUrl()}&languages=${langOpenSubTag}$yearQuery$epQuery$seasonQuery"
         }
 
         val req = app.get(
