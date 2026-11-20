@@ -295,6 +295,16 @@ object AndroidRepositoryManager : RepositoryManager {
         // belongs to it (both restored by the rollback below).
         val backupFile = file.parentFile?.let { File(it, file.name + ".bak") }
         val previousAnchor = PluginManager.storedPluginHash(file.absolutePath)
+        // Audit-7 #49: built up here (was: just before load) so
+        // the move-failure rollback below can also reload the
+        // restored plugin, like the load-failure rollback does.
+        val pluginData = PluginData(
+            internalName = source.internalName,
+            url = source.pluginUrl,
+            isOnline = true,
+            filePath = file.absolutePath,
+            version = PLUGIN_VERSION_NOT_SET
+        )
         try {
         tempFile.outputStream().use { writeStream ->
             app.get(convertRawGitUrl(source.pluginUrl)).body.use { body ->
@@ -330,19 +340,29 @@ object AndroidRepositoryManager : RepositoryManager {
         }
         file.parentFile?.mkdirs() // make the directories as Files.move needs this to work
 
+        // Audit-7 #49: a plain IOException from this move (disk
+        // error, cross-device fallback failing) used to escape
+        // with the working file parked as .bak — a name no code
+        // ever reads — and the plugin simply gone. Roll back
+        // like a load failure does.
         try {
-            Files.move(
-                tempFile.toPath(),
-                file.toPath(),
-                StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE
-            )
-        } catch (_: AtomicMoveNotSupportedException) {
-            Files.move(
-                tempFile.toPath(),
-                file.toPath(),
-                StandardCopyOption.REPLACE_EXISTING
-            )
+            try {
+                Files.move(
+                    tempFile.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE
+                )
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(
+                    tempFile.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+        } catch (e: Exception) {
+            rollbackPluginUpdate(file, backupFile, previousAnchor, context, pluginData)
+            throw e
         }
         tempMoved = true
         } finally {
@@ -359,13 +379,6 @@ object AndroidRepositoryManager : RepositoryManager {
             PluginManager.storePluginHash(file.absolutePath, anchorHash)
         }
 
-        val pluginData = PluginData(
-            internalName = source.internalName,
-            url = source.pluginUrl,
-            isOnline = true,
-            filePath = file.absolutePath,
-            version = PLUGIN_VERSION_NOT_SET
-        )
         val result = try {
             PluginManager.loadPlugin(
                 context = context,
