@@ -260,8 +260,14 @@ object M3u8Helper2 {
 
             val tsResponse = app.get(ts.url, headers = headers)
             val body = tsResponse.body
-            val tsData = body.bytes()
-            body.close()
+            // Audit-4 #12: close in a finally — when bytes() threw,
+            // the body was never closed and its connection could
+            // not return to the pool.
+            val tsData = try {
+                body.bytes()
+            } finally {
+                body.close()
+            }
             if (tsData.isEmpty()) throw ErrorLoadingException("no data")
 
             // Some sources respond with "error 404" or similar, this checks for small responses that
@@ -364,8 +370,12 @@ object M3u8Helper2 {
             val encryptionKeyResponse =
                 app.get(encryptionUrl, headers = playlistStream.headers)
             val body = encryptionKeyResponse.body
-            encryptionData = body.bytes()
-            body.close()
+            // Audit-4 #12: same finally-close as the segment body.
+            encryptionData = try {
+                body.bytes()
+            } finally {
+                body.close()
+            }
         } else {
             encryptionState = false
         }
