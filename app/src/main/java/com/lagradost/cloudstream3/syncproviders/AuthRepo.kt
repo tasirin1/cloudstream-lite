@@ -29,17 +29,26 @@ abstract class AuthRepo(open val api: AuthAPI) {
 
     companion object {
         private val oauthPayload: MutableMap<String, String?> = mutableMapOf()
-    }
 
-    // Fork fix (audit #37): check-refresh-store was unsynchronized;
-    // two concurrent calls could both refresh, and providers that
-    // rotate refresh tokens then invalidate the first result,
-    // silently logging the user out. Serialize per repo instance.
-    private val refreshMutex = kotlinx.coroutines.sync.Mutex()
+        // Audit-14 #31: ONE refresh mutex per provider, shared
+        // by every repo wrapper around the same API.
+        // AccountManager builds separate SubtitleRepo/SyncRepo
+        // instances for one API (allApis vs subtitleProviders
+        // vs syncApis), so the old per-instance mutex (audit
+        // #37) never actually serialized the player path
+        // against the account-screen path — both could refresh
+        // (for OpenSubtitles: full re-login) at once.
+        private val refreshMutexes = mutableMapOf<String, kotlinx.coroutines.sync.Mutex>()
+
+        fun refreshMutexFor(idPrefix: String): kotlinx.coroutines.sync.Mutex =
+            synchronized(refreshMutexes) {
+                refreshMutexes.getOrPut(idPrefix) { kotlinx.coroutines.sync.Mutex() }
+            }
+    }
 
     @Throws
     protected suspend fun freshAuth(): AuthData? =
-        refreshMutex.withLock {
+        refreshMutexFor(idPrefix).withLock {
             val data = authData() ?: return@withLock null
             if (data.token.isAccessTokenExpired()) {
                 val newToken = api.refreshToken(data.token) ?: return@withLock null
