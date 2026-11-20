@@ -340,7 +340,20 @@ private class Lexer(private val src: String) {
         val sb = StringBuilder()
         while (pos < src.length && src[pos] != '`') {
             when {
-                src[pos] == '\\' -> appendEscape(sb)
+                src[pos] == '\\' -> {
+                    // Audit-20 #8: an escape can itself decode
+                    // TO a marker char (`\u0001` in a literal
+                    // part) — double any marker the escape
+                    // produced so parseTemplate keeps it as
+                    // literal text instead of misparsing the
+                    // rest as an expression.
+                    val tmp = StringBuilder()
+                    appendEscape(tmp)
+                    for (ch in tmp) {
+                        if (ch == '\u0001' || ch == '\u0002') sb.append(ch)
+                        sb.append(ch)
+                    }
+                }
                 src[pos] == '$' && pos + 1 < src.length && src[pos + 1] == '{' -> {
                     val close = findCloseBrace(pos + 2)
                     sb.append('\u0001')
@@ -506,30 +519,61 @@ private class Parser(private val lex: Lexer) {
     // unparseable interpolation degrades to an empty string
     // instead of failing the whole script.
     private fun parseTemplate(raw: String): Node {
+        // Audit-20 #8: doubled markers are literal marker
+        // chars (an escape decoded to one); single markers
+        // delimit expressions.
         val parts = mutableListOf<Node>()
+        val lit = StringBuilder()
+        fun flushLit() {
+            if (lit.isNotEmpty()) {
+                parts.add(StrLit(lit.toString()))
+                lit.clear()
+            }
+        }
         var i = 0
         while (i < raw.length) {
-            val open = raw.indexOf('\u0001', i)
-            if (open == -1) {
-                parts.add(StrLit(raw.substring(i)))
-                break
+            val c = raw[i]
+            when {
+                c == '\u0001' && i + 1 < raw.length && raw[i + 1] == '\u0001' -> {
+                    lit.append('\u0001')
+                    i += 2
+                }
+                c == '\u0002' && i + 1 < raw.length && raw[i + 1] == '\u0002' -> {
+                    lit.append('\u0002')
+                    i += 2
+                }
+                c == '\u0001' -> {
+                    flushLit()
+                    var j = i + 1
+                    val expr = StringBuilder()
+                    while (j < raw.length && raw[j] != '\u0002') {
+                        expr.append(raw[j])
+                        j++
+                    }
+                    parts.add(parseTemplateExpr(expr.toString()))
+                    i = if (j < raw.length) j + 1 else j
+                }
+                else -> {
+                    lit.append(c)
+                    i++
+                }
             }
-            if (open > i) parts.add(StrLit(raw.substring(i, open)))
-            val close = raw.indexOf('\u0002', open)
-            val exprSrc =
-                if (close == -1) raw.substring(open + 1)
-                else raw.substring(open + 1, close)
-            val exprNode = try {
-                val stmts = Parser(Lexer(exprSrc)).parseProgram()
-                (stmts.singleOrNull() as? ExprStmt)?.expr ?: StrLit("")
-            } catch (e: Exception) {
-                StrLit("")
-            }
-            parts.add(exprNode)
-            if (close == -1) break
-            i = close + 1
         }
+        flushLit()
         return TemplateExpr(parts)
+    }
+
+    private fun parseTemplateExpr(exprSrc: String): Node {
+        fun parseAs(src: String): Node? = try {
+            val stmts = Parser(Lexer(src)).parseProgram()
+            (stmts.singleOrNull() as? ExprStmt)?.expr
+        } catch (e: Exception) {
+            null
+        }
+        // Audit-20 #9: an interpolation that is not a plain
+        // expression statement (object literal, function
+        // expression) parses when parenthesized.
+        return parseAs(exprSrc) ?: parseAs("($exprSrc)") ?: StrLit("")
     }
 
     fun parseProgram(): List<Node> {
@@ -1177,7 +1221,23 @@ private fun jsReplaceFirst(source: String, pattern: String, replacement: String)
 }
 
 private fun jsReplaceAll(source: String, pattern: String, replacement: String): String {
-    if (pattern.isEmpty()) return source.replace(pattern, replacement)
+    // Audit-20 #10: the empty-pattern shortcut skipped $
+    // expansion entirely; JS inserts the (expanded)
+    // replacement at both ends and between every char,
+    // with $& bound to the empty match.
+    if (pattern.isEmpty()) {
+        val sb = StringBuilder()
+        for (idx in 0..source.length) {
+            sb.append(
+                expandDollarReplacement(
+                    replacement, "",
+                    source.substring(0, idx), source.substring(idx)
+                )
+            )
+            if (idx < source.length) sb.append(source[idx])
+        }
+        return sb.toString()
+    }
     val sb = StringBuilder()
     var i = 0
     while (true) {
@@ -1969,7 +2029,8 @@ private class JsInterpreter(
             "indexOf" -> nativeFn("indexOf") { args ->
                 // Audit-15 #27 (string sibling): the position
                 // argument was ignored here too.
-                val rawStart = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
+                // Audit-20 #11: explicit undefined = default.
+                val rawStart = args.getOrNull(1)?.takeIf { it !is Unit }?.let { toNumber(it).toInt() } ?: 0
                 val start = if (rawStart < 0) 0 else minOf(rawStart, obj.length)
                 obj.indexOf(toJsString(args.getOrNull(0)), start).toDouble()
             }
@@ -1978,19 +2039,19 @@ private class JsInterpreter(
             // Audit-15 #27). endsWith's second argument is
             // the END position, as in JS.
             "lastIndexOf" -> nativeFn("lastIndexOf") { args ->
-                val rawPos = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: obj.length
+                val rawPos = args.getOrNull(1)?.takeIf { it !is Unit }?.let { toNumber(it).toInt() } ?: obj.length
                 obj.lastIndexOf(toJsString(args.getOrNull(0)), rawPos.coerceIn(0, obj.length)).toDouble()
             }
             "includes" -> nativeFn("includes") { args ->
-                val rawPos = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
+                val rawPos = args.getOrNull(1)?.takeIf { it !is Unit }?.let { toNumber(it).toInt() } ?: 0
                 obj.indexOf(toJsString(args.getOrNull(0)), rawPos.coerceIn(0, obj.length)) >= 0
             }
             "startsWith" -> nativeFn("startsWith") { args ->
-                val rawPos = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: 0
+                val rawPos = args.getOrNull(1)?.takeIf { it !is Unit }?.let { toNumber(it).toInt() } ?: 0
                 obj.startsWith(toJsString(args.getOrNull(0)), rawPos.coerceIn(0, obj.length))
             }
             "endsWith" -> nativeFn("endsWith") { args ->
-                val rawEnd = args.getOrNull(1)?.let { toNumber(it).toInt() } ?: obj.length
+                val rawEnd = args.getOrNull(1)?.takeIf { it !is Unit }?.let { toNumber(it).toInt() } ?: obj.length
                 obj.substring(0, rawEnd.coerceIn(0, obj.length)).endsWith(toJsString(args.getOrNull(0)))
             }
             "slice" -> nativeFn("slice") { args ->
