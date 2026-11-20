@@ -25,6 +25,15 @@ class SubtitleResource {
         // the STB's internal storage before anything noticed.
         private const val MAX_SUBTITLE_ARCHIVE_BYTES = 50_000_000L
         private const val MAX_SUBTITLE_EXTRACTED_BYTES = 100_000_000L
+
+        // Audit-7 #1: entry-COUNT cap. The two byte caps count
+        // content bytes, so an archive of hundreds of thousands
+        // of EMPTY entries (tiny, highly compressible headers)
+        // stayed under both while unzip() created a real temp
+        // file + deleteFileOnExit registration for every entry.
+        // A subtitle archive holds a handful of files; 100 is
+        // generous headroom.
+        private const val MAX_SUBTITLE_ARCHIVE_ENTRIES = 100
     }
 
     fun downloadFile(source: BufferedSource): File {
@@ -69,6 +78,14 @@ class SubtitleResource {
                 var zipEntry = zipInputStream.nextEntry
 
                 while (zipEntry != null) {
+                    // Audit-7 #1: see MAX_SUBTITLE_ARCHIVE_ENTRIES.
+                    // The catch below deletes every temp file
+                    // created so far, so throwing here is clean.
+                    if (entries.size >= MAX_SUBTITLE_ARCHIVE_ENTRIES) {
+                        throw java.io.IOException(
+                            "Subtitle archive has more than $MAX_SUBTITLE_ARCHIVE_ENTRIES entries"
+                        )
+                    }
                     val tempFile = File.createTempFile("unzipped-subtitle", ".tmp").apply {
                         deleteFileOnExit(this)
                     }
