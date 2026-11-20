@@ -257,18 +257,29 @@ object AccountHelper {
 
         var isPinValid = false
 
+        // Audit-5 #38: one Cancel used to fire the callback up
+        // to three times (negative button + onCancel + onDismiss
+        // each invoke it). Every invocation now goes through this
+        // single-fire guard.
+        var callbackFired = false
+        fun fireCallback(pin: String?) {
+            if (callbackFired) return
+            callbackFired = true
+            callback.invoke(pin)
+        }
+
         val builder = AlertDialog.Builder(context, R.style.AlertDialogCustom)
             .setView(binding.root)
             .setTitle(titleRes)
             .setNegativeButton(R.string.cancel) { _, _ ->
-                callback.invoke(null)
+                fireCallback(null)
             }
             .setOnCancelListener {
-                callback.invoke(null)
+                fireCallback(null)
             }
             .setOnDismissListener {
                 if (!isPinValid) {
-                    callback.invoke(null)
+                    fireCallback(null)
                 }
             }
 
@@ -313,7 +324,7 @@ object AccountHelper {
                     )
                 } else {
                     val enteredPin = binding.pinEditText.text.toString()
-                    callback.invoke(enteredPin)
+                    fireCallback(enteredPin)
                 }
             }
         }
@@ -334,7 +345,7 @@ object AccountHelper {
                         binding.pinEditTextError.isVisible = false
                         isPinValid = true
 
-                        callback.invoke(enteredPin)
+                        fireCallback(enteredPin)
                         dialog.dismissSafe()
                     }
                 } else {
@@ -351,7 +362,7 @@ object AccountHelper {
         binding.pinEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE && isPinValid) {
                 val enteredPin = binding.pinEditText.text.toString()
-                callback.invoke(enteredPin)
+                fireCallback(enteredPin)
                 dialog.dismissSafe()
             }
             true
