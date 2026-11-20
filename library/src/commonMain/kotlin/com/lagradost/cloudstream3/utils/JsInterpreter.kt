@@ -1098,13 +1098,34 @@ private fun toJsString(v: Any?): String = when (v) {
     null -> "null"
     is Unit -> "undefined"
     is Boolean -> v.toString()
-    is Double -> if (v == floor(v) && !v.isInfinite()) integralDoubleToJsString(v) else v.toString()
+    is Double -> if (v == floor(v) && !v.isInfinite()) integralDoubleToJsString(v) else nonIntegralDoubleToJsString(v)
     is String -> v
     is JsList -> v.elements.joinToString(",") { joinElement(it) }
     is JsObject -> "[object Object]"
     is NativeFn -> v.toString()
     is JsFunction -> "function ${v.name ?: ""}() { [native code] }"
     else -> v.toString()
+}
+
+// Audit-19 #6: JS Number-to-String for non-integers —
+// plain decimal inside [1e-6, 1e21), exponential outside,
+// never Kotlin's "1.0E-4" shape. (0.0001 -> "0.0001",
+// 1.5e-7 -> "1.5e-7".)
+private fun nonIntegralDoubleToJsString(v: Double): String {
+    if (v.isNaN()) return "NaN"
+    if (v.isInfinite()) return if (v > 0) "Infinity" else "-Infinity"
+    val bd = java.math.BigDecimal.valueOf(v).stripTrailingZeros()
+    val digits = bd.unscaledValue().abs().toString()
+    val exp = digits.length - bd.scale() - 1
+    val sign = if (v < 0) "-" else ""
+    return if (exp in -6..20) {
+        sign + bd.abs().toPlainString()
+    } else {
+        val mantissa =
+            if (digits.length == 1) digits
+            else digits.substring(0, 1) + "." + digits.substring(1)
+        sign + mantissa + "e" + (if (exp >= 0) "+" else "") + exp
+    }
 }
 
 private fun strictEq(a: Any?, b: Any?): Boolean = when {
