@@ -834,6 +834,25 @@ internal class JsCancellationException(message: String) : CancellationException(
  */
 private class JsExecutionLimitExceeded(message: String) : Throwable(message)
 
+// Audit-16 #3: JS ToInt32/ToUint32 — truncate toward zero,
+// wrap modulo 2^32, then sign-adjust. (Kotlin's
+// Double.toInt() saturates instead of wrapping, and the
+// bitwise operators used raw Longs, so 32-bit hash math
+// in deobfuscation scripts computed wrong values.)
+private fun toInt32(v: Any?): Int {
+    val n = toNumber(v)
+    if (n.isNaN() || n.isInfinite() || n == 0.0) return 0
+    val wrapped = ((n % 4294967296.0) + 4294967296.0) % 4294967296.0
+    return if (wrapped >= 2147483648.0) (wrapped - 4294967296.0).toInt()
+    else wrapped.toInt()
+}
+
+private fun toUint32(v: Any?): Long {
+    val n = toNumber(v)
+    if (n.isNaN() || n.isInfinite() || n == 0.0) return 0L
+    return (((n % 4294967296.0) + 4294967296.0) % 4294967296.0).toLong()
+}
+
 private fun toNumber(v: Any?): Double = when (v) {
     null -> 0.0 // In JS Number(null) === 0
     is Unit -> Double.NaN // In JS Number(undefined) === NaN
@@ -1336,7 +1355,7 @@ private class JsInterpreter(
             "-" -> -toNumber(v)
             "+" -> toNumber(v)
             "!" -> !toBoolean(v)
-            "~" -> toNumber(v).toLong().inv().toDouble()
+            "~" -> toInt32(v).inv().toDouble()
             else -> Unit
         }
     }
@@ -1373,12 +1392,12 @@ private class JsInterpreter(
             "!=" -> !looseEq(l, r)
             "===" -> strictEq(l, r)
             "!==" -> !strictEq(l, r)
-            "&" -> (toNumber(l).toLong() and toNumber(r).toLong()).toDouble()
-            "|" -> (toNumber(l).toLong() or toNumber(r).toLong()).toDouble()
-            "^" -> (toNumber(l).toLong() xor toNumber(r).toLong()).toDouble()
-            "<<" -> (toNumber(l).toLong() shl toNumber(r).toInt()).toDouble()
-            ">>" -> (toNumber(l).toLong() shr toNumber(r).toInt()).toDouble()
-            ">>>" -> (toNumber(l).toInt().toLong() and 0xFFFFFFFFL ushr toNumber(r).toInt()).toDouble()
+            "&" -> (toInt32(l) and toInt32(r)).toDouble()
+            "|" -> (toInt32(l) or toInt32(r)).toDouble()
+            "^" -> (toInt32(l) xor toInt32(r)).toDouble()
+            "<<" -> (toInt32(l) shl (toUint32(r) and 31L).toInt()).toDouble()
+            ">>" -> (toInt32(l) shr (toUint32(r) and 31L).toInt()).toDouble()
+            ">>>" -> (toUint32(l) ushr (toUint32(r) and 31L).toInt()).toDouble()
             "instanceof" -> when (r) {
                 is NativeFn -> when (r.name) {
                     "Array" -> l is JsList
