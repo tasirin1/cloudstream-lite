@@ -672,6 +672,15 @@ class CS3IPlayer : IPlayer {
                 removeListener(it)
                 playerListener = null
             }
+            // Audit-7 #29: the IDLE-resume listener was the one
+            // listener releasePlayer never removed (the Audit-5
+            // #24 replacement logic only covers installing the
+            // next one). It captures the old session's seek
+            // position; remove and clear it with the rest.
+            idleResumeListener?.let {
+                removeListener(it)
+                idleResumeListener = null
+            }
             stop()
             release()
         }
