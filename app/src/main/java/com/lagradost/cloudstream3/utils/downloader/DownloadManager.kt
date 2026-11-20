@@ -1737,10 +1737,40 @@ object VideoDownloadManager {
     }
 
 
+    // Audit-4 #39: getDownloadFileInfo pays a SAF provider query
+    // (lengthOrThrow) per call, and the downloads screen calls it
+    // once per episode on every refresh — N Binder round-trips to
+    // the storage provider for data that cannot change while no
+    // download is running. Successful results for ids with no
+    // live download session are cached for a short TTL; active
+    // downloads (present in downloadStatus) always query fresh
+    // because their file length is still growing, misses are
+    // never cached so deletions show up immediately, and the
+    // app's own delete path evicts explicitly.
+    private data class CachedFileInfo(
+        val result: DownloadedFileInfoResult,
+        val atMs: Long
+    )
+
+    private val fileInfoCache =
+        java.util.concurrent.ConcurrentHashMap<Int, CachedFileInfo>()
+
+    private const val FILE_INFO_CACHE_TTL_MS = 15_000L
+
     fun getDownloadFileInfo(
         context: Context,
         id: Int,
     ): DownloadedFileInfoResult? {
+        // Audit-4 #39: see fileInfoCache.
+        val cacheable = id !in downloadStatus
+        if (cacheable) {
+            val cached = fileInfoCache[id]
+            if (cached != null &&
+                System.currentTimeMillis() - cached.atMs < FILE_INFO_CACHE_TTL_MS
+            ) {
+                return cached.result
+            }
+        }
         try {
             val info =
                 context.getKey<DownloadedFileInfo>(KEY_DOWNLOAD_INFO, id.toString()) ?: return null
@@ -1751,11 +1781,16 @@ object VideoDownloadManager {
             // top of the length query below. lengthOrThrow() already
             // throws for a missing file, which the catch turns into
             // the same null result.
-            return DownloadedFileInfoResult(
+            val result = DownloadedFileInfoResult(
                 file.lengthOrThrow(),
                 info.totalBytes,
                 file.uriOrThrow()
             )
+            // Audit-4 #39: see fileInfoCache.
+            if (cacheable) {
+                fileInfoCache[id] = CachedFileInfo(result, System.currentTimeMillis())
+            }
+            return result
         } catch (e: Exception) {
             logError(e)
             return null
@@ -1795,6 +1830,8 @@ object VideoDownloadManager {
     private fun deleteFileAndUpdateSettings(context: Context, id: Int): Boolean {
         val success = deleteFile(context, id)
         if (success) context.removeKey(KEY_DOWNLOAD_INFO, id.toString())
+        // Audit-4 #39: never serve a deleted file from the cache.
+        fileInfoCache.remove(id)
         return success
     }
 
