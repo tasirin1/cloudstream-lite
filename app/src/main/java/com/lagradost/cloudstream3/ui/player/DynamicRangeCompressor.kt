@@ -170,7 +170,10 @@ class DynamicRangeCompressor : AudioProcessor {
             advanceEnvelope(peak)
             val gain = computeGain(threshLinear) * makeupLinear
             input.position(frameStart)
-            repeat(channelCount) { out.putFloat(input.getFloat() * gain) }
+            // Audit-14 #22: clamp like the PCM16 path — float
+            // samples far above 1.0 (makeup gain goes to +24 dB)
+            // used to pass through and clip harshly downstream.
+            repeat(channelCount) { out.putFloat((input.getFloat() * gain).coerceIn(-1f, 1f)) }
         }
     }
 
