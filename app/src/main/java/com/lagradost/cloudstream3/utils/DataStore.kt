@@ -71,10 +71,17 @@ class PreferenceDelegate<T : Any>(
             if (cacheLoaded && cacheGeneration == restoreGeneration) {
                 return cache ?: default
             }
+            // Audit-11 #12: sample the generation BEFORE the
+            // load. It used to be re-read after, so a restore
+            // landing between the load and the assignment tagged
+            // a PRE-restore value as post-restore-fresh,
+            // defeating the invalidation for this key for the
+            // rest of the process.
+            val generationAtLoad = restoreGeneration
             val stored = getKeyClass(key, klass.java)
             cache = stored
             cacheLoaded = true
-            cacheGeneration = restoreGeneration
+            cacheGeneration = generationAtLoad
             return stored ?: default
         }
     }
