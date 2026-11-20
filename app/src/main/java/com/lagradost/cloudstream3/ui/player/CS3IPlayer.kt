@@ -1763,6 +1763,16 @@ class CS3IPlayer : IPlayer {
             // this is because we need PlayerAttachedEvent to be called to render the UI
             // but don't really want the rest like Player.STATE_ENDED calling next episode
             if (mediaSlices.isEmpty() && subSources.isEmpty()) {
+                // Audit-7 #30: IsBuffering was already emitted
+                // above, so returning silently left the UI on the
+                // buffering spinner forever with no way out but
+                // the back button. An empty source list IS an
+                // error — surface it like one.
+                event(
+                    ErrorEvent(
+                        IllegalStateException("No playable sources in the playlist")
+                    )
+                )
                 return
             }
 
