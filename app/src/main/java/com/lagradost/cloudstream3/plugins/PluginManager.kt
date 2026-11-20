@@ -213,17 +213,11 @@ object PluginManager {
     }
 
     private fun getStoredPluginHash(filePath: String): String? {
-        // Stored value: "sha256-<hex>" optionally followed by
-        // "|<length>|<lastModified>" (the unchanged-file stamp).
+        // Stored value: "sha256-<hex>". Values written before
+        // Audit-4 #48 may carry a "|<length>|<lastModified>"
+        // suffix (the removed unchanged-file stamp); the
+        // substringBefore keeps those readable.
         return pluginHashMap()[filePath]?.substringBefore('|')
-    }
-
-    private fun getStoredPluginStamp(filePath: String): Pair<Long, Long>? {
-        val parts = pluginHashMap()[filePath]?.split('|') ?: return null
-        if (parts.size != 3) return null
-        val length = parts[1].toLongOrNull() ?: return null
-        val modified = parts[2].toLongOrNull() ?: return null
-        return length to modified
     }
 
     // Serializes the read-modify-write in storePluginHash: parallel
@@ -233,14 +227,10 @@ object PluginManager {
 
     fun storePluginHash(filePath: String, hash: String) {
         synchronized(pluginHashLock) {
-            // Audit-3 #15: record the file stamp next to the hash so
-            // an unchanged file can skip the full SHA-256 on load.
-            val file = File(filePath)
-            val stamped = if (file.exists()) {
-                "$hash|${file.length()}|${file.lastModified()}"
-            } else {
-                hash
-            }
+            // Audit-4 #48: the bare hash is stored; the
+            // "|length|mtime" stamp Audit-3 #15 appended is gone
+            // with the load-time shortcut that consumed it.
+            val stamped = hash
             // Audit-4 #4: build on a fresh read of the stored map,
             // not on the read cache. A cache initialized from a
             // failed read (empty map) would otherwise be written
@@ -722,17 +712,14 @@ object PluginManager {
         // match the hash verified when it was downloaded.
         val storedHash = getStoredPluginHash(filePath)
         if (storedHash != null) {
-            // Audit-3 #15: an unchanged file (same length + mtime as
-            // when its hash was verified) skips the full re-hash;
-            // anything else is hashed and compared as before.
-            val stamp = getStoredPluginStamp(filePath)
-            val unchanged = stamp != null && stamp.first == file.length() &&
-                stamp.second == file.lastModified()
-            val actualHash = if (unchanged) {
-                storedHash
-            } else {
-                runCatching { sha256(file) }.getOrNull()
-            }
+            // Audit-4 #48: the Audit-3 #15 shortcut (same length +
+            // mtime = skip the re-hash) is removed — length and
+            // mtime are both attacker-controllable on a file that
+            // was swapped with same-size content, which silently
+            // defeated this integrity check. Plugin files are a
+            // few MB, so a full SHA-256 on load is cheap; always
+            // hash and compare.
+            val actualHash = runCatching { sha256(file) }.getOrNull()
             if (actualHash != storedHash) {
                 Log.e(
                     TAG,
@@ -740,10 +727,6 @@ object PluginManager {
                 )
                 currentlyLoading = null
                 return false
-            }
-            if (!unchanged) {
-                // Refresh the stamp so the next load can skip hashing.
-                storePluginHash(filePath, storedHash)
             }
         } else if (!data.isOnline) {
             Log.w(TAG, "Loading local plugin $fileName without integrity verification")
