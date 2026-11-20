@@ -1558,14 +1558,28 @@ private class JsInterpreter(
             "trim" -> nativeFn("trim") { _ -> obj.trim() }
             "trimStart", "trimLeft" -> nativeFn("trimStart") { _ -> obj.trimStart() }
             "trimEnd", "trimRight" -> nativeFn("trimEnd") { _ -> obj.trimEnd() }
-            "repeat" -> nativeFn("repeat") { args -> obj.repeat(toNumber(args.getOrNull(0)).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE)) }
+            "repeat" -> nativeFn("repeat") { args ->
+                // Audit-14 #6: the Audit-13 #12 cap bounded the
+                // count, but the RESULT is obj.length x count —
+                // "x".repeat(100000).repeat(1000000) chained to a
+                // ~1e11-char allocation. Cap the result size.
+                val count = toNumber(args.getOrNull(0)).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE)
+                if (obj.isNotEmpty() && count > JS_MAX_NATIVE_SIZE / obj.length) {
+                    throw JsExecutionLimitExceeded("repeat result exceeds max native size of $JS_MAX_NATIVE_SIZE")
+                }
+                obj.repeat(count)
+            }
             "padStart" -> nativeFn("padStart") { args ->
                 val len = toNumber(args.getOrNull(0)).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE); val pad = args.getOrNull(1)?.let { toJsString(it) } ?: " "
-                if (obj.length >= len) obj else (pad.repeat(len) + obj).takeLast(len)
+                // Audit-14 #6: pad.repeat(len) allocated
+                // pad.length x len before the takeLast — repeat
+                // the pad only as often as the gap needs.
+                if (obj.length >= len || pad.isEmpty()) obj else (pad.repeat((len - obj.length + pad.length - 1) / pad.length) + obj).takeLast(len)
             }
             "padEnd" -> nativeFn("padEnd") { args ->
                 val len = toNumber(args.getOrNull(0)).toInt().coerceIn(0, JS_MAX_NATIVE_SIZE); val pad = args.getOrNull(1)?.let { toJsString(it) } ?: " "
-                if (obj.length >= len) obj else (obj + pad.repeat(len)).take(len)
+                // Audit-14 #6: see padStart.
+                if (obj.length >= len || pad.isEmpty()) obj else (obj + pad.repeat((len - obj.length + pad.length - 1) / pad.length)).take(len)
             }
             "toString" -> nativeFn("toString") { _ -> obj }
             "valueOf" -> nativeFn("valueOf") { _ -> obj }
