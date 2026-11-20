@@ -33,7 +33,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -85,6 +84,7 @@ import com.lagradost.cloudstream3.USER_AGENT
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.mvvm.debugAssert
 import com.lagradost.cloudstream3.mvvm.logError
+import com.lagradost.cloudstream3.network.buildDefaultClient
 import com.lagradost.cloudstream3.mvvm.safe
 import com.lagradost.cloudstream3.ui.player.CustomDecoder.Companion.fixSubtitleAlignment
 import com.lagradost.cloudstream3.ui.player.live.LiveHelper
@@ -113,12 +113,8 @@ import kotlinx.coroutines.delay
 import okhttp3.Interceptor
 import org.chromium.net.CronetEngine
 import java.io.File
-import java.security.SecureRandom
 import java.util.UUID
 import java.util.concurrent.Executors
-import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSession
 import kotlin.uuid.toJavaUuid
 
 const val TAG = "CS3ExoPlayer"
@@ -159,15 +155,13 @@ class CS3IPlayer : IPlayer {
             it.isCommandAvailable(Player.COMMAND_GET_CURRENT_MEDIA_ITEM) && it.isCurrentMediaItemSeekable
         } ?: false
 
-    private var ignoreSSL: Boolean = true
-
-    // Fork fix (audit #1; audit sesi 15 #4): the ignoreSSL block below
-    // replaces the PROCESS-WIDE HttpsURLConnection defaults. The
-    // originals are captured once in the companion (see sslDefaultsLock)
-    // and restored when the last relaxing player is released, so
-    // overlapping players cannot capture the relaxed values as the
-    // "originals" and leave the app TLS-blind after playback.
-    private var sslRelaxed: Boolean = false
+    // Audit-3 #3: the process-wide HttpsURLConnection TLS
+    // relaxation that used to live here is GONE. Online playback
+    // never used it (OkHttp baseClient is verified; Cronet has its
+    // own stack); the only consumer was the offline source's HTTP
+    // fallback, which now gets its own scoped insecure client in
+    // createOfflineSource(). Nothing process-wide is trust-all
+    // anymore, during playback or otherwise.
 
     private var playBackSpeed: Float = 1.0f
 
@@ -606,30 +600,8 @@ class CS3IPlayer : IPlayer {
         }
     }
 
-    // Fork fix (audit #1; audit sesi 15 #4): undo the process-wide
-    // TLS relaxation once the last relaxing player stops using it.
-    private fun restoreSslDefaultsIfRelaxed() {
-        if (sslRelaxed) {
-            synchronized(sslDefaultsLock) {
-                sslRelaxed = false
-                if (relaxedSslUsers > 0) relaxedSslUsers--
-                if (relaxedSslUsers == 0) {
-                    originalHostnameVerifier?.let {
-                        HttpsURLConnection.setDefaultHostnameVerifier(it)
-                    }
-                    originalSslSocketFactory?.let {
-                        HttpsURLConnection.setDefaultSSLSocketFactory(it)
-                    }
-                    originalHostnameVerifier = null
-                    originalSslSocketFactory = null
-                }
-            }
-        }
-    }
-
     private fun releasePlayer(saveTime: Boolean = true) {
         Log.i(TAG, "releasePlayer")
-        restoreSslDefaultsIfRelaxed()
         eventLooperIndex.incrementAndGet()
         if (saveTime)
             updatedTime()
@@ -704,14 +676,6 @@ class CS3IPlayer : IPlayer {
 
     companion object {
         private const val CRONET_TIMEOUT_MS = 15_000
-
-        // Guard for the process-wide TLS relaxation in loadOnlinePlayer:
-        // originals are captured by the first relaxing player and
-        // restored when the count returns to zero (audit sesi 15 #4).
-        private val sslDefaultsLock = Any()
-        private var relaxedSslUsers = 0
-        private var originalHostnameVerifier: javax.net.ssl.HostnameVerifier? = null
-        private var originalSslSocketFactory: javax.net.ssl.SSLSocketFactory? = null
 
         /**
          * Single shared engine, to minimize the overhead of maintaining many as:
@@ -885,9 +849,14 @@ class CS3IPlayer : IPlayer {
         }
 
         private fun Context.createOfflineSource(): DataSource.Factory {
+            // Audit-3 #3: the HTTP fallback for offline items keeps
+            // the old bad-cert tolerance, but scoped to THIS source
+            // via its own insecure OkHttp client -- not via
+            // process-wide HttpsURLConnection defaults.
             return DefaultDataSource.Factory(
                 this,
-                DefaultHttpDataSource.Factory().setUserAgent(USER_AGENT)
+                OkHttpDataSource.Factory(buildDefaultClient(this, ignoreSSL = true))
+                    .setUserAgent(USER_AGENT)
             )
         }
 
@@ -1879,30 +1848,6 @@ class CS3IPlayer : IPlayer {
 
             currentLink = link
 
-            if (ignoreSSL && !sslRelaxed) {
-                // Disables ssl check for playback only. The defaults are
-                // process-wide, so the originals are captured once under
-                // a lock and restored by releasePlayer() when the last
-                // relaxing player goes away (fork fix, audit #1;
-                // audit sesi 15 #4).
-                synchronized(sslDefaultsLock) {
-                    if (relaxedSslUsers == 0) {
-                        originalHostnameVerifier =
-                            HttpsURLConnection.getDefaultHostnameVerifier()
-                        originalSslSocketFactory =
-                            HttpsURLConnection.getDefaultSSLSocketFactory()
-                    }
-                    relaxedSslUsers++
-                    sslRelaxed = true
-                    val sslContext: SSLContext = SSLContext.getInstance("TLS")
-                    sslContext.init(null, arrayOf(SSLTrustManager()), SecureRandom())
-                    HttpsURLConnection.setDefaultHostnameVerifier { _: String, _: SSLSession ->
-                        true
-                    }
-                    HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.socketFactory)
-                }
-            }
-
 
             val mediaItems = when (link) {
                 is ExtractorLinkPlayList -> link.playlist.map {
@@ -1973,10 +1918,6 @@ class CS3IPlayer : IPlayer {
                 onlineSource = onlineSourceFactory
             )
         } catch (t: Throwable) {
-            // Audit sesi 15 #38: a failure after the TLS relaxation
-            // above must not leave the process-wide trust-all defaults
-            // installed for a player that never started.
-            restoreSslDefaultsIfRelaxed()
             Log.e(TAG, "loadOnlinePlayer error", t)
             event(ErrorEvent(t))
         }
