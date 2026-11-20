@@ -118,6 +118,15 @@ object PluginManager {
     // Prevent multiple writes at once
     val lock = Mutex()
 
+    // Audit-11 #6: absolute paths of ".new" staging files a
+    // plugin download is currently writing. The startup sweep
+    // and deletePlugin (Audit-10 #10) must not delete a
+    // staging file out from under an in-flight transfer —
+    // the periodic SubscriptionWorkManager load could
+    // otherwise kill a user-started update mid-download.
+    private val inFlightStagingFiles =
+        java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
     const val TAG = "PluginManager"
 
     private var hasCreatedNotChanel = false
@@ -627,8 +636,12 @@ object PluginManager {
             // Audit-10 #10: a leftover ".new" staging file from
             // an interrupted download is never a loadable
             // plugin — delete it instead of letting it sit in
-            // the plugin folder forever.
-            File(pluginFile.parentFile, pluginFile.name + ".new").delete()
+            // the plugin folder forever. Audit-11 #6: unless a
+            // download is writing it right now.
+            val stagingCandidate = File(pluginFile.parentFile, pluginFile.name + ".new")
+            if (!inFlightStagingFiles.contains(stagingCandidate.absolutePath)) {
+                stagingCandidate.delete()
+            }
             if (!pluginFile.exists()) {
                 val bakFile = File(pluginFile.parentFile, pluginFile.name + ".bak")
                 if (bakFile.exists()) {
@@ -1154,6 +1167,10 @@ object PluginManager {
             // The plugin file needs to be salted with the repository url hash as to allow multiple repositories with the same internal plugin names
             // Audit-9 #1: download+verify into the staging file;
             // the installed plugin stays untouched until the swap.
+            // Audit-11 #6: mark the staging file in-flight until
+            // this function exits (finally below), so background
+            // plugin loads cannot sweep it mid-transfer.
+            stagingFile?.let { inFlightStagingFiles.add(it.absolutePath) }
             downloadPluginToFile(activity, pluginUrl, stagingFile ?: file, normalizedHash)
                 ?: run {
                     stagingFile?.delete()
@@ -1246,6 +1263,10 @@ object PluginManager {
             }
             logError(e)
             return false
+        } finally {
+            // Audit-11 #6: transfer (and swap) finished one way
+            // or another — the staging file is sweepable again.
+            stagingFile?.let { inFlightStagingFiles.remove(it.absolutePath) }
         }
     }
 
@@ -1271,7 +1292,12 @@ object PluginManager {
             // registered forever. Audit-10 #10: the ".new"
             // staging sibling gets the same treatment.
             File(pluginFile.parentFile, pluginFile.name + ".bak").delete()
-            File(pluginFile.parentFile, pluginFile.name + ".new").delete()
+            // Audit-11 #6: not while an update download is
+            // writing this plugin's staging file.
+            val deleteStaging = File(pluginFile.parentFile, pluginFile.name + ".new")
+            if (!inFlightStagingFiles.contains(deleteStaging.absolutePath)) {
+                deleteStaging.delete()
+            }
             unloadPlugin(file.absolutePath)
             list.forEach { deletePluginData(it) }
             // Audit-7 #6: drop the deleted plugin's anchor
