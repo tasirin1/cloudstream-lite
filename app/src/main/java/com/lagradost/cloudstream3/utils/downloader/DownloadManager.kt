@@ -1541,6 +1541,11 @@ object VideoDownloadManager {
             // we just rethrow it
             logError(e)
             throw e
+        } catch (e: CancellationException) {
+            // Audit-14 #10: rethrow cancellation — the catch-all
+            // below turned a scope cancellation into a failure
+            // verdict the Audit-13 #17 guard upstream never saw.
+            throw e
         } catch (t: Throwable) {
             // some sort of network error, will error
             logError(t)
@@ -1806,6 +1811,9 @@ object VideoDownloadManager {
                                     metadata.addBytesWritten(cacheLength)
                                     metadata.setWrittenSegment(metadata.hlsWrittenProgress)
                                 }
+                            } catch (e: CancellationException) {
+                                // Audit-14 #10: not a write fail.
+                                throw e
                             } catch (t: Throwable) {
                                 // this is in case of write fail
                                 logError(t)
@@ -1860,6 +1868,9 @@ object VideoDownloadManager {
 
             metadata.type = DownloadType.IsDone
             return@withContext DOWNLOAD_SUCCESS
+        } catch (e: CancellationException) {
+            // Audit-14 #10: not a failure.
+            throw e
         } catch (t: Throwable) {
             logError(t)
             metadata.type = DownloadType.IsFailed
@@ -2364,6 +2375,9 @@ object VideoDownloadManager {
                         break
                     }
                 }
+            } catch (e: CancellationException) {
+                // Audit-14 #10: not a failure.
+                throw e
             } catch (e: Exception) {
                 isFailed = true
                 logError(e)
@@ -2408,6 +2422,9 @@ object VideoDownloadManager {
                     }
                 }
                 return
+            } catch (e: CancellationException) {
+                // Audit-14 #10: not a failure.
+                throw e
             } catch (e: Exception) {
                 isFailed = true
                 logError(e)
