@@ -109,6 +109,12 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
     var isVolumeLocked: Boolean = false
     var hasShownVolumeToast: Boolean = false
     private var loudnessEnhancer: LoudnessEnhancer? = null
+
+    // Audit-14 #26: the audio session the enhancer is bound
+    // to. An enhancer only ever affects ITS session; a new
+    // episode gets a new session, and reusing the old enhancer
+    // silently applied no boost while the UI showed >100%.
+    private var loudnessEnhancerSessionId: Int = -1
     private var progressBarLeftHideRunnable: Runnable? = null
 
     /** Brightness state */
@@ -256,6 +262,7 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
         brightnessOverlay = null
         loudnessEnhancer?.release()
         loudnessEnhancer = null
+        loudnessEnhancerSessionId = -1
         holdHandler.removeCallbacksAndMessages(null)
         clearZoomState()
         releaseOverlayLayoutListener()
@@ -312,6 +319,7 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
                 currentRequestedVolume = cur.toFloat() / max.toFloat()
                 loudnessEnhancer?.release()
                 loudnessEnhancer = null
+                loudnessEnhancerSessionId = -1
             }
         }
     }
@@ -372,21 +380,28 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
         // Apply loudness enhancer for volumes > 100%, removes it if less.
         if (next > 1.0f) {
             val boost = ((next - 1.0f) * 1000).toInt()
+            val sessionId = (playerView.exoPlayerView?.player as? ExoPlayer)?.audioSessionId
             val existing = loudnessEnhancer
-            if (existing != null) {
+            if (existing != null && sessionId != null && loudnessEnhancerSessionId == sessionId) {
                 existing.setTargetGain(boost)
             } else {
-                val sessionId = (playerView.exoPlayerView?.player as? ExoPlayer)?.audioSessionId
+                // Audit-14 #26: no enhancer yet, or it is bound
+                // to a dead session — (re)create it for the
+                // CURRENT session.
+                existing?.release(); loudnessEnhancer = null
+                loudnessEnhancerSessionId = -1
                 if (sessionId != null && sessionId != AudioManager.ERROR) {
                     try {
                         loudnessEnhancer = LoudnessEnhancer(sessionId).apply {
                             setTargetGain(boost); enabled = true
                         }
+                        loudnessEnhancerSessionId = sessionId
                     } catch (t: Throwable) { logError(t); hasBoostError = true }
                 }
             }
         } else {
             loudnessEnhancer?.release(); loudnessEnhancer = null
+            loudnessEnhancerSessionId = -1
         }
 
         currentRequestedVolume = next
