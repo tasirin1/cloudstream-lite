@@ -132,7 +132,15 @@ object RepositoryManager {
     suspend fun parseRepoUrl(url: String): String? {
         val fixedUrl = url.trim()
         return if (fixedUrl.contains("^https?://".toRegex())) {
-            fixedUrl
+            // Audit-3 #11: a repository serves the plugin list AND
+            // the hashes used to verify plugins; over plain HTTP a
+            // network attacker can forge both together, so repo
+            // URLs are upgraded to HTTPS.
+            if (fixedUrl.startsWith("http://")) {
+                "https://" + fixedUrl.removePrefix("http://")
+            } else {
+                fixedUrl
+            }
         } else if (fixedUrl.contains("^(cloudstreamrepo://)|(https://cs\\.repo/\\??)".toRegex())) {
             fixedUrl.replace("^(cloudstreamrepo://)|(https://cs\\.repo/\\??)".toRegex(), "").let {
                 return@let if (!it.contains("^https?://".toRegex()))
