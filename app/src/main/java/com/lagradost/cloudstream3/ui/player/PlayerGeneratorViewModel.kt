@@ -76,7 +76,23 @@ data class VideoState(
     fun clearSortedLinksCache() = sortedLinks.clear()
 
     private fun hasLinkErrored(link: VideoLink): Boolean {
-        return erroredLinks.any { it == link }
+        // Audit-14 #19: erroredLinks is a PersistentSet — the
+        // old any{} scan made every sortLinks() call linear in
+        // the errored count for EVERY link.
+        return link in erroredLinks
+    }
+
+    /**
+     * Audit-14 #19: copy() re-initializes body properties, so
+     * the sorted-links cache died on every state copy — each
+     * arriving subtitle/stamp re-sorted the full link list.
+     * Copies that do not touch links/erroredLinks (the sort
+     * inputs) may inherit the cache; link-changing copies
+     * deliberately start empty.
+     */
+    private fun inheritSortedLinksCache(newState: VideoState): VideoState {
+        newState.sortedLinks.putAll(this.sortedLinks)
+        return newState
     }
 
     private fun VideoLink.toDisplayLink(
@@ -117,17 +133,20 @@ data class VideoState(
     }
 
     @Contract(pure = true)
-    fun add(item: SubtitleData): VideoState = copy(subtitles = subtitles.add(item))
+    fun add(item: SubtitleData): VideoState =
+        inheritSortedLinksCache(copy(subtitles = subtitles.add(item)))
 
     @Contract(pure = true)
     fun add(item: VideoLink): VideoState = copy(links = links.add(item))
 
     @Contract(pure = true)
-    fun add(item: VideoSkipStamp): VideoState = copy(stamps = stamps.add(item))
+    fun add(item: VideoSkipStamp): VideoState =
+        inheritSortedLinksCache(copy(stamps = stamps.add(item)))
 
     @JvmName("addSubtitleData")
     @Contract(pure = true)
-    fun add(items: Collection<SubtitleData>): VideoState = copy(subtitles = subtitles.addAll(items))
+    fun add(items: Collection<SubtitleData>): VideoState =
+        inheritSortedLinksCache(copy(subtitles = subtitles.addAll(items)))
 
     @JvmName("addVideoLink")
     @Contract(pure = true)
@@ -135,20 +154,24 @@ data class VideoState(
 
     @JvmName("addVideoSkipStamp")
     @Contract(pure = true)
-    fun add(items: Collection<VideoSkipStamp>): VideoState = copy(stamps = stamps.addAll(items))
+    fun add(items: Collection<VideoSkipStamp>): VideoState =
+        inheritSortedLinksCache(copy(stamps = stamps.addAll(items)))
 
     @Contract(pure = true)
-    fun set(item: SubtitleData): VideoState = copy(subtitles = persistentSetOf(item))
+    fun set(item: SubtitleData): VideoState =
+        inheritSortedLinksCache(copy(subtitles = persistentSetOf(item)))
 
     @Contract(pure = true)
     fun set(item: VideoLink): VideoState = copy(links = persistentSetOf(item))
 
     @Contract(pure = true)
-    fun set(item: VideoSkipStamp): VideoState = copy(stamps = persistentListOf(item))
+    fun set(item: VideoSkipStamp): VideoState =
+        inheritSortedLinksCache(copy(stamps = persistentListOf(item)))
 
     @JvmName("setSubtitleData")
     @Contract(pure = true)
-    fun set(items: Collection<SubtitleData>): VideoState = copy(subtitles = items.toPersistentSet())
+    fun set(items: Collection<SubtitleData>): VideoState =
+        inheritSortedLinksCache(copy(subtitles = items.toPersistentSet()))
 
     @JvmName("setVideoLink")
     @Contract(pure = true)
@@ -156,7 +179,8 @@ data class VideoState(
 
     @JvmName("setVideoSkipStamp")
     @Contract(pure = true)
-    fun set(items: Collection<VideoSkipStamp>): VideoState = copy(stamps = items.toPersistentList())
+    fun set(items: Collection<VideoSkipStamp>): VideoState =
+        inheritSortedLinksCache(copy(stamps = items.toPersistentList()))
 
     @Contract(pure = true)
     fun addError(item: VideoLink): VideoState = copy(erroredLinks = erroredLinks.add(item))
