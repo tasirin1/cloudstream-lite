@@ -8,6 +8,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.M3u8Helper
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import kotlinx.coroutines.CancellationException
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.INFER_TYPE
 import kotlinx.serialization.SerialName
@@ -69,6 +70,12 @@ object JwPlayerHelper {
                         referer = mainUrl,
                         headers = headers,
                     )
+                } catch (e: CancellationException) {
+                    // Audit-13 #32: cancellation is not a source
+                    // failure — rethrow instead of swallowing it
+                    // into an empty list and fetching every
+                    // remaining source for a dead load.
+                    throw e
                 } catch (e: Exception) {
                     Log.d("JW_PLAYER_HELPER", "Error generating M3U8 links: ${e.message}")
                     emptyList()

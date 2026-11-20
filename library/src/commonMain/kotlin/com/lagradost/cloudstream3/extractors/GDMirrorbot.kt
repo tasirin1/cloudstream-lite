@@ -7,6 +7,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.base64Decode
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.cloudstream3.utils.ExtractorApi
+import kotlinx.coroutines.CancellationException
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.loadExtractor
 import io.ktor.http.Url
@@ -100,6 +101,12 @@ open class GDMirrorbot : ExtractorApi() {
                     "RpmShare", "UpnShare", "StreamP2p" -> VidStack().getUrl(fullUrl, referer, subtitleCallback, callback)
                     else -> loadExtractor(fullUrl, referer ?: mainUrl, subtitleCallback, callback)
                 }
+            } catch (e: CancellationException) {
+                // Audit-13 #31: cancellation is not a mirror
+                // failure — rethrow instead of logging a fake
+                // error and walking every remaining mirror for
+                // a dead load (same class as Audit-12 #10).
+                throw e
             } catch (e: Exception) {
                 Log.e("GDMirrorbot", "Failed to extract from $friendlyName at $fullUrl: $e")
             }
