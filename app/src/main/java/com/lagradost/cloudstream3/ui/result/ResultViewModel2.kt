@@ -2550,9 +2550,9 @@ class ResultViewModel2 : ViewModel() {
         dubStatus: DubStatus,
         autostart: AutoResume?,
         loadTrailers: Boolean = true,
-    ) {
+    ): Job {
         currentLoadJob?.cancel()
-        currentLoadJob = ioSafe {
+        val job = ioSafe {
             _page.postValue(Resource.Loading(url))
             _episodes.postValue(Resource.Loading())
 
@@ -2640,5 +2640,7 @@ class ResultViewModel2 : ViewModel() {
                 }
             }
         }
+        currentLoadJob = job
+        return job
     }
 }
