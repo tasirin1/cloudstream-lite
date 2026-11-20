@@ -30,6 +30,9 @@ object Kitsu {
         ).parsed<KitsuResponse>()
     }
 
+    // Audit-10 #9: this was a plain mutableMapOf mutated from
+    // concurrent coroutines with no lock and no size bound —
+    // same class as the APIHolder tracker cache (Audit-10 #8).
     private val cache: MutableMap<Pair<String, String>, Map<Int, KitsuResponse.Node>> =
         mutableMapOf()
 
@@ -70,9 +73,7 @@ object Kitsu {
             "invalid site"
         }
 
-        if (cache.containsKey(id to site)) {
-            return cache[id to site]
-        }
+        synchronized(cache) { cache[id to site] }?.let { return it }
 
         val query =
             """
@@ -104,7 +105,10 @@ query {
             num to ep
         }.toMap()
         if (map.isNotEmpty()) {
-            cache[id to site] = map
+            synchronized(cache) {
+                if (cache.size >= 200) cache.clear()
+                cache[id to site] = map
+            }
         }
         return map
     }
