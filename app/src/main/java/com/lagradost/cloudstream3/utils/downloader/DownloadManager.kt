@@ -2157,7 +2157,19 @@ object VideoDownloadManager {
 
             downloadStatusEvent.invoke(Pair(id, status))
             downloadStatus[id] = status
-            downloadEvent.invoke(Pair(id, DownloadActionType.Stop))
+            // Audit-8 #3: the Stop event means "the user stopped
+            // this" to its only listener (DownloadQueueService),
+            // which reacts by cancelling the instance and
+            // clearing its resume keys. Firing it for FAILURES
+            // made the service convert every failure into a user
+            // stop: a second cleanup ran as IsStopped, deleting
+            // the subtitles Audit-7 #4 preserves for failures,
+            // overwriting the shown status Failed -> Stopped, and
+            // discarding the resume package (mirror progress)
+            // that the failure path deliberately keeps.
+            if (status == DownloadType.IsStopped) {
+                downloadEvent.invoke(Pair(id, DownloadActionType.Stop))
+            }
 
             // Force refresh the queue when failed.
             // May lead to some redundant calls, but ensures that the queue is always up to date.
