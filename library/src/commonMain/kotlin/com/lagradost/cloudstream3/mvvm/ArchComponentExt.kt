@@ -133,6 +133,10 @@ fun Throwable.getAllMessages(): String {
     return (this.message ?: "") + (this.cause?.getAllMessages()?.let { "\n$it" } ?: "")
 }
 
+// Audit-14 #41: compiled once — this regex used to be
+// rebuilt for every stack-trace line of every error.
+private val STACK_TRACE_FILE_REGEX = Regex("""\(([^)]+)\)$""")
+
 fun Throwable.getStackTracePretty(showMessage: Boolean = true): String {
     val prefix = if (showMessage) this.message?.let { "$it\n" } ?: "" else ""
     return prefix + this.stackTraceToString()
@@ -141,7 +145,7 @@ fun Throwable.getStackTracePretty(showMessage: Boolean = true): String {
             val trimmed = line.trim()
             if (!trimmed.startsWith("at ")) return@mapNotNull null
             // pull "File.kt:42" out of "at com.pkg.Class.method(File.kt:42)"
-            Regex("""\(([^)]+)\)$""").find(trimmed)?.groupValues?.get(1)
+            STACK_TRACE_FILE_REGEX.find(trimmed)?.groupValues?.get(1)
                 ?.replace(":", " ")
         }
         .joinToString("\n")
@@ -180,7 +184,7 @@ fun <T> throwAbleToResource(
             val traceLine = throwable.stackTraceToString()
                 .lines()
                 .firstOrNull { it.contains("provider.kt", ignoreCase = true) }
-                ?.let { Regex("""\(([^)]+)\)$""").find(it)?.groupValues?.get(1) }
+                ?.let { STACK_TRACE_FILE_REGEX.find(it)?.groupValues?.get(1) }
             if (traceLine != null) {
                 return Resource.Failure(
                     false,
