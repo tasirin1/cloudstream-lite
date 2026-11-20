@@ -1941,8 +1941,15 @@ class GeneratorPlayer : FullScreenPlayer() {
         var isOpVisible = false
         when (val meta = currentMeta) {
             is ResultEpisode -> {
+                // Audit-17 #8: guard and store on the TOTAL
+                // episode index — the value actually synced.
+                // Comparing the per-season number meant that
+                // after S1E12, episodes S2E1-E12 never passed
+                // the guard and sync progress stalled for a
+                // whole season.
+                val syncEpisodeIndex = meta.totalEpisodeIndex ?: meta.episode
                 if (percentage >= UPDATE_SYNC_PROGRESS_PERCENTAGE && (maxEpisodeSet
-                        ?: -1) < meta.episode
+                        ?: -1) < syncEpisodeIndex
                 ) {
                     context?.let { ctx ->
                         val settingsManager = PreferenceManager.getDefaultSharedPreferences(ctx)
@@ -1950,8 +1957,8 @@ class GeneratorPlayer : FullScreenPlayer() {
                                 ctx.getString(R.string.episode_sync_enabled_key), true
                             )
                         ) {
-                            maxEpisodeSet = meta.episode
-                            sync.modifyMaxEpisode(meta.totalEpisodeIndex ?: meta.episode)
+                            maxEpisodeSet = syncEpisodeIndex
+                            sync.modifyMaxEpisode(syncEpisodeIndex)
                         }
                     }
                 }
