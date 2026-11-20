@@ -400,6 +400,17 @@ class CustomDecoder(private val fallbackFormat: Format?) : SubtitleParser {
                     outputOptions,
                     customOutput
                 )
+                // Audit-7 #17: a successful parse re-arms the
+                // failure report. The flag used to stay set for
+                // the instance's whole life, so after the first
+                // reported failure no later, unrelated failure
+                // (another file, another episode) ever surfaced
+                // the toast again — back to subtitles silently
+                // missing. Still once per unbroken failure run:
+                // a continuously failing file does not re-toast
+                // per chunk, because the flag is only cleared by
+                // a success.
+                parseFailureReported = false
             }
         } catch (e: Exception) {
             logError(e)
