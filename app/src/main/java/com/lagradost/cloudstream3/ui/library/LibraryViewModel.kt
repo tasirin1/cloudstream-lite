@@ -79,19 +79,33 @@ class LibraryViewModel : ViewModel() {
     }
 
     fun sort(method: ListSorting, query: String? = null) = ioSafe {
+        // Audit-11 #8: capture the reload generation — sort()
+        // used to post unconditionally, so a sort of the OLD
+        // list finishing after an account/API switch overwrote
+        // the new account's pages (and reloadPages(false) then
+        // refused to reload because pages were non-empty).
+        val sortGeneration = libraryLoadIndex
         val value = _pages.value ?: return@ioSafe
         if (value is Resource.Success) {
-            sort(method, query, value.value)
+            sort(method, query, value.value, sortGeneration)
         }
     }
 
-    private fun sort(method: ListSorting, query: String? = null, items: List<SyncAPI.Page>) {
+    private fun sort(
+        method: ListSorting,
+        query: String? = null,
+        items: List<SyncAPI.Page>,
+        generation: Int? = null
+    ) {
         currentSortingMethod = method
         DataStoreHelper.librarySortingMode = method.ordinal
 
         items.forEach { page ->
             page.sort(method, query)
         }
+        // Audit-11 #8: a newer reload started while sorting —
+        // these pages are stale, do not post them.
+        if (generation != null && generation != libraryLoadIndex) return
         _pages.postValue(Resource.Success(items))
     }
 
