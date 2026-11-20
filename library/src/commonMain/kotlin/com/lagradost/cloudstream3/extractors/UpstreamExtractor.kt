@@ -27,9 +27,14 @@ open class UpstreamExtractor : ExtractorApi() {
         val doc = app.get(url, referer = referer).text
         if (doc.isNotBlank()) {
             var reg = hoistedRegex1
-            val result = reg.find(doc)?.groupValues?.map {
+            // Audit-7 #47: groupValues includes the whole match
+            // at index 0 — with this regex's zero-width
+            // lookarounds the whole match EQUALS group 1, so the
+            // same link was generated and published twice. Only
+            // the capture groups are link ids.
+            val result = reg.find(doc)?.groupValues?.drop(1)?.map {
                 it.trim('|')
-            }?.toList()
+            }?.distinct()?.toList()
             reg = hoistedRegex2
             val domainList = reg.find(doc)?.groupValues?.get(1)?.split("|")
             var domain = when (!domainList.isNullOrEmpty()) {
