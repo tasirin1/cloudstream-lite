@@ -35,6 +35,13 @@ object Coroutines {
         return withContext(workerDispatcher) {
             try {
                 work(value)
+            } catch (e: CancellationException) {
+                // Audit-10 #7: cancellation is not an error —
+                // the sibling helpers (safe/safeAsync/launchSafe)
+                // already rethrow it; this one swallowed it into
+                // a logged error + null, so work kept running in
+                // a cancelled scope.
+                throw e
             } catch (e: Exception) {
                 logError(e)
                 null
