@@ -711,13 +711,23 @@ class CS3IPlayer : IPlayer {
          * 2. Mem consumption/GC
          * 3. Disk usage, as we simply use the same folder
          * */
+        // Audit-4 #50: @Volatile + cronetLock below — creation
+        // used to be an unlocked check-then-build, so two
+        // concurrent loads could build two engines on the same
+        // cache directory (one leaked) or two executors (one
+        // leaked, the exact leak Audit-3 #18 removed).
+        @Volatile
         private var cronetEngine: CronetEngine? = null
 
         // Audit-3 #18: createVideoSource used to hand every
         // CronetDataSource a brand new single-thread executor that
         // was never shut down, leaking one thread per video load.
         // The executor is shared with the engine's lifetime instead.
+        @Volatile
         private var cronetExecutor: java.util.concurrent.ExecutorService? = null
+
+        // Audit-4 #50: guards engine/executor creation + shutdown.
+        private val cronetLock = Any()
 
         /**
          * How many active sessions we have.
@@ -753,16 +763,31 @@ class CS3IPlayer : IPlayer {
             // We should release if and only if this was the last call, and
             // there is no active players
             if (activePlayers == 0 && id == cronetReleasedId) {
-                try {
-                    cronetEngine?.shutdown()
-                    cronetExecutor?.shutdown()
-                    cronetExecutor = null
-                } catch (t: Throwable) {
-                    logError(t)
-                } finally {
-                    Log.d(TAG, "CronetEngine shutdown")
-                    // Even if it fails to shutdown, the GC should take care of it
-                    cronetEngine = null
+                // Audit-4 #50: under the same lock as creation, so
+                // a shutdown cannot interleave with a build.
+                synchronized(cronetLock) {
+                    try {
+                        cronetEngine?.shutdown()
+                        cronetExecutor?.shutdown()
+                        cronetExecutor = null
+                    } catch (t: Throwable) {
+                        logError(t)
+                    } finally {
+                        Log.d(TAG, "CronetEngine shutdown")
+                        // Even if it fails to shutdown, the GC should take care of it
+                        cronetEngine = null
+                    }
+                }
+            }
+        }
+
+        // Audit-4 #50: double-checked get-or-create for the
+        // shared executor (see cronetLock).
+        private fun sharedCronetExecutor(): java.util.concurrent.ExecutorService {
+            cronetExecutor?.let { return it }
+            return synchronized(cronetLock) {
+                cronetExecutor ?: Executors.newSingleThreadExecutor().also {
+                    cronetExecutor = it
                 }
             }
         }
@@ -831,6 +856,18 @@ class CS3IPlayer : IPlayer {
                 return it
             }
 
+            // Audit-4 #50: double-checked under cronetLock (see
+            // the field declaration); the build itself is the
+            // unchanged body in createCronetEngine below.
+            return synchronized(cronetLock) {
+                cronetEngine?.let {
+                    return@synchronized it
+                }
+                createCronetEngine(context, diskCacheSize)
+            }
+        }
+
+        private fun createCronetEngine(context: Context, diskCacheSize: Long): CronetEngine? {
             // https://gist.github.com/ShivamKumarJha/3c8398b47053ae05112d2a8f8b5de531
             return try {
                 val cacheDirectory = File(context.cacheDir, "CronetEngine")
@@ -891,9 +928,9 @@ class CS3IPlayer : IPlayer {
                     Log.d(TAG, "Using CronetDataSource for $link")
                     CronetDataSource.Factory(
                         engine,
-                        cronetExecutor ?: Executors.newSingleThreadExecutor().also {
-                            cronetExecutor = it
-                        }
+                        // Audit-4 #50: was an unlocked
+                        // check-then-create here.
+                        sharedCronetExecutor()
                     )
                         .setUserAgent(userAgent)
                         .setConnectionTimeoutMs(CRONET_TIMEOUT_MS)
