@@ -148,7 +148,18 @@ class Videa : ExtractorApi() {
 
         // Get player page to extract tokens
         val playerResponse = app.get(playerUrl)
-        val playerHtml = playerResponse.text
+        // Audit-10 #15: the Audit-9 #13 fix bounded the first
+        // fetch in this function but left this one on .text —
+        // a chunked or huge player page was still read into
+        // RAM whole. Same bounded read as above.
+        val playerBody = playerResponse.body
+        val playerHtml = try {
+            playerBody.source().readBytesBounded(5_000_000L).decodeToString()
+        } catch (e: Exception) {
+            return null
+        } finally {
+            playerBody.close()
+        }
 
         // Update cookie from player response
         playerResponse.headers["Set-Cookie"]?.let { cookieHeader ->
