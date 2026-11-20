@@ -46,6 +46,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 object BackupUtils {
@@ -222,7 +224,18 @@ object BackupUtils {
         return withContext(Dispatchers.IO) { runBackup(context) }
     }
 
-    private suspend fun runBackup(context: Context): Boolean {
+    // Audit-5 #28: backups are serialized. The filename has
+    // one-second resolution (Audit-4 #40) and setupStream deletes
+    // an existing file of the same name, so a manual backup and
+    // the scheduled WorkManager backup starting in the same
+    // second targeted the same file: interleaved writes, and a
+    // "success" report for a file the other run then replaced.
+    private val backupMutex = Mutex()
+
+    private suspend fun runBackup(context: Context): Boolean =
+        backupMutex.withLock { runBackupLocked(context) }
+
+    private suspend fun runBackupLocked(context: Context): Boolean {
         var fileStream: OutputStream? = null
         var printStream: PrintWriter? = null
 
