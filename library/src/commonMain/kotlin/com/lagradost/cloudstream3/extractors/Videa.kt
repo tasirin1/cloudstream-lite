@@ -44,6 +44,12 @@ class Videa : ExtractorApi() {
 
             val webUrl = getXmlUrl(currentUrl) { cookie -> /* no-op, cookie not used */ } ?: return
             val response = app.get(webUrl)
+            // Audit-8 #17: this fetch read the whole body into
+            // RAM uncapped, while the sibling fetch in
+            // getXmlUrl (same file) refuses declared bodies over
+            // 5 MB as OOM protection. Apply the same cap here.
+            val responseSize = response.size
+            if (responseSize != null && responseSize > 5_000_000) return
             val body = response.body
             val rawBytes = body.bytes()
             body.close()
@@ -209,7 +215,18 @@ class Videa : ExtractorApi() {
                 .replace("\n", "")
                 .replace(" ", "")
                 .trim()
-            base64DecodeArray(base64String)
+            // Audit-8 #18: the printable-ASCII heuristic above
+            // also passes for HTML error pages, whose <, > and "
+            // are NOT in the base64 alphabet - the decode threw
+            // IllegalArgumentException out of getUrl. A failed
+            // decode now falls back to the raw bytes (which
+            // decrypt to garbage and yield no sources, a clean
+            // no-result).
+            try {
+                base64DecodeArray(base64String)
+            } catch (e: IllegalArgumentException) {
+                encryptedBytes
+            }
         } else {
             encryptedBytes
         }
