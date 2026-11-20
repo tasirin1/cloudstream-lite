@@ -181,7 +181,16 @@ object PluginManager {
     // re-check it on every load, so a plugin file swapped on disk
     // afterwards is refused instead of silently executed. Local
     // sideloaded plugins have no anchor by design.
-    private fun getStoredPluginHash(filePath: String): String? {
+    // Audit-3 #15: the anchor map used to be read + parsed from
+    // SharedPreferences on every single plugin load and rewritten on
+    // every store, making startup and mass downloads O(n^2) in the
+    // number of plugins. It is now cached in memory; this object is
+    // the only writer.
+    @Volatile
+    private var pluginHashCache: Map<String, String>? = null
+
+    private fun pluginHashMap(): Map<String, String> {
+        pluginHashCache?.let { return it }
         // Audit sesi 15 #11: a parse failure used to be swallowed and
         // treated as "no anchor", silently disabling the integrity
         // check for every online plugin. At least leave evidence.
@@ -190,8 +199,23 @@ object PluginManager {
         } catch (e: Exception) {
             logError(e)
             null
-        }
-        return hashes?.get(filePath)
+        } ?: emptyMap()
+        pluginHashCache = hashes
+        return hashes
+    }
+
+    private fun getStoredPluginHash(filePath: String): String? {
+        // Stored value: "sha256-<hex>" optionally followed by
+        // "|<length>|<lastModified>" (the unchanged-file stamp).
+        return pluginHashMap()[filePath]?.substringBefore('|')
+    }
+
+    private fun getStoredPluginStamp(filePath: String): Pair<Long, Long>? {
+        val parts = pluginHashMap()[filePath]?.split('|') ?: return null
+        if (parts.size != 3) return null
+        val length = parts[1].toLongOrNull() ?: return null
+        val modified = parts[2].toLongOrNull() ?: return null
+        return length to modified
     }
 
     // Serializes the read-modify-write in storePluginHash: parallel
@@ -201,15 +225,17 @@ object PluginManager {
 
     fun storePluginHash(filePath: String, hash: String) {
         synchronized(pluginHashLock) {
-            // Audit sesi 15 #11: never clobber the whole anchor map
-            // because one read failed; abort this store instead.
-            val current = try {
-                getKey<Map<String, String>>(PLUGIN_FILE_HASHES_KEY)
-            } catch (e: Exception) {
-                logError(e)
-                return
-            } ?: emptyMap()
-            setKey(PLUGIN_FILE_HASHES_KEY, current + (filePath to hash))
+            // Audit-3 #15: record the file stamp next to the hash so
+            // an unchanged file can skip the full SHA-256 on load.
+            val file = File(filePath)
+            val stamped = if (file.exists()) {
+                "$hash|${file.length()}|${file.lastModified()}"
+            } else {
+                hash
+            }
+            val updated = pluginHashMap() + (filePath to stamped)
+            pluginHashCache = updated
+            setKey(PLUGIN_FILE_HASHES_KEY, updated)
         }
     }
 
@@ -652,7 +678,17 @@ object PluginManager {
         // match the hash verified when it was downloaded.
         val storedHash = getStoredPluginHash(filePath)
         if (storedHash != null) {
-            val actualHash = runCatching { sha256(file) }.getOrNull()
+            // Audit-3 #15: an unchanged file (same length + mtime as
+            // when its hash was verified) skips the full re-hash;
+            // anything else is hashed and compared as before.
+            val stamp = getStoredPluginStamp(filePath)
+            val unchanged = stamp != null && stamp.first == file.length() &&
+                stamp.second == file.lastModified()
+            val actualHash = if (unchanged) {
+                storedHash
+            } else {
+                runCatching { sha256(file) }.getOrNull()
+            }
             if (actualHash != storedHash) {
                 Log.e(
                     TAG,
@@ -660,6 +696,10 @@ object PluginManager {
                 )
                 currentlyLoading = null
                 return false
+            }
+            if (!unchanged) {
+                // Refresh the stamp so the next load can skip hashing.
+                storePluginHash(filePath, storedHash)
             }
         } else if (!data.isOnline) {
             Log.w(TAG, "Loading local plugin $fileName without integrity verification")
