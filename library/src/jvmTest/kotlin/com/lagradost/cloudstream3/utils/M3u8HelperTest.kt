@@ -10,7 +10,6 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.test.assertFailsWith
 
 class M3u8HelperTest {
     private lateinit var server: HttpServer
@@ -177,11 +176,17 @@ class M3u8HelperTest {
 
     @Test
     fun hslLazyRejectsUnsupportedEncryptionMethod() = runBlocking {
-        assertFailsWith<IllegalStateException> {
+        // Not assertFailsWith: hslLazy is suspend, and
+        // assertFailsWith takes a non-suspend block.
+        var threw = false
+        try {
             M3u8Helper2.hslLazy(
                 M3u8Helper.M3u8Stream("http://$host/a/b/sample-aes.m3u8"),
                 requireAudio = false,
             )
+        } catch (e: IllegalStateException) {
+            threw = true
         }
+        assertTrue(threw, "SAMPLE-AES must be rejected, not silently mis-decrypted")
     }
 }
