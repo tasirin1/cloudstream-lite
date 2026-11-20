@@ -20,6 +20,23 @@ private val hoistedRegex6 = Regex("""video_source\s*name="([^"]+)".*exp="([^"]+)
  * Extractor for Videa.hu video hosting service
  * Handles encrypted XML responses and redirect chains
  */
+// Audit-9 #13: bounded body reader (same pattern as
+// M3u8Helper2's, Audit-7 #16) — throws once the cap is passed
+// instead of reading an unbounded body into RAM.
+private fun okio.BufferedSource.readBytesBounded(maxBytes: Long): ByteArray {
+    val buffer = okio.Buffer()
+    var total = 0L
+    while (true) {
+        val read = read(buffer, 8192)
+        if (read < 0) break
+        total += read
+        if (total > maxBytes) {
+            throw ErrorLoadingException("Videa response exceeds $maxBytes bytes")
+        }
+    }
+    return buffer.readByteArray()
+}
+
 class Videa : ExtractorApi() {
     override val name = "Videa"
     override val mainUrl = "https://videa.hu"
@@ -48,10 +65,21 @@ class Videa : ExtractorApi() {
             // RAM uncapped, while the sibling fetch in
             // getXmlUrl (same file) refuses declared bodies over
             // 5 MB as OOM protection. Apply the same cap here.
+            //
+            // Audit-9 #13: the declared-size check alone is not
+            // enough — a chunked response has no declared size
+            // and was still read to EOF uncapped. Read through
+            // the bounded reader below so the 5 MB cap holds
+            // either way.
             val responseSize = response.size
             if (responseSize != null && responseSize > 5_000_000) return
             val body = response.body
-            val rawBytes = body.bytes()
+            val rawBytes = try {
+                body.source().readBytesBounded(5_000_000L)
+            } catch (e: Exception) {
+                body.close()
+                return
+            }
             body.close()
 
             // Check if response starts with XML declaration
@@ -91,7 +119,16 @@ class Videa : ExtractorApi() {
             // You tried to use a video here
             return null
         }
-        val html = response.text
+        // Audit-9 #13: same chunked-body hole as the loop above
+        // — read bounded instead of via .text.
+        val body = response.body
+        val html = try {
+            body.source().readBytesBounded(5_000_000L).decodeToString()
+        } catch (e: Exception) {
+            return null
+        } finally {
+            body.close()
+        }
 
         // Extract sl cookie if present
         response.headers["Set-Cookie"]?.let { cookieHeader ->
