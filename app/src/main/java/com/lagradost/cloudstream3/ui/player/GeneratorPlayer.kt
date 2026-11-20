@@ -2377,7 +2377,13 @@ class GeneratorPlayer : FullScreenPlayer() {
                 settingsManager.getBoolean(ctx.getString(R.string.show_resolution_key), true)
             showMediaInfo =
                 settingsManager.getBoolean(ctx.getString(R.string.show_media_info_key), false)
-            limitTitle = settingsManager.getInt(ctx.getString(R.string.prefer_title_limit_key), 0)
+            // Audit-13 #3: this read R.string.prefer_title_limit_key
+            // ("prefer_title_limit"), a key nothing ever writes —
+            // the setting writes "prefer_limit_title_key"
+            // (R.string.prefer_limit_title_key, as FullScreenPlayer
+            // reads), so the Limit title setting was dead here and
+            // titles were never truncated in this player.
+            limitTitle = settingsManager.getInt(ctx.getString(R.string.prefer_limit_title_key), 0)
             updateForcedEncoding(ctx)
             viewModel.filterSubByLang =
                 settingsManager.getBoolean(getString(R.string.filter_sub_lang_key), false)
