@@ -150,6 +150,13 @@ class UpdatedMatroskaExtractor private constructor(
     private var currentCueRelativePosition: Long = C.INDEX_UNSET.toLong()
     private var primarySeekTrackNumber: Int = C.INDEX_UNSET
     private var seekForCues = false
+
+    // Audit-14 #4: the Cues seek may be attempted at most once.
+    // The seek-head path has visitedSeekHeads for this; the cues
+    // path had nothing, so a file whose "Cues" position actually
+    // holds Cluster data re-armed seekForCues on every Cluster
+    // parse and the extractor sought in a circle forever.
+    private var attemptedCuesSeek = false
     private var seekForSeekContent = false
     private var visitedSeekHeads: HashSet<Long> = HashSet()
     private var pendingSeekHeads: ArrayList<Long> = ArrayList()
@@ -1673,9 +1680,16 @@ class UpdatedMatroskaExtractor private constructor(
         }
 
         if (seekForCues) {
+            seekForCues = false
+            // Audit-14 #4: one attempt only — if the data at the
+            // cues position was not a Cues element, parsing it
+            // must not arm this seek again.
+            if (attemptedCuesSeek) {
+                return false
+            }
+            attemptedCuesSeek = true
             seekPositionAfterBuildingCues = currentPosition
             seekPosition.position = cuesContentPosition
-            seekForCues = false
             return true
         }
 
