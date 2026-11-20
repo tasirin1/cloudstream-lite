@@ -95,17 +95,25 @@ class LibraryViewModel : ViewModel() {
         _pages.postValue(Resource.Success(items))
     }
 
+    // Audit-9 #4: reload generation — reloadPages had no job
+    // tracking or staleness guard at all, so switching sync API
+    // mid-fetch let the slower, older fetch finish last and
+    // overwrite the new API's library (and sorting methods).
+    private var libraryLoadIndex = 0
+
     fun reloadPages(forceReload: Boolean) {
         // Only skip loading if its not forced and pages is not empty
         if (!forceReload && (pages.value as? Resource.Success)?.value?.isNotEmpty() == true &&
             currentSyncApi?.requireLibraryRefresh != true
         ) return
 
+        val loadIndex = ++libraryLoadIndex
         ioSafe {
             currentSyncApi?.let { repo ->
                 _currentApiName.postValue(repo.name)
                 _pages.postValue(Resource.Loading())
                 val libraryResource = repo.library()
+                if (loadIndex != libraryLoadIndex) return@let
                 val err = libraryResource.exceptionOrNull()
                 if (err != null) {
                     _pages.postValue(throwAbleToResource(err))
