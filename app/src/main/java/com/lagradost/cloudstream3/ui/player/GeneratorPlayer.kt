@@ -484,7 +484,12 @@ class GeneratorPlayer : FullScreenPlayer() {
 
                 // Only show rewind in expanded
                 setUseRewindAction(true)
-                setUseFastForwardActionInCompactView(false)
+                // Audit-7 #33: this line re-set the FAST-FORWARD
+                // compact flag to false, undoing the true above —
+                // the rewind compact setter was never called, so
+                // the skip-30s button never appeared in the
+                // compact notification.
+                setUseRewindActionInCompactView(false)
 
                 // Use custom stop action
                 setUseStopAction(false)
