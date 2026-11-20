@@ -118,7 +118,15 @@ abstract class AuthRepo(open val api: AuthAPI) {
                 val selectedName = synchronized(AccountManager.cachedAccountNames) {
                     AccountManager.cachedAccountNames[idPrefix]
                 }
-                if (removed.any { it.user.id == selectedId && it.user.name == selectedName }) {
+                // Audit-16 #18: a missing cached name (legacy
+                // entries) falls back to id-only matching —
+                // otherwise logging out the SELECTED account
+                // left the selection pointing at the removed
+                // account when its name was never cached.
+                if (removed.any {
+                        it.user.id == selectedId &&
+                            (selectedName == null || it.user.name == selectedName)
+                    }) {
                     AccountManager.updateAccountsId(idPrefix, 0)
                 }
             }
