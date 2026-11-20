@@ -32,14 +32,19 @@ class Megacloud : Rabbitstream() {
         var extractedKey = ""
         var currentIndex = 0
         for (index in rawKeys) {
-            val start = index[0] + currentIndex
-            val end = start + index[1]
+            // Audit-3 #47: these offsets come from the server's key
+            // response; an out-of-range pair used to throw
+            // ArrayIndexOutOfBounds and kill the extractor.
+            val start = (index.getOrNull(0) ?: continue) + currentIndex
+            val length = index.getOrNull(1) ?: continue
+            val end = start + length
             for (i in start until end) {
+                if (i !in sourcesArray.indices) break
                 extractedKey += sourcesArray[i].toString()
                 sourcesArray[i] = ' '
             }
 
-            currentIndex += index[1]
+            currentIndex += length
         }
 
         return extractedKey to sourcesArray.joinToString("").replace(" ", "")
