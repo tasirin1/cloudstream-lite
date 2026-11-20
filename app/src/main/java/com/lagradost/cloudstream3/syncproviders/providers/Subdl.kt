@@ -125,14 +125,9 @@ class SubDlApi : SubtitleAPI() {
         }
     }
 
-    @Serializable
-    data class SubtitleOAuthEntity(
-        @JsonProperty("userEmail") @SerialName("userEmail") var userEmail: String,
-        @JsonProperty("pass") @SerialName("pass") var pass: String,
-        @JsonProperty("name") @SerialName("name") var name: String? = null,
-        @JsonProperty("accessToken") @SerialName("accessToken") var accessToken: String? = null,
-        @JsonProperty("apiKey") @SerialName("apiKey") var apiKey: String? = null,
-    )
+    // Audit-14 #36: SubtitleOAuthEntity (an unused data class
+    // holding an email + password shape) removed — it had no
+    // references anywhere in the repo.
 
     @Serializable
     data class OAuthTokenResponse(
