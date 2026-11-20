@@ -127,6 +127,14 @@ open class ParentItemAdapter(
             )
             homeChildMoreInfo.text = info.name
 
+            // Audit-4 #15: this bind runs for every (re)bind and the
+            // listener was never removed, so a recycled row
+            // accumulated one listener per bind — each with its own
+            // expandCount, firing expandCallback again for the same
+            // list and leaking the captured item. This RecyclerView
+            // has no other scroll listeners, so clearing first
+            // keeps exactly the newest bind's listener.
+            homeChildRecyclerview.clearOnScrollListeners()
             homeChildRecyclerview.addOnScrollListener(object :
                 RecyclerView.OnScrollListener() {
                 var expandCount = 0
