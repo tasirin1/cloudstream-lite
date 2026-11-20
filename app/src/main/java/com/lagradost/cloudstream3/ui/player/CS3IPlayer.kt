@@ -281,7 +281,9 @@ class CS3IPlayer : IPlayer {
     }
 
     fun String.stripTrackId(): String {
-        return this.replace(Regex("""^\d+:"""), "")
+        // Audit-4 #23: the Regex used to be compiled on every
+        // call (this runs per subtitle/audio track per load).
+        return this.replace(TRACK_ID_PREFIX_REGEX, "")
     }
 
     fun initSubtitles(subView: SubtitleView?, subHolder: FrameLayout?, style: SaveCaptionStyle?) {
@@ -700,6 +702,9 @@ class CS3IPlayer : IPlayer {
         // Audit-4 #14: see consumeAutoRetry.
         private const val AUTO_RETRY_MAX = 5
         private const val AUTO_RETRY_WINDOW_MS = 60_000L
+
+        // Audit-4 #23: see stripTrackId.
+        private val TRACK_ID_PREFIX_REGEX = Regex("""^\d+:""")
 
         /**
          * Single shared engine, to minimize the overhead of maintaining many as:
