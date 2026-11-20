@@ -35,9 +35,31 @@ class PreferenceDelegate<T : Any>(
     // simple cache to make it not get the key every time it is accessed, however this requires
     // that ONLY this changes the key
     private var cache: T? = null
+    private var cacheGeneration: Int = -1
 
-    operator fun getValue(self: Any?, property: KProperty<*>) =
-        cache ?: getKeyClass(key, klass.java).also { newCache -> cache = newCache } ?: default
+    companion object {
+        // Audit-3 #9: a backup restore writes keys directly through an
+        // Editor, bypassing these delegates, so cached values (accounts,
+        // selected profile) stayed stale until the process died. The
+        // restore path bumps this generation; delegates re-read once
+        // when it changes.
+        @Volatile
+        var restoreGeneration: Int = 0
+            private set
+
+        fun invalidateAllDelegateCaches() {
+            restoreGeneration++
+        }
+    }
+
+    operator fun getValue(self: Any?, property: KProperty<*>): T {
+        val cached = cache
+        if (cached != null && cacheGeneration == restoreGeneration) return cached
+        return getKeyClass(key, klass.java).also { newCache ->
+            cache = newCache
+            cacheGeneration = restoreGeneration
+        } ?: default
+    }
 
     operator fun setValue(
         self: Any?,
@@ -45,6 +67,7 @@ class PreferenceDelegate<T : Any>(
         t: T?
     ) {
         cache = t
+        cacheGeneration = restoreGeneration
         if (t == null) {
             removeKey(key)
         } else {

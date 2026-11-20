@@ -187,6 +187,11 @@ object BackupUtils {
             context.restoreMap(backupFile.datastore.stringSet)
         }
 
+        // Audit-3 #9: the restores above wrote through a raw Editor,
+        // bypassing PreferenceDelegate caches; invalidate them so the
+        // restored accounts/settings apply without a force-stop.
+        PreferenceDelegate.invalidateAllDelegateCaches()
+
         // Make sure the library is fresh
         for (api in AccountManager.syncApis) {
             api.requireLibraryRefresh = true
