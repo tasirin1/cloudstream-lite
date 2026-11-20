@@ -90,7 +90,10 @@ class BackupWorkManager(val context: Context, workerParams: WorkerParameters) :
             ) else  ForegroundInfo(BACKUP_NOTIFICATION_ID, backupNotificationBuilder.build())
         setForeground(foregroundInfo)
 
-        BackupUtils.backup(context)
+        // Audit-3 #8: backup() returns a Job; without join() the
+        // worker reported success immediately and WorkManager was
+        // free to kill the process mid-write.
+        BackupUtils.backup(context).join()
 
         return Result.success()
     }
