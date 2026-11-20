@@ -420,6 +420,13 @@ class PlayerGeneratorViewModel : ViewModel() {
         // previous position; a fresh load supersedes it.
         preloadJob?.cancel()
         val index = episodeIndex
+        // Audit-18 #3: generation id for THIS load, captured
+        // at call time like loadStamps does (Audit-13 #8).
+        // The link callbacks below checked only isActive —
+        // a check-then-act race — so an extension callback
+        // slipping through at cancellation could write the
+        // PREVIOUS episode's links into the new state.
+        val loadId = generator?.getId(index)
 
         // Clear old data and reset the state
         modifyState {
@@ -429,7 +436,7 @@ class PlayerGeneratorViewModel : ViewModel() {
                     GeneratorState(
                         meta = gen.videos.getOrNull(index),
                         nextMeta = gen.videos.getOrNull(index + 1),
-                        id = gen.getId(index),
+                        id = loadId,
                         response = (gen as? RepoLinkGenerator)?.page,
                         index = index,
                         allMeta = gen.videos
@@ -446,7 +453,7 @@ class PlayerGeneratorViewModel : ViewModel() {
                     sourceTypes = sourceTypes,
                     clearCache = forceClearCache,
                     callback = { link ->
-                        if (isActive)
+                        if (isActive && state.generatorState?.id == loadId)
                             modifyState {
                                 add(link)
                             }
@@ -454,7 +461,7 @@ class PlayerGeneratorViewModel : ViewModel() {
                     isCasting = false,
                     offset = index,
                     subtitleCallback = { link ->
-                        if (isActive && isValidSubtitle(link))
+                        if (isActive && state.generatorState?.id == loadId && isValidSubtitle(link))
                             modifyState {
                                 add(link)
                             }
