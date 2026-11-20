@@ -1394,9 +1394,13 @@ object VideoDownloadManager {
                     val callback: (suspend CoroutineScope.(LazyStreamDownloadResponse) -> Unit) =
                         callback@{ response ->
                             if (!isActive) return@callback
+                            // Audit-14 #12: wait out the pause
+                            // BEFORE taking fileMutex — holding it
+                            // for the whole pause starved the
+                            // fileChecker, which needs the same
+                            // lock to mark IsStopped.
+                            while (metadata.type == DownloadType.IsPaused) delay(100)
                             fileMutex.withLock {
-                                // wait until not paused
-                                while (metadata.type == DownloadType.IsPaused) delay(100)
                                 // if stopped then throw
                                 if (metadata.type == DownloadType.IsStopped || metadata.type == DownloadType.IsFailed) {
                                     this.cancel()
@@ -1778,10 +1782,11 @@ object VideoDownloadManager {
                             return@launch
                         }
 
+                        // Audit-14 #12: pause wait outside
+                        // fileMutex, see the plain-file writer.
+                        while (metadata.type == DownloadType.IsPaused) delay(100)
                         fileMutex.withLock {
                             try {
-                                // user pause
-                                while (metadata.type == DownloadType.IsPaused) delay(100)
                                 // if stopped then break to delete
                                 if (metadata.type == DownloadType.IsStopped || metadata.type == DownloadType.IsFailed || !isActive) return@launch
 
