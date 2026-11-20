@@ -123,7 +123,15 @@ object M3u8Helper2 {
     }
 
     private fun defaultIv(index: Int): ByteArray {
-        return toBytes16Big(index + 1)
+        // Audit-16 #9: RFC 8216 §5.2 — without an IV
+        // attribute the IV is the segment's media sequence
+        // number. The old +1 matched no convention (the
+        // internal resolveLink path passes mediaSequence +
+        // index explicitly). The default now treats index
+        // as the media sequence (a playlist's sequence
+        // defaults to 0); callers with a non-zero
+        // EXT-X-MEDIA-SEQUENCE must pass the IV explicitly.
+        return toBytes16Big(index)
     }
 
     /**
