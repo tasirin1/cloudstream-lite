@@ -11,7 +11,14 @@ import kotlinx.coroutines.launch
 /** Handle notification actions such as pause/resume downloads */
 class VideoDownloadService : Service() {
 
-    private val downloadScope = CoroutineScope(Dispatchers.Default)
+    // Audit-6 #26: a parallelism-1 dispatcher — commands used
+    // to launch onto the multi-threaded Default pool, so a fast
+    // Pause-then-Resume (or the reverse) from the notification
+    // could execute out of order and leave the download in the
+    // opposite state of the user's last tap. Serial launches
+    // deliver commands in arrival order.
+    private val downloadScope =
+        CoroutineScope(Dispatchers.Default.limitedParallelism(1))
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
