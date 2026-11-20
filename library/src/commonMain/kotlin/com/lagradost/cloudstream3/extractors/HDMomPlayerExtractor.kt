@@ -7,7 +7,7 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.helper.AesHelper
 import com.lagradost.cloudstream3.utils.*
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -43,7 +43,10 @@ open class HDMomPlayer : ExtractorApi() {
             m3uLink = hoistedRegex3.find(iSource)?.groupValues?.get(1)
             val trackStr = hoistedRegex4.find(iSource)?.groupValues?.get(1)
             if (trackStr != null) {
-                val tracks = parseJson<List<Track>>("[${trackStr}]")
+                // Audit-7 #46: subtitles are auxiliary — a
+                // malformed track list must not throw away the
+                // video link already found above.
+                val tracks = tryParseJson<List<Track>>("[${trackStr}]") ?: emptyList()
                 for (track in tracks) {
                     if (track.file == null || track.label == null) continue
                     if (track.label.contains("Forced")) continue
