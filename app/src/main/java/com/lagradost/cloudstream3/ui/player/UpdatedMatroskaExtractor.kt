@@ -971,6 +971,23 @@ class UpdatedMatroskaExtractor private constructor(
     @CallSuper
     @Throws(IOException::class)
     protected fun binaryElement(id: Int, contentSize: Int, input: ExtractorInput) {
+        // Audit-16 #2: the small-data branches below allocate
+        // ByteArray(contentSize) straight from the declared
+        // element size — a tiny crafted file declaring
+        // hundreds of MB OOM-crashed the player before a
+        // single byte was read. Legitimate codec privates,
+        // projection data and DV configs are KB-scale.
+        if (contentSize > MAX_SMALL_ELEMENT_BYTES && (
+                id == ID_CODEC_PRIVATE || id == ID_PROJECTION_PRIVATE ||
+                id == ID_CONTENT_COMPRESSION_SETTINGS ||
+                id == ID_CONTENT_ENCRYPTION_KEY_ID ||
+                id == ID_BLOCK_ADD_ID_EXTRA_DATA || id == ID_BLOCK_ADDITIONAL)
+        ) {
+            throw ParserException.createForMalformedContainer(
+                "Binary element $id declares an implausible size: $contentSize",
+                /* cause= */ null
+            )
+        }
         when (id) {
             ID_SEEK_ID -> {
                 // Audit-15 #25: a SeekID declaring 5+ bytes
@@ -1629,6 +1646,15 @@ class UpdatedMatroskaExtractor private constructor(
 
     @Throws(IOException::class)
     private fun writeSubtitleSampleData(input: ExtractorInput, samplePrefix: ByteArray, size: Int) {
+        // Audit-16 #2: same declared-size allocation hazard
+        // as binaryElement — the buffer below grows to ~2x
+        // the declared sample size before any byte is read.
+        if (size > MAX_SMALL_ELEMENT_BYTES) {
+            throw ParserException.createForMalformedContainer(
+                "Subtitle sample declares an implausible size: $size",
+                /* cause= */ null
+            )
+        }
         val sizeWithPrefix = samplePrefix.size + size
         if (subtitleSample.capacity() < sizeWithPrefix) {
             // Initialize subripSample to contain the required prefix and have space to hold a subtitle
@@ -2635,6 +2661,10 @@ class UpdatedMatroskaExtractor private constructor(
         private const val TAG = "MatroskaExtractor"
 
         private const val UNSET_ENTRY_ID = -1
+
+        // Audit-16 #2: sanity ceiling for elements/samples
+        // whose buffers are allocated from their declared size.
+        private const val MAX_SMALL_ELEMENT_BYTES = 16 * 1024 * 1024
 
         private const val BLOCK_STATE_START = 0
         private const val BLOCK_STATE_HEADER = 1
