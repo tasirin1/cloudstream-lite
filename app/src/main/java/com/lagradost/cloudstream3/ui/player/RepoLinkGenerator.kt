@@ -152,7 +152,10 @@ class RepoLinkGenerator(
                             callback(Pair(link, null))
                         }
 
-                        currentCache.linkCache.add(link)
+                        // Audit-15 #21: a duplicate
+                        // linkCache.add(link) used to sit here
+                        // (copy-paste leftover) — a no-op on a
+                        // Set inside the guard that just added it.
                         currentCache.lastCachedTimestamp = unixTime
                     }
                 }
