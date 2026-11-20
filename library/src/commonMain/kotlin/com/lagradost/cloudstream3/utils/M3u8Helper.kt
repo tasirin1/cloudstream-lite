@@ -126,6 +126,15 @@ object M3u8Helper2 {
 
     private val MEDIA_SEQUENCE_REGEX = Regex("#EXT-X-MEDIA-SEQUENCE:(\\d+)")
 
+    // Audit-5 #20: single-entry cache for the decoded AES key —
+    // decoding ran on every segment. Playlists overwhelmingly
+    // use one key (rotation between two just re-decodes on the
+    // switch, staying correct). Plain fields on purpose: the
+    // parallel download jobs may race a duplicate decode, never
+    // a wrong key — the raw bytes are compared before reuse.
+    private var cachedRawKey: ByteArray? = null
+    private var cachedDecodedKey: AES.Key? = null
+
     @OptIn(DelicateCryptographyApi::class)
     fun getDecrypted(
         secretKey: ByteArray,
@@ -134,7 +143,13 @@ object M3u8Helper2 {
         index: Int,
     ): ByteArray {
         val ivKey = if (iv.isEmpty()) defaultIv(index) else iv
-        val aesKey = aesCbc.keyDecoder().decodeFromByteArrayBlocking(AES.Key.Format.RAW, secretKey)
+        val aesKey = cachedDecodedKey?.takeIf {
+            cachedRawKey?.contentEquals(secretKey) == true
+        } ?: aesCbc.keyDecoder().decodeFromByteArrayBlocking(AES.Key.Format.RAW, secretKey)
+            .also {
+                cachedRawKey = secretKey
+                cachedDecodedKey = it
+            }
         return aesKey.cipher(padding = true).decryptWithIvBlocking(ivKey, data)
     }
 
