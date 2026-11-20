@@ -51,6 +51,14 @@ class RepoLinkGenerator(
         val current = videos.getOrNull(offset) ?: return false
 
         val currentCache = synchronized(cache) {
+            // Audit-5 #7: evict entries past the 20-minute
+            // staleness window. The map used to grow forever —
+            // the staleness check only ran when the SAME episode
+            // was loaded again, so entries for episodes never
+            // revisited were never dropped.
+            cache.entries.removeIf {
+                unixTime - it.value.lastCachedTimestamp > 60 * 20
+            }
             cache[current.apiName to current.id] ?: Cache(
                 mutableSetOf(),
                 mutableSetOf(),
