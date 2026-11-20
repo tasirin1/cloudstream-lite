@@ -351,14 +351,22 @@ class PlayerGeneratorViewModel : ViewModel() {
     private var currentStampJob: Job? = null
 
     fun loadStamps(duration: Long) {
+        // Audit-13 #8: capture the generation state HERE, at
+        // call time — it used to be read inside the detached
+        // ioSafe coroutine, so a job starting late read the
+        // NEW episode's state, computed its stamps with the
+        // OLD duration, and the id guard compared new-vs-new
+        // and always passed. The previous stamp job was also
+        // never cancelled anywhere; cancel it before replacing.
+        val genState = state.generatorState ?: return
+        val meta = genState.meta
+        val page = genState.response
+        val id = genState.id
+        if (page == null || meta !is ResultEpisode) {
+            return
+        }
+        currentStampJob?.cancel()
         currentStampJob = ioSafe {
-            val genState = state.generatorState ?: return@ioSafe
-            val meta = genState.meta
-            val page = genState.response
-            val id = genState.id
-            if (page == null || meta !is ResultEpisode) {
-                return@ioSafe
-            }
             val stamps = SkipAPI.videoStamps(
                 page,
                 meta,
