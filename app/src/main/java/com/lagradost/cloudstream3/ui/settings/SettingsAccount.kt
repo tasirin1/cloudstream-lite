@@ -139,7 +139,9 @@ class SettingsAccount : BasePreferenceFragmentCompat(), BiometricCallback {
 
             val adapter = AccountAdapter {
                 dialog?.dismissSafe(activity)
-                api.accountId = it.card.user.id
+                // Audit-14 #32: select by full identity so the
+                // name is stored with the id.
+                api.selectAccount(it.card.user)
             }.apply {
                 submitList(accounts.toList())
             }

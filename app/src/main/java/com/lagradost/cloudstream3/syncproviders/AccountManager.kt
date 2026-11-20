@@ -37,6 +37,14 @@ abstract class AccountManager {
         val cachedAccounts: MutableMap<String, Array<AuthData>> = mutableMapOf()
         val cachedAccountIds: MutableMap<String, Int> = mutableMapOf()
 
+        // Audit-14 #32: the selected account's NAME, stored
+        // alongside its id. Several providers derive user.id
+        // from String.hashCode(), so an id alone cannot tell
+        // two colliding accounts apart — the second one could
+        // never be selected. Guarded by the cachedAccountIds
+        // lock, like the ids map.
+        val cachedAccountNames: MutableMap<String, String?> = mutableMapOf()
+
         // Audit-10 #4: serializes whole read-modify-write cycles
         // of the account arrays in AuthRepo (logout / refreshUser
         // / setupLogin). Without it, a token refresh racing a
@@ -47,6 +55,7 @@ abstract class AccountManager {
 
         const val ACCOUNT_TOKEN = "auth_tokens"
         const val ACCOUNT_IDS = "auth_ids"
+        const val ACCOUNT_ID_NAMES = "auth_id_names"
         private const val ENCRYPTED_PREFIX = "enc:v1:"
         private const val TOKEN_KEY_ALIAS = "cs3_auth_token_key"
 
@@ -166,10 +175,23 @@ abstract class AccountManager {
         }
 
         fun updateAccountsId(prefix: String, id: Int) {
+            updateAccountsId(prefix, id, null)
+        }
+
+        // Audit-14 #32: name-aware selection (see
+        // cachedAccountNames). A null name clears the stored
+        // name, reverting selection to id-only matching.
+        fun updateAccountsId(prefix: String, id: Int, name: String?) {
             require(prefix != "NONE")
             setKey(ACCOUNT_IDS, "${prefix}/${DataStoreHelper.currentAccount}", id)
+            if (name == null) {
+                removeKey(ACCOUNT_ID_NAMES, "${prefix}/${DataStoreHelper.currentAccount}")
+            } else {
+                setKey(ACCOUNT_ID_NAMES, "${prefix}/${DataStoreHelper.currentAccount}", name)
+            }
             synchronized(cachedAccountIds) {
                 cachedAccountIds[prefix] = id
+                cachedAccountNames[prefix] = name
             }
         }
 
@@ -203,6 +225,7 @@ abstract class AccountManager {
 
         fun updateAccountIds() {
             val ids = mutableMapOf<String, Int>()
+            val names = mutableMapOf<String, String?>()
             for (api in allApis) {
                 ids.put(
                     api.idPrefix,
@@ -212,16 +235,27 @@ abstract class AccountManager {
                         NONE_ID
                     ) ?: NONE_ID
                 )
+                names.put(
+                    api.idPrefix,
+                    getKey<String>(
+                        ACCOUNT_ID_NAMES,
+                        "${api.idPrefix}/${DataStoreHelper.currentAccount}",
+                        null
+                    )
+                )
             }
             synchronized(cachedAccountIds) {
                 cachedAccountIds.clear()
                 cachedAccountIds.putAll(ids)
+                cachedAccountNames.clear()
+                cachedAccountNames.putAll(names)
             }
         }
 
         init {
             val data = mutableMapOf<String, Array<AuthData>>()
             val ids = mutableMapOf<String, Int>()
+            val names = mutableMapOf<String, String?>()
             for (api in allApis) {
                 data.put(api.idPrefix, accounts(api.idPrefix))
                 ids.put(
@@ -232,9 +266,18 @@ abstract class AccountManager {
                         NONE_ID
                     ) ?: NONE_ID
                 )
+                names.put(
+                    api.idPrefix,
+                    getKey<String>(
+                        ACCOUNT_ID_NAMES,
+                        "${api.idPrefix}/${DataStoreHelper.currentAccount}",
+                        null
+                    )
+                )
             }
             cachedAccounts.putAll(data)
             cachedAccountIds.putAll(ids)
+            cachedAccountNames.putAll(names)
         }
 
         // I do not want to place this in the init block as JVM initialization order is weird, and it may cause exceptions

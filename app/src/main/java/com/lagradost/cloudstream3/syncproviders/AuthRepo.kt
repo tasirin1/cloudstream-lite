@@ -154,9 +154,22 @@ abstract class AuthRepo(open val api: AuthAPI) {
     fun authData(): AuthData? = synchronized(AccountManager.cachedAccounts) {
         synchronized(AccountManager.cachedAccountIds) {
             AccountManager.cachedAccountIds[idPrefix]?.let { id ->
-                AccountManager.cachedAccounts[idPrefix]?.firstOrNull { data -> data.user.id == id }
+                val accounts = AccountManager.cachedAccounts[idPrefix]
+                // Audit-14 #32: when a selection name is stored,
+                // prefer the (id, name) match — with hashCode
+                // ids, an id-only firstOrNull could pin the
+                // WRONG colliding account forever.
+                val name = AccountManager.cachedAccountNames[idPrefix]
+                accounts?.firstOrNull { data -> data.user.id == id && (name == null || data.user.name == name) }
+                    ?: accounts?.firstOrNull { data -> data.user.id == id }
             }
         }
+    }
+
+    // Audit-14 #32: select an account by its full identity so
+    // the name is stored with the id (see AccountManager).
+    fun selectAccount(user: AuthUser) {
+        AccountManager.updateAccountsId(idPrefix, user.id, user.name)
     }
 
     fun authToken(): AuthToken? = authData()?.token
@@ -203,7 +216,8 @@ abstract class AuthRepo(open val api: AuthAPI) {
 
             val newAccounts = currentAccounts + newAccount
             AccountManager.updateAccounts(idPrefix, newAccounts)
-            AccountManager.updateAccountsId(idPrefix, user.id)
+            // Audit-14 #32: store the name with the id.
+            AccountManager.updateAccountsId(idPrefix, user.id, user.name)
         }
         if (this is SyncRepo) {
             requireLibraryRefresh = true
