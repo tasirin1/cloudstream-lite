@@ -235,14 +235,30 @@ class GeneratorPlayer : FullScreenPlayer() {
     private var isNextEpisode: Boolean = false // this is used to reset the watch time
 
     private var preferredAutoSelectSubtitles: String? = null // null means do nothing, "" means none
+    // Audit-14 #21: allMeta used to re-run a per-episode
+    // getViewPos (preference lookup + JSON parse) on EVERY
+    // access, on the main thread — hundreds of parses to open
+    // the episode list of a long series. Memoize on the source
+    // list's identity; a new generator state (new load, new
+    // episode list) recomputes.
+    private var allMetaSource: List<*>? = null
+    private var allMetaCache: List<ResultEpisode>? = null
+
     private val allMeta: List<ResultEpisode>?
-        get() = viewModel.state.generatorState?.allMeta?.filterIsInstance<ResultEpisode>()
-            ?.map { episode ->
-                // Refresh all the episodes watch duration
-                getViewPos(episode.id)?.let { data ->
-                    episode.copy(position = data.position, duration = data.duration)
-                } ?: episode
+        get() {
+            val source = viewModel.state.generatorState?.allMeta
+            if (source !== allMetaSource) {
+                allMetaSource = source
+                allMetaCache = source?.filterIsInstance<ResultEpisode>()
+                    ?.map { episode ->
+                        // Refresh all the episodes watch duration
+                        getViewPos(episode.id)?.let { data ->
+                            episode.copy(position = data.position, duration = data.duration)
+                        } ?: episode
+                    }
             }
+            return allMetaCache
+        }
 
     private fun setSubtitles(subtitle: SubtitleData?, userInitiated: Boolean): Boolean {
         // If subtitle is changed and user initiated -> Save the language
