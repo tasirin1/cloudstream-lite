@@ -128,15 +128,23 @@ class SearchViewModel : ViewModel() {
         _searchSuggestions.postValue(emptyList())
     }
 
-    private val lock: MutableSet<String> = mutableSetOf()
+    // Audit-6 #12: synchronized so the claim in expandAndReturn
+    // (Set.add returning false when already present) is atomic.
+    private val lock: MutableSet<String> =
+        java.util.Collections.synchronizedSet(mutableSetOf())
 
     // ExpandableHomepageList because the home adapter is reused in the search fragment
     suspend fun expandAndReturn(name: String): HomeViewModel.ExpandableHomepageList? {
-        if (lock.contains(name)) return null
         val query = lastQuery ?: return null
         val repo = repos.find { it.name == name } ?: return null
 
-        lock += name
+        // Audit-6 #12: atomic claim + finally release — see
+        // HomeViewModel.expandAndReturn for the failure modes
+        // (double expand skipping a page; cancellation leaking
+        // the lock and killing load-more for the session).
+        if (!lock.add(name)) return null
+
+        try {
 
         expandableSearches[name]?.let { current ->
             debugAssert({ !current.hasNext }) {
@@ -169,14 +177,15 @@ class SearchViewModel : ViewModel() {
             _currentSearch.postValue(expandableSearchesSnapshot())
         }
 
-        lock -= name
-
         val item = expandableSearches[name] ?: return null
         return HomeViewModel.ExpandableHomepageList(
             HomePageList(name, item.list),
             item.currentPage,
             item.hasNext
         )
+        } finally {
+            lock -= name
+        }
     }
 
     private fun bundleSearch(lists: Map<String, ExpandableSearchList>): ExpandableSearchList {

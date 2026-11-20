@@ -245,12 +245,22 @@ class HomeViewModel : ViewModel() {
         MutableLiveData<Resource<Map<String, ExpandableHomepageList>>>(Resource.Loading())
     val page: LiveData<Resource<Map<String, ExpandableHomepageList>>> = _page
 
-    val lock: MutableSet<String> = mutableSetOf()
+    // Audit-6 #12: synchronized so the claim in expandAndReturn
+    // (Set.add returning false when already present) is atomic.
+    val lock: MutableSet<String> =
+        java.util.Collections.synchronizedSet(mutableSetOf())
 
     suspend fun expandAndReturn(name: String): ExpandableHomepageList? {
-        if (lock.contains(name)) return null
-        lock += name
+        // Audit-6 #12: the old check-then-add let two concurrent
+        // expands for the same section both pass (double fetch,
+        // currentPage advanced twice, a results page silently
+        // skipped), and the remove at the end had no try/finally,
+        // so a cancellation mid-fetch locked the section's
+        // load-more until app restart. Claim atomically; release
+        // in finally.
+        if (!lock.add(name)) return null
 
+        try {
         repo?.apply {
             waitForHomeDelay()
 
@@ -292,9 +302,10 @@ class HomeViewModel : ViewModel() {
             _page.postValue(Resource.Success(expandableSnapshot()))
         }
 
-        lock -= name
-
         return expandable[name]
+        } finally {
+            lock -= name
+        }
     }
 
     // this is soo over engineered, but idk how I can make it clean without making the main api harder to use :pensive:
