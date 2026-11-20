@@ -16,7 +16,6 @@ import androidx.compose.ui.res.stringResource
 import com.lagradost.cloudstream3.BuildConfig
 import com.lagradost.cloudstream3.CloudStreamApp
 import com.lagradost.cloudstream3.CommonActivity.activity
-import com.lagradost.cloudstream3.MainActivityScreen
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.mvvm.logError
 import com.lagradost.cloudstream3.services.BackupWorkManager
@@ -27,7 +26,6 @@ import com.lagradost.cloudstream3.utils.InAppUpdater.installPreReleaseIfNeeded
 import com.lagradost.cloudstream3.utils.UIHelper.navigate
 import com.lagradost.cloudstream4.AppSettings
 import com.lagradost.cloudstream4.rememberAppSettings
-import com.lagradost.cloudstream4.viewmodels.GithubAction
 import com.lagradost.safefile.SafeFile
 import com.mihon.presentation.settings.Preference
 import com.mihon.presentation.settings.SearchableSettings
@@ -79,8 +77,6 @@ object SettingsUpdatesScreen : SearchableSettings {
             }
         }
 
-        val githubViewModel = MainActivityScreen.githubViewModel()
-
         return persistentListOf(
             Preference.PreferenceGroup(
                 title = stringResource(R.string.pref_category_app_updates),
@@ -90,7 +86,6 @@ object SettingsUpdatesScreen : SearchableSettings {
                         subtitle = BuildConfig.VERSION_NAME,
                         icon = painterResource(R.drawable.mobile_arrow_down_24px),
                         onClick = {
-                            githubViewModel?.onAction(GithubAction.SearchForUpdate)
                             /*ioSafe {
                                 if (activity?.runAutoUpdate(false) == false) {
                                     activity?.runOnUiThread {
