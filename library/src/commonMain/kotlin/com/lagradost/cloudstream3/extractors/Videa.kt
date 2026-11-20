@@ -2,6 +2,7 @@
 package com.lagradost.cloudstream3.extractors
 
 import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.ErrorLoadingException
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.base64DecodeArray
