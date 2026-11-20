@@ -126,18 +126,27 @@ class SearchViewModel : ViewModel() {
      * 
      * @param query The search query to get suggestions for
      */
+    // Audit-7 #51: generation guard for the suggestions path,
+    // mirroring currentSearchIndex for search() below. A slow
+    // response for an old query used to post after a newer
+    // query (or after clearSuggestions) and overwrite the panel.
+    private var currentSuggestionIndex = 0
+
     fun fetchSuggestions(query: String) {
         suggestionJob?.cancel()
-        
+        val index = ++currentSuggestionIndex
+
         if (query.isBlank() || query.length < 2) {
             _searchSuggestions.postValue(emptyList())
             return
         }
-        
+
         suggestionJob = ioSafe {
             delay(300) // Debounce
             val suggestions = SearchSuggestionApi.getSuggestions(query)
-            _searchSuggestions.postValue(suggestions)
+            if (index == currentSuggestionIndex) {
+                _searchSuggestions.postValue(suggestions)
+            }
         }
     }
 
@@ -146,6 +155,7 @@ class SearchViewModel : ViewModel() {
      */
     fun clearSuggestions() {
         suggestionJob?.cancel()
+        currentSuggestionIndex++
         _searchSuggestions.postValue(emptyList())
     }
 

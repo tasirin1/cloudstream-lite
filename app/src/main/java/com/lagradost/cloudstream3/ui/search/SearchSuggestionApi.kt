@@ -51,6 +51,12 @@ object SearchSuggestionApi {
             )
             
             parseSuggestions(response)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Audit-7 #51: cancellation is not a failure — the
+            // generic catch below used to swallow it and return
+            // an (empty or stale) list anyway, so a cancelled
+            // fetch still posted its result.
+            throw e
         } catch (e: Exception) {
             logError(e)
             emptyList()
