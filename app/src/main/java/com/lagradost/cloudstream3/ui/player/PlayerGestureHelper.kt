@@ -191,9 +191,9 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
     /** Monotonically-incremented token; cancels any pending single-tap runnable when a double-tap arrives. */
     private var doubleTapToken = 0
 
-    /** Number of consecutive taps in the current double-tap window. */
-    private var tapCount = 0
-
+    // Audit-14 #64: a tapCount field used to sit here — it
+    // was only ever written, never read (double-tap detection
+    // runs on doubleTapToken below).
     /** System time of the most-recent touch end.  Updated by callers at the end of every ACTION_UP. */
     var lastTouchEndTime: Long = 0L
 
@@ -995,7 +995,6 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
         val timeSinceLast = System.currentTimeMillis() - lastTouchEndTime
         return if (!isLocked && timeSinceLast < DOUBLE_TAP_MINIMUM_TIME_BETWEEN) {
             /** Double-tap */
-            tapCount++
             doubleTapToken++ // cancel any pending single-tap runnable
             if (doubleTapPauseEnabled) {
                 when {
@@ -1015,7 +1014,6 @@ class PlayerGestureHelper(private val playerView: PlayerView) {
             true
         } else {
             /** Single tap (first tap, or too slow for double-tap) */
-            tapCount = 0
             val token = ++doubleTapToken
             playerView.playerHolder?.postDelayed({
                 if (token == doubleTapToken) {
