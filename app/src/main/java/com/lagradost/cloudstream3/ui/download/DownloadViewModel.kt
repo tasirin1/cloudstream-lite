@@ -326,7 +326,19 @@ class DownloadViewModel : ViewModel() {
                 }
                 return@forEach
             }
-            if (childFile.fileLength <= 1) return@forEach
+            if (childFile.fileLength <= 1) {
+                // Audit-5 #30: zero/one-byte entries used to be
+                // skipped outright — never counted, never shown
+                // in the downloads list, and never pruned, so a
+                // download that died before writing anything left
+                // a permanent ghost entry the user could not see
+                // or delete. Treat them like missing file info
+                // above: redundant when nothing is downloading.
+                if (!DownloadQueueService.isRunning && downloadInstances.value.isEmpty() && DownloadQueueManager.queue.value.isEmpty()) {
+                    redundantDownloads.add(child.parentId to child.id)
+                }
+                return@forEach
+            }
 
             val len = childFile.totalBytes
             val flen = childFile.fileLength
