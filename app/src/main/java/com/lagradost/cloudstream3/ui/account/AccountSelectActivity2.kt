@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
@@ -153,8 +154,14 @@ class AccountSelectActivity2 : FragmentActivity(), BiometricCallback {
                 )
             }
             val state by viewModel.state.collectAsState()
-            if (state.loggedInWith != null) {
-                navigateToMainActivity()
+            // Audit-5 #37: navigation used to run directly in
+            // composition — every recomposition while logged in
+            // re-fired openActivity()+finish(). As an effect
+            // keyed on the login state it runs once per login.
+            LaunchedEffect(state.loggedInWith) {
+                if (state.loggedInWith != null) {
+                    navigateToMainActivity()
+                }
             }
             CloudStreamThemeAppSettings {
                 AccountScreen.Content(state, viewModel::onAction)
