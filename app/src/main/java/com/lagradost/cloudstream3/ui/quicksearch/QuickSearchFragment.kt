@@ -18,6 +18,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.lagradost.cloudstream3.APIHolder.getApiFromNameNull
 import com.lagradost.cloudstream3.CommonActivity.activity
 import com.lagradost.cloudstream3.HomePageList
+import com.lagradost.cloudstream3.MainActivity.Companion.afterPluginsLoadedEvent
 import com.lagradost.cloudstream3.R
 import com.lagradost.cloudstream3.databinding.QuickSearchBinding
 import com.lagradost.cloudstream3.mvvm.Resource
@@ -141,7 +142,28 @@ class QuickSearchFragment : BaseFragment<QuickSearchBinding>(
         return false
     }
 
+    // Audit-12 #9: SearchViewModel snapshots its provider
+    // list at construction. SearchFragment compensates with
+    // reloadRepos + the plugins-loaded event; this fragment
+    // did neither, so a quick search created while plugins
+    // were still loading kept a stale provider list for its
+    // whole lifetime. Mirror SearchFragment.
+    private fun reloadRepos(success: Boolean = false) {
+        searchViewModel.reloadRepos()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        afterPluginsLoadedEvent += ::reloadRepos
+    }
+
+    override fun onStop() {
+        super.onStop()
+        afterPluginsLoadedEvent -= ::reloadRepos
+    }
+
     override fun onBindingCreated(binding: QuickSearchBinding) {
+        searchViewModel.reloadRepos()
         arguments?.getStringArray(PROVIDER_KEY)?.let {
             providers = it.toSet()
         }
