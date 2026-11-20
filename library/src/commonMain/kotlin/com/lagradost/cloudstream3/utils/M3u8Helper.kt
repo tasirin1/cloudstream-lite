@@ -129,14 +129,23 @@ object M3u8Helper2 {
     // Audit-5 #20: single-entry cache for the decoded AES key —
     // decoding ran on every segment. Playlists overwhelmingly
     // use one key (rotation between two just re-decodes on the
-    // switch, staying correct). Plain fields on purpose: the
-    // parallel download jobs may race a duplicate decode, never
-    // a wrong key — the raw bytes are compared before reuse.
-    private var cachedRawKey: ByteArray? = null
-    // AES.CBC.Key, not AES.Key: the CBC subtype carries the
-    // cipher() used below (typing the cache as the base key made
-    // CI fail with "Unresolved reference 'cipher'").
-    private var cachedDecodedKey: AES.CBC.Key? = null
+    // switch, staying correct).
+    //
+    // Audit-6 #2: the Audit-5 cache kept the raw bytes and the
+    // decoded key in TWO plain fields written in sequence (raw
+    // first, decoded second), and its comment claimed a wrong
+    // key was impossible — it was not: a parallel job could read
+    // the NEW raw bytes paired with the OLD decoded key and
+    // decrypt a segment with its neighbour's key. The pair now
+    // lives in one immutable holder behind a single @Volatile
+    // reference, so a reader always sees a consistent pair; two
+    // jobs may still race a duplicate decode, but never a
+    // mismatched one. The decoded type is AES.CBC.Key, not
+    // AES.Key: the CBC subtype carries the cipher() used below.
+    private class CachedAesKey(val raw: ByteArray, val decoded: AES.CBC.Key)
+
+    @kotlin.concurrent.Volatile
+    private var cachedAesKey: CachedAesKey? = null
 
     @OptIn(DelicateCryptographyApi::class)
     fun getDecrypted(
@@ -146,12 +155,12 @@ object M3u8Helper2 {
         index: Int,
     ): ByteArray {
         val ivKey = if (iv.isEmpty()) defaultIv(index) else iv
-        val aesKey = cachedDecodedKey?.takeIf {
-            cachedRawKey?.contentEquals(secretKey) == true
-        } ?: aesCbc.keyDecoder().decodeFromByteArrayBlocking(AES.Key.Format.RAW, secretKey)
-            .also {
-                cachedRawKey = secretKey
-                cachedDecodedKey = it
+        val aesKey = cachedAesKey?.takeIf {
+            it.raw.contentEquals(secretKey)
+        }?.decoded ?: aesCbc.keyDecoder()
+            .decodeFromByteArrayBlocking(AES.Key.Format.RAW, secretKey)
+            .also { decoded ->
+                cachedAesKey = CachedAesKey(secretKey, decoded)
             }
         return aesKey.cipher(padding = true).decryptWithIvBlocking(ivKey, data)
     }
