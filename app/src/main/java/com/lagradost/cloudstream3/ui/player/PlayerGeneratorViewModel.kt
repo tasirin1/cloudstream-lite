@@ -286,10 +286,17 @@ class PlayerGeneratorViewModel : ViewModel() {
         if (id == currentLoadingEpisodeId) return
 
         Log.i(TAG, "preLoadNextLinks")
-        currentJob?.cancel()
+        // Audit-7 #7: the preload gets its OWN job. It used to
+        // share currentJob with loadLinks() and cancelled it —
+        // preloading triggers at >=80% playback (including a
+        // resume into that range) while the current episode's
+        // links may still be streaming in, so the preload killed
+        // the playing episode's load and its Loading state never
+        // resolved.
+        preloadJob?.cancel()
         currentLoadingEpisodeId = id
 
-        currentJob = viewModelScope.launch {
+        preloadJob = viewModelScope.launch {
             try {
                 if (generator?.hasCache == true && generator?.hasNext(episodeIndex) == true) {
                     safeApiCall {
@@ -336,6 +343,11 @@ class PlayerGeneratorViewModel : ViewModel() {
     }
 
     private var currentJob: Job? = null
+
+    // Audit-7 #7: background preload of the next episode; kept
+    // separate from currentJob so it can never cancel the load
+    // of the episode actually being watched.
+    private var preloadJob: Job? = null
     private var currentStampJob: Job? = null
 
     fun loadStamps(duration: Long) {
@@ -386,6 +398,9 @@ class PlayerGeneratorViewModel : ViewModel() {
     fun loadLinks(sourceTypes: Set<ExtractorLinkType> = LOADTYPE_INAPP) {
         Log.i(TAG, "loadLinks with generator=$generator and index=$episodeIndex")
         currentJob?.cancel()
+        // Audit-7 #7: a preload in flight belongs to the
+        // previous position; a fresh load supersedes it.
+        preloadJob?.cancel()
         val index = episodeIndex
 
         // Clear old data and reset the state
