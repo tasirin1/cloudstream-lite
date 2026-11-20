@@ -182,105 +182,126 @@ class DownloadQueueService : Service() {
         // flag that a sticky restart flips back to true — so the
         // old collector woke up next to its replacement and both
         // raced to pop and start the same queued episodes.
-        activeQueueJob?.cancel()
-        val myJob = ioSafe {
-            // Ensure this is up to date to prevent race conditions with MainActivity launches
-            setLastError(context)
-            // Early return, to prevent waiting for plugins in safe mode
-            if (lastError != null) return@ioSafe
+        launchQueueCollector(context)
+    }
 
-            // Try to ensure all plugins are loaded before starting the downloader.
-            // To prevent infinite stalls we use a timeout of 15 seconds, it is judged as long enough
-            val timeout = 15.seconds
-            val timeTaken = withTimeoutOrNull(timeout) {
-                measureTimeMillis {
-                    while (!(PluginManager.loadedOnlinePlugins && PluginManager.loadedLocalPlugins)) {
-                        delay(100.milliseconds)
-                    }
+
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    private fun launchQueueCollector(context: Context) {
+    activeQueueJob?.cancel()
+    val myJob = ioSafe {
+        // Ensure this is up to date to prevent race conditions with MainActivity launches
+        setLastError(context)
+        // Early return, to prevent waiting for plugins in safe mode
+        if (lastError != null) return@ioSafe
+
+        // Try to ensure all plugins are loaded before starting the downloader.
+        // To prevent infinite stalls we use a timeout of 15 seconds, it is judged as long enough
+        val timeout = 15.seconds
+        val timeTaken = withTimeoutOrNull(timeout) {
+            measureTimeMillis {
+                while (!(PluginManager.loadedOnlinePlugins && PluginManager.loadedLocalPlugins)) {
+                    delay(100.milliseconds)
                 }
             }
-
-            debugWarning({ timeTaken == null || timeTaken > 3_000 }, {
-                "Abnormally long downloader startup time of: ${timeTaken ?: timeout.inWholeMilliseconds}ms"
-            })
-            debugAssert({ timeTaken == null }, { "Downloader startup should not time out" })
-
-            totalDownloadFlow
-                .debounce { (instances, queue) ->
-                    // Filter away incorrect transient queue states.
-                    // For example when we pop the queue and add a download instance there exists a transient state where
-                    // there is no queue and no download instances (leading to an early exit)
-                    if (instances.isEmpty() && queue.isEmpty()) {
-                        500.milliseconds
-                    } else {
-                        0.milliseconds
-                    }
-                }
-                .takeWhile { (instances, queue) ->
-                    // Stop if destroyed
-                    isRunning
-                            // Run as long as there is a queue to process
-                            && (instances.isNotEmpty() || queue.isNotEmpty())
-                            // Run as long as there are no app crashes
-                            && lastError == null
-                }
-                .collect { (_, queue, currentDownloads) ->
-                    // Remove completed or failed
-                    val newInstances = _downloadInstances.updateAndGet { currentInstances ->
-                        currentInstances.filterNot { it.isCompleted || it.isFailed || it.isCancelled }
-                    }
-
-                    val maxDownloads = VideoDownloadManager.maxConcurrentDownloads(context)
-                    val currentInstanceCount = newInstances.size
-
-                    val newDownloads = minOf(
-                        // Cannot exceed the max downloads
-                        maxOf(0, maxDownloads - currentInstanceCount),
-                        // Cannot start more downloads than the queue size
-                        queue.size
-                    )
-
-                    // Cant start multiple downloads at once. If this is rerun it may start too many downloads.
-                    if (newDownloads > 0) {
-                        // Fork fix (audit #23): StateFlow.update may run
-                        // its lambda more than once under contention, so
-                        // side effects must not live inside it; a retry
-                        // could pop and start a download that is then
-                        // never tracked in downloadInstances.
-                        val downloadInstance = DownloadQueueManager.popQueue(context)
-                        if (downloadInstance != null) {
-                            downloadInstance.startDownload()
-                            _downloadInstances.update { instances ->
-                                instances + downloadInstance
-                            }
-                        }
-                    }
-
-                    // The downloads actually displayed to the user with a notification
-                    val currentVisualDownloads =
-                        currentDownloads.size + newInstances.count {
-                            currentDownloads.contains(it.downloadQueueWrapper.id)
-                                .not()
-                        }
-                    // Just the queue
-                    val currentVisualQueue = queue.size
-
-                    updateNotification(context, currentVisualDownloads, currentVisualQueue)
-                }
         }
 
-        queueJob = myJob
-        activeQueueJob = myJob
+        debugWarning({ timeTaken == null || timeTaken > 3_000 }, {
+            "Abnormally long downloader startup time of: ${timeTaken ?: timeout.inWholeMilliseconds}ms"
+        })
+        debugAssert({ timeTaken == null }, { "Downloader startup should not time out" })
 
-        // Stop self regardless of job outcome
-        myJob.invokeOnCompletion { throwable ->
-            if (throwable != null) {
-                logError(throwable)
+        totalDownloadFlow
+            .debounce { (instances, queue) ->
+                // Filter away incorrect transient queue states.
+                // For example when we pop the queue and add a download instance there exists a transient state where
+                // there is no queue and no download instances (leading to an early exit)
+                if (instances.isEmpty() && queue.isEmpty()) {
+                    500.milliseconds
+                } else {
+                    0.milliseconds
+                }
             }
-            safe {
+            .takeWhile { (instances, queue) ->
+                // Stop if destroyed
+                isRunning
+                        // Run as long as there is a queue to process
+                        && (instances.isNotEmpty() || queue.isNotEmpty())
+                        // Run as long as there are no app crashes
+                        && lastError == null
+            }
+            .collect { (_, queue, currentDownloads) ->
+                // Remove completed or failed
+                val newInstances = _downloadInstances.updateAndGet { currentInstances ->
+                    currentInstances.filterNot { it.isCompleted || it.isFailed || it.isCancelled }
+                }
+
+                val maxDownloads = VideoDownloadManager.maxConcurrentDownloads(context)
+                val currentInstanceCount = newInstances.size
+
+                val newDownloads = minOf(
+                    // Cannot exceed the max downloads
+                    maxOf(0, maxDownloads - currentInstanceCount),
+                    // Cannot start more downloads than the queue size
+                    queue.size
+                )
+
+                // Cant start multiple downloads at once. If this is rerun it may start too many downloads.
+                if (newDownloads > 0) {
+                    // Fork fix (audit #23): StateFlow.update may run
+                    // its lambda more than once under contention, so
+                    // side effects must not live inside it; a retry
+                    // could pop and start a download that is then
+                    // never tracked in downloadInstances.
+                    val downloadInstance = DownloadQueueManager.popQueue(context)
+                    if (downloadInstance != null) {
+                        downloadInstance.startDownload()
+                        _downloadInstances.update { instances ->
+                            instances + downloadInstance
+                        }
+                    }
+                }
+
+                // The downloads actually displayed to the user with a notification
+                val currentVisualDownloads =
+                    currentDownloads.size + newInstances.count {
+                        currentDownloads.contains(it.downloadQueueWrapper.id)
+                            .not()
+                    }
+                // Just the queue
+                val currentVisualQueue = queue.size
+
+                updateNotification(context, currentVisualDownloads, currentVisualQueue)
+            }
+    }
+
+    queueJob = myJob
+    activeQueueJob = myJob
+
+    // Stop self regardless of job outcome — unless work arrived
+    // while the collector was draining (Audit-5 #10).
+    myJob.invokeOnCompletion { throwable ->
+        if (throwable != null) {
+            logError(throwable)
+        }
+        safe {
+            // Audit-5 #10: the collector ends when the queue
+            // drains, but isRunning stays true until onDestroy,
+            // and startQueueService() trusts that flag — so a
+            // download queued in the stopSelf-to-onDestroy gap
+            // was accepted into the persisted queue yet never
+            // started until the next app launch. If work is
+            // waiting at completion time, relaunch the collector
+            // instead of stopping.
+            if (DownloadQueueManager.queue.value.isNotEmpty() ||
+                _downloadInstances.value.isNotEmpty()
+            ) {
+                launchQueueCollector(context)
+            } else {
                 stopSelf()
             }
         }
+    }
     }
 
     override fun onDestroy() {
