@@ -629,6 +629,22 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(
         super.onDestroyView()
     }
 
+    override fun onDestroy() {
+        // Audit-5 #14: the expanded-list dialog is only hidden
+        // (ownHide) in onDestroyView so it can be resumed, and its
+        // span listener is removed from the process-static
+        // configEvent only by the dialog's OnDismissListener —
+        // which hide() never fires. If the fragment itself is
+        // destroyed with the sheet still open, nothing ever
+        // dismissed it and the listener (plus the binding
+        // hierarchy it captures) leaked for the process lifetime.
+        // Dismiss for real here: the dismiss listener unregisters
+        // the span listener and runs the normal dismiss callback.
+        bottomSheetDialog?.dismissSafe()
+        bottomSheetDialog = null
+        super.onDestroy()
+    }
+
     private val apiChangeClickListener = View.OnClickListener { view ->
         view.context.selectHomepage(currentApiName) { api ->
             homeViewModel.loadAndCancel(api, forceReload = true, fromUI = true)
