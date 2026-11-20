@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.ExtractorApi
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.Qualities
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -25,7 +26,11 @@ open class Tantifilm : ExtractorApi() {
                 it.file + ".${it.type}",
             ) {
                 this.referer = mainUrl
-                this.quality = it.label.filter{ it.isDigit() }.toInt()
+                // Audit-3 #22: a label without digits ("HD", "Auto")
+                // used to throw NumberFormatException inside the map
+                // and discard every link, not just that entry.
+                this.quality = it.label.filter{ it.isDigit() }.toIntOrNull()
+                    ?: Qualities.Unknown.value
             }
         }
     }
