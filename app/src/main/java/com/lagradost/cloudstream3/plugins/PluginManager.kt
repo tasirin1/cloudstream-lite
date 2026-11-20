@@ -617,8 +617,31 @@ object PluginManager {
     suspend fun ___DO_NOT_CALL_FROM_A_PLUGIN_loadAllOnlinePlugins(context: Context) {
         assertNonRecursiveCallstack()
 
+        // Audit-9 #1: restore any plugin whose file is missing
+        // but whose .bak survived — an update interrupted between
+        // parking and swapping (process death, power loss) must
+        // not lose the plugin.
+        val onlinePlugins = (getPluginsOnline()).toList()
+        for (pluginData in onlinePlugins) {
+            val pluginFile = File(pluginData.filePath)
+            if (!pluginFile.exists()) {
+                val bakFile = File(pluginFile.parentFile, pluginFile.name + ".bak")
+                if (bakFile.exists()) {
+                    try {
+                        Files.move(
+                            bakFile.toPath(),
+                            pluginFile.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING
+                        )
+                    } catch (e: Exception) {
+                        logError(e)
+                    }
+                }
+            }
+        }
+
         // Load all plugins as fast as possible!
-        (getPluginsOnline()).toList().amap { pluginData ->
+        onlinePlugins.amap { pluginData ->
             loadPlugin(
                 context,
                 File(pluginData.filePath),
@@ -1065,31 +1088,24 @@ object PluginManager {
         file: File,
         loadPlugin: Boolean,
     ): Boolean {
-        // Audit-8 #2: park the installed file as .bak BEFORE
-        // downloadPluginToFile replaces it in place, and remember
-        // its anchor. Until now a verified-but-unloadable update
-        // (newer plugin API, corrupt inner manifest, missing
-        // class) destroyed the working plugin permanently on
-        // this path — the Compose path got this safety net in
-        // Audit-6 #9, the legacy path never did.
+        // Audit-8 #2: give this path the same .bak rollback the
+        // Compose path got in Audit-6 #9 — a verified-but-
+        // unloadable update (newer plugin API, corrupt inner
+        // manifest, missing class) used to destroy the working
+        // plugin permanently here.
+        //
+        // Audit-9 #1: Audit-8 parked the installed file BEFORE
+        // the download, leaving the plugin path EMPTY for the
+        // whole transfer — a process death in that window lost
+        // the plugin with no recovery. Mirror the Compose order
+        // instead: download+verify into a staging file first,
+        // park only for the swap, then move staging into place.
         val backupFile = file.parentFile?.let { File(it, file.name + ".bak") }
         val previousAnchor = storedPluginHash(file.absolutePath)
+        val stagingFile = file.parentFile?.let { File(it, file.name + ".new") }
         var parked = false
-        if (backupFile != null && file.exists()) {
-            parked = try {
-                Files.move(
-                    file.toPath(),
-                    backupFile.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING
-                )
-                true
-            } catch (e: Exception) {
-                logError(e)
-                false
-            }
-        }
         // Built up here (was: after the download) so the rollback
-        // above can reload with it; newFile IS file on success.
+        // below can reload with it; newFile IS file on success.
         val data = PluginData(
             internalName,
             pluginUrl,
@@ -1125,14 +1141,49 @@ object PluginManager {
                 }
             }
             // The plugin file needs to be salted with the repository url hash as to allow multiple repositories with the same internal plugin names
-            val newFile = downloadPluginToFile(activity, pluginUrl, file, normalizedHash) ?: run {
-                // Audit-8 #2: the download failed after the
-                // installed file was parked — put it back.
-                if (parked) {
-                    rollbackLegacyPluginUpdate(activity, file, backupFile, previousAnchor, data)
+            // Audit-9 #1: download+verify into the staging file;
+            // the installed plugin stays untouched until the swap.
+            downloadPluginToFile(activity, pluginUrl, stagingFile ?: file, normalizedHash)
+                ?: run {
+                    stagingFile?.delete()
+                    return false
                 }
-                return false
+            if (backupFile != null && file.exists()) {
+                parked = try {
+                    Files.move(
+                        file.toPath(),
+                        backupFile.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+                    true
+                } catch (e: Exception) {
+                    logError(e)
+                    false
+                }
+                if (!parked) {
+                    // Cannot swap safely — keep the old plugin.
+                    stagingFile?.delete()
+                    return false
+                }
             }
+            if (stagingFile != null) {
+                try {
+                    Files.move(
+                        stagingFile.toPath(),
+                        file.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+                } catch (e: Exception) {
+                    logError(e)
+                    if (parked) {
+                        rollbackLegacyPluginUpdate(
+                            activity, file, backupFile, previousAnchor, data
+                        )
+                    }
+                    return false
+                }
+            }
+            val newFile = file
 
             // Fork fix (audit #9): anchor for the load-time check.
             if (normalizedHash != null) {
