@@ -875,13 +875,32 @@ class CS3IPlayer : IPlayer {
         private var simpleCache: SimpleCache? = null
         private val simpleCacheLock = Any()
 
+        // Audit-14 #54: the size the live cache was built
+        // with. getCacheOrBuild used to return the first cache
+        // whatever size was requested, so changing the disk
+        // buffer size in settings never applied until the
+        // process died.
+        @Volatile
+        private var builtCacheSize: Long = -1L
+
         private fun getCacheOrBuild(context: Context, cacheSize: Long): SimpleCache? {
-            simpleCache?.let { return it }
+            simpleCache?.let { if (builtCacheSize == cacheSize) return it }
             return synchronized(simpleCacheLock) {
+                val existing = simpleCache
+                if (existing != null && builtCacheSize == cacheSize) {
+                    return@synchronized existing
+                }
+                // Size changed (or first build): release the
+                // old cache and rebuild. This runs while a new
+                // player is being set up, before it plays.
+                existing?.release()
+                simpleCache = null
+                builtCacheSize = -1L
                 // Never assign a failed build over an existing
                 // cache: only publish non-null results.
-                simpleCache ?: getCache(context, cacheSize)?.also {
+                getCache(context, cacheSize)?.also {
                     simpleCache = it
+                    builtCacheSize = cacheSize
                 }
             }
         }
