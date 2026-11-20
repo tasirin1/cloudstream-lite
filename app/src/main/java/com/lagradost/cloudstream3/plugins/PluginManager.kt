@@ -157,13 +157,22 @@ object PluginManager {
 
     suspend fun deleteRepositoryData(repositoryPath: String) {
         lock.withLock {
+            // Audit-7 #24: match on a path boundary, not a raw
+            // substring — contains() also matched a DIFFERENT
+            // repository whose folder path merely contains this
+            // one (e.g. ".../repo" matching ".../repo2/..."), so
+            // deleting one repo unregistered the other's plugins.
+            val belongsToRepo = { path: String ->
+                path == repositoryPath ||
+                    path.startsWith(repositoryPath + File.separator)
+            }
             // Audit-7 #6: the removed plugins' anchors go with
             // them (see deletePlugin).
             val removed = getPluginsOnline().filter {
-                it.filePath.contains(repositoryPath)
+                belongsToRepo(it.filePath)
             }
             val plugins = getPluginsOnline().filter {
-                !it.filePath.contains(repositoryPath)
+                !belongsToRepo(it.filePath)
             }
             val file = File(repositoryPath)
             safe {
