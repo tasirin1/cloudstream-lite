@@ -535,24 +535,36 @@ object VideoDownloadManager {
     data class DownloadMetaData(
         private val id: Int?,
         private val linkHash : Int,
+        // Audit-4 #10: these counters are mutated by the parallel
+        // download jobs. @Volatile prevents torn 64-bit reads on
+        // 32-bit devices, and every compound mutation (+=, the
+        // notify() rate pair) is guarded by counterLock below —
+        // previously a lost update could make the final
+        // completeness check judge a whole download as failed.
+        @Volatile
         var bytesDownloaded: Long = 0,
+        @Volatile
         var bytesWritten: Long = 0,
 
         var totalBytes: Long? = null,
 
         // notification metadata
+        @Volatile
         private var lastUpdatedMs: Long = 0,
+        @Volatile
         private var lastDownloadedBytes: Long = 0,
         private val createNotificationCallback: (CreateNotificationMetadata) -> Unit,
 
         private var internalType: DownloadType = DownloadType.IsPending,
         val isHLS : Boolean,
         // how many segments that we have downloaded
+        @Volatile
         var hlsProgress: Int = 0,
         // how many segments that exist
         var hlsTotal: Int? = null,
         // this is how many segments that has been written to the file
         // will always be <= hlsProgress as we may keep some in a buffer
+        @Volatile
         var hlsWrittenProgress: Int = 0,
 
         // this is used for copy with metadata on how much we have downloaded for setKey
@@ -573,10 +585,15 @@ object VideoDownloadManager {
             hlsCheckpoint = Pair(index, bytes)
         }
 
+        // Audit-4 #10: guards every compound counter mutation.
+        private val counterLock = Any()
+
         fun setResumeLength(length: Long) {
-            bytesDownloaded = length
-            bytesWritten = length
-            lastDownloadedBytes = length
+            synchronized(counterLock) {
+                bytesDownloaded = length
+                bytesWritten = length
+                lastDownloadedBytes = length
+            }
         }
 
         /** Returns the appropriate failed status based on download progress */
@@ -711,36 +728,51 @@ object VideoDownloadManager {
 
         @JvmName("DownloadMetaDataNotify")
         private fun notify() {
-            // max 10 sec between notifications, min 0.1s, this is to stop div by zero
-            val dt = (System.currentTimeMillis() - lastUpdatedMs).coerceIn(100, 10000)
+            // Audit-4 #10: snapshot the rate pair and the progress
+            // values under counterLock (this answers the old
+            // "TODO MUTEX?" below). The callbacks run outside the
+            // lock so a listener can never deadlock against a
+            // counter update.
+            val snapshot = synchronized(counterLock) {
+                // max 10 sec between notifications, min 0.1s, this is to stop div by zero
+                val dt = (System.currentTimeMillis() - lastUpdatedMs).coerceIn(100, 10000)
 
-            val bytesPerSecond =
-                ((bytesDownloaded - lastDownloadedBytes) * 1000L) / dt
+                val bytesPerSecond =
+                    ((bytesDownloaded - lastDownloadedBytes) * 1000L) / dt
 
-            lastDownloadedBytes = bytesDownloaded
-            lastUpdatedMs = System.currentTimeMillis()
+                lastDownloadedBytes = bytesDownloaded
+                lastUpdatedMs = System.currentTimeMillis()
+
+                NotifySnapshot(
+                    bytesPerSecond = bytesPerSecond,
+                    bytesDownloaded = bytesDownloaded,
+                    approxTotalBytes = approxTotalBytes,
+                    hlsProgress = hlsProgress,
+                    type = internalType
+                )
+            }
             try {
-                val bytes = approxTotalBytes
+                val bytes = snapshot.approxTotalBytes
 
                 // notification creation
                 if (isHLS) {
                     createNotificationCallback(
                         CreateNotificationMetadata(
-                            internalType,
-                            bytesDownloaded,
+                            snapshot.type,
+                            snapshot.bytesDownloaded,
                             bytes,
                             hlsTotal = hlsTotal?.toLong(),
-                            hlsProgress = hlsProgress.toLong(),
-                            bytesPerSecond = bytesPerSecond
+                            hlsProgress = snapshot.hlsProgress.toLong(),
+                            bytesPerSecond = snapshot.bytesPerSecond
                         )
                     )
                 } else {
                     createNotificationCallback(
                         CreateNotificationMetadata(
-                            internalType,
-                            bytesDownloaded,
+                            snapshot.type,
+                            snapshot.bytesDownloaded,
                             bytes,
-                            bytesPerSecond = bytesPerSecond
+                            bytesPerSecond = snapshot.bytesPerSecond
                         )
                     )
                 }
@@ -750,15 +782,15 @@ object VideoDownloadManager {
                     updateFileInfo()
                 }
 
-                if (internalType == DownloadType.IsStopped || internalType == DownloadType.IsFailed) {
+                if (snapshot.type == DownloadType.IsStopped || snapshot.type == DownloadType.IsFailed) {
                     stopListener?.invoke()
                     stopListener = null
                 }
 
-                // push all events, this *should* not crash, TODO MUTEX?
+                // push all events, this *should* not crash
                 if (id != null) {
                     downloadStatus[id] = type
-                    downloadProgressEvent(Triple(id, bytesDownloaded, bytes))
+                    downloadProgressEvent(Triple(id, snapshot.bytesDownloaded, bytes))
                     downloadStatusEvent(id to type)
                 }
             } catch (t: Throwable) {
@@ -769,6 +801,16 @@ object VideoDownloadManager {
             }
         }
 
+        // Audit-4 #10: one consistent set of progress values for a
+        // single notify() pass, captured under counterLock.
+        private data class NotifySnapshot(
+            val bytesPerSecond: Long,
+            val bytesDownloaded: Long,
+            val approxTotalBytes: Long,
+            val hlsProgress: Int,
+            val type: DownloadType
+        )
+
         private fun checkNotification() {
             if (lastUpdatedMs + UPDATE_RATE_MS > System.currentTimeMillis()) return
             notify()
@@ -777,28 +819,43 @@ object VideoDownloadManager {
 
         /** adds the length and pushes a notification if necessary */
         fun addBytes(length: Long) {
-            bytesDownloaded += length
+            // Audit-4 #10: += on a plain var lost updates when the
+            // parallel download jobs raced.
+            synchronized(counterLock) {
+                bytesDownloaded += length
+            }
             // we don't want to update the notification after it is paused,
             // download progress may not stop directly when we "pause" it
             if (type == DownloadType.IsDownloading) checkNotification()
         }
 
         fun addBytesWritten(length: Long) {
-            bytesWritten += length
+            synchronized(counterLock) {
+                bytesWritten += length
+            }
         }
 
         /** adds the length + hsl progress and pushes a notification if necessary */
         fun addSegment(length: Long) {
-            hlsProgress += 1
-            addBytes(length)
+            // Audit-4 #10: both counters move as one locked step.
+            synchronized(counterLock) {
+                hlsProgress += 1
+                bytesDownloaded += length
+            }
+            if (type == DownloadType.IsDownloading) checkNotification()
         }
 
         fun setWrittenSegment(segmentIndex: Int) {
-            hlsWrittenProgress = segmentIndex + 1
-            // Audit-4 #1: bytesWritten was already updated by
-            // addBytesWritten just before this call (both write paths),
-            // so this pair always describes the file's current prefix.
-            hlsCheckpoint = Pair(hlsWrittenProgress, bytesWritten)
+            // Audit-4 #10: the progress + checkpoint update is one
+            // locked step; the prefs write itself stays outside.
+            val shouldPersist = synchronized(counterLock) {
+                hlsWrittenProgress = segmentIndex + 1
+                // Audit-4 #1: bytesWritten was already updated by
+                // addBytesWritten just before this call (both write paths),
+                // so this pair always describes the file's current prefix.
+                hlsCheckpoint = Pair(hlsWrittenProgress, bytesWritten)
+                hlsWrittenProgress % 10 == 0
+            }
             // Audit-3 #6: persisting rewrites the whole prefs file,
             // so doing it for every segment made HLS downloads write
             // the same XML hundreds of times. Every 10 segments is
@@ -808,7 +865,7 @@ object VideoDownloadManager {
             // Audit-4 #1 the resume side verifies the file length
             // against the persisted checkpoint before appending, so
             // the segments past it can no longer be duplicated.
-            if (hlsWrittenProgress % 10 == 0) {
+            if (shouldPersist) {
                 updateFileInfo()
             }
         }
