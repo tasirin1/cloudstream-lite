@@ -132,22 +132,30 @@ object APIHolder {
     var apis: AtomicList<MainAPI> = atomicListOf()
     var apiMap: Map<String, Int>? = null
 
+    // Audit-10 #3: add/remove REPLACE the apis field with a new
+    // AtomicList, so locking the current instance (apis.withLock)
+    // does not serialize the read-modify-write — two plugins
+    // registering in parallel could each build on the same base
+    // list and the later assignment silently dropped the other's
+    // provider. All apis access goes through this one lock.
+    private val apisLock = Any()
+
     fun addPluginMapping(plugin: MainAPI) {
-        apis.withLock {
+        synchronized(apisLock) {
             apis = apis + plugin
         }
         initMap(true)
     }
 
     fun removePluginMapping(plugin: MainAPI) {
-        apis.withLock {
+        synchronized(apisLock) {
             apis = apis.filter { it != plugin }
         }
         initMap(true)
     }
 
     private fun initMap(forcedUpdate: Boolean = false) {
-        apis.withLock {
+        synchronized(apisLock) {
             if (apiMap == null || forcedUpdate)
                 apiMap = apis.mapIndexed { index, api -> api.name to index }.toMap()
         }
@@ -157,7 +165,7 @@ object APIHolder {
         if (apiName == null) return null
         return allProviders.withLock {
             initMap()
-            apis.withLock {
+            synchronized(apisLock) {
                 apiMap?.get(apiName)?.let { apis.getOrNull(it) }
                 // Leave the ?. null check, it can crash regardless
                 ?: allProviders.firstOrNull { it.name == apiName }
