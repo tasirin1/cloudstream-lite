@@ -423,6 +423,13 @@ class SubtitlesFragment : BaseDialogFragment<SubtitleSettingsBinding>(
     override fun onDestroy() {
         super.onDestroy()
         onColorSelectedEvent -= ::onColorSelected
+        // Audit-7 #50: this listener was registered in
+        // onBindingCreated but never removed — the static event
+        // (CommonActivity) held every visited fragment instance
+        // for the process lifetime, the one unpaired
+        // registration left in ui/ (family of Audit-5 #14 /
+        // Audit-6 #13).
+        onDialogDismissedEvent -= ::onDialogDismissed
     }
 
     override fun onStart() {
