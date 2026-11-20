@@ -2112,10 +2112,17 @@ object VideoDownloadManager {
             }
 
             // Profiles should always contain a download type
-            val profile = QualityDataHelper.getProfiles().first {
+            // Audit-3 #10: first{} threw NoSuchElementException when the
+            // user had edited profiles so none is a Download profile,
+            // leaving a zombie instance that kept the queue service
+            // alive forever. Fail the download cleanly instead.
+            val profile = QualityDataHelper.getProfiles().firstOrNull {
                 it.types.contains(
                     QualityDataHelper.QualityProfileType.Download
                 )
+            } ?: run {
+                isFailed = true
+                return
             }
 
             val sortedLinks = currentLinks.sortedBy { link ->
