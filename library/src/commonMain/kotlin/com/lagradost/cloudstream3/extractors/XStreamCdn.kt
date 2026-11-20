@@ -114,14 +114,21 @@ open class XStreamCdn : ExtractorApi() {
                 }
             }
 
-            val userData = sources?.player?.posterFile?.split("/")?.get(2)
-            sources?.captions?.map {
-                subtitleCallback.invoke(
-                    newSubtitleFile(
-                        it?.language.toString(),
-                        "$mainUrl/asset/userdata/$userData/caption/${it?.hash}/${it?.id}.${it?.extension}"
+            // Audit-7 #40: getOrNull — a poster_file with fewer
+            // than three segments threw IndexOutOfBounds and
+            // killed an extraction whose video links were already
+            // in hand. Without the userdata segment there is no
+            // caption URL to build, so captions are skipped.
+            val userData = sources?.player?.posterFile?.split("/")?.getOrNull(2)
+            if (userData != null) {
+                sources?.captions?.map {
+                    subtitleCallback.invoke(
+                        newSubtitleFile(
+                            it?.language.toString(),
+                            "$mainUrl/asset/userdata/$userData/caption/${it?.hash}/${it?.id}.${it?.extension}"
+                        )
                     )
-                )
+                }
             }
         }
     }

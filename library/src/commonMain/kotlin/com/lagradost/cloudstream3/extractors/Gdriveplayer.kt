@@ -96,7 +96,10 @@ open class Gdriveplayer : ExtractorApi() {
         val password = hoistedRegex2.first(eval)
             ?.split(hoistedRegex3)
             ?.joinToString("") {
-                it.toInt().toChar().toString()
+                // Audit-7 #41: split pieces can be empty (leading
+                // or trailing separator) — toInt() on those threw
+                // a raw NumberFormatException out of getUrl.
+                it.toIntOrNull()?.toChar()?.toString() ?: ""
             }.let { hoistedRegex4.first(it ?: return)?.encodeToByteArray() }
                 ?: throw ErrorLoadingException("can't find password")
 
