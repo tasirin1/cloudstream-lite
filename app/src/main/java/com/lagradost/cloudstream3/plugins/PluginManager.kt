@@ -463,7 +463,11 @@ object PluginManager {
             "Outdated plugins: ${outdatedPlugins.filter { it.isOutdated }}"
         }
 
-        val updatedPlugins = mutableListOf<String>()
+        // Audit-14 #33: filled from parallel amap children —
+        // a plain ArrayList loses/corrupts entries under
+        // concurrent add().
+        val updatedPlugins =
+            java.util.Collections.synchronizedList(mutableListOf<String>())
 
         outdatedPlugins.amap { pluginData ->
             if (pluginData.isDisabled) {
@@ -518,7 +522,9 @@ object PluginManager {
     ) {
         assertNonRecursiveCallstack()
 
-        val newDownloadPlugins = mutableListOf<String>()
+        // Audit-14 #33: see above.
+        val newDownloadPlugins =
+            java.util.Collections.synchronizedList(mutableListOf<String>())
         val urls = (getKey<Array<RepositoryData>>(REPOSITORIES_KEY)
             ?: emptyArray()) + PREBUILT_REPOSITORIES
         val onlinePlugins = urls.toList().amap {
@@ -1340,7 +1346,11 @@ object PluginManager {
                 }
         }.distinctBy { it.onlineData.plugin.url }
 
-        val updatedPlugins = mutableListOf<String>()
+        // Audit-14 #33: filled from parallel amap children —
+        // a plain ArrayList loses/corrupts entries under
+        // concurrent add().
+        val updatedPlugins =
+            java.util.Collections.synchronizedList(mutableListOf<String>())
 
         allPlugins.amap { pluginData ->
             if (pluginData.isDisabled) {
