@@ -275,7 +275,16 @@ class SettingsAccount {
                             )
 
                             val pollJob = ioSafe {
-                                if (secondsUntilFinished.rem(pinCodeData.interval) == 0 && api.login(
+                                // Audit-19 #13: the interval is
+                                // provider-controlled and was
+                                // never validated — interval 0
+                                // made rem() throw on every tick,
+                                // so login was never attempted
+                                // and the dialog just counted
+                                // down. Treat a non-positive
+                                // interval as "poll every tick".
+                                val interval = pinCodeData.interval.takeIf { it > 0 } ?: 1
+                                if (secondsUntilFinished.rem(interval) == 0 && api.login(
                                         pinCodeData
                                     )
                                 ) {
