@@ -13,6 +13,10 @@ import com.lagradost.cloudstream3.utils.SubtitleUtils.isMatchingSubtitle
 import com.lagradost.cloudstream3.utils.downloader.DownloadFileManagement.getFolder
 import com.lagradost.cloudstream3.utils.downloader.VideoDownloadManager.getDownloadFileInfo
 
+// Audit-4 #27: hoisted out of generateLinks, which recompiled
+// it for every file in the download folder.
+private val LAST_NUM_REGEX = Regex(" ([0-9]+)$")
+
 class DownloadFileGenerator(
     episodes: List<ExtractorUri>
 ) : VideoGenerator<ExtractorUri>(episodes) {
@@ -55,9 +59,8 @@ class DownloadFileGenerator(
         getFolder(ctx, relative, meta.basePath)?.forEach { (name, uri) ->
             if (isMatchingSubtitle(name, display, cleanDisplay)) {
                 val cleanName = cleanDisplayName(name)
-                val lastNum = Regex(" ([0-9]+)$")
-                val nameSuffix = lastNum.find(cleanName)?.groupValues?.get(1) ?: ""
-                val originalName = cleanName.removePrefix(cleanDisplay).replace(lastNum, "").trim()
+                val nameSuffix = LAST_NUM_REGEX.find(cleanName)?.groupValues?.get(1) ?: ""
+                val originalName = cleanName.removePrefix(cleanDisplay).replace(LAST_NUM_REGEX, "").trim()
 
                 subtitleCallback(
                     SubtitleData(
