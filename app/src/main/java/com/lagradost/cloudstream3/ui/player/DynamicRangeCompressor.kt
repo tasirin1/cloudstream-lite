@@ -101,11 +101,18 @@ class DynamicRangeCompressor : AudioProcessor {
         // computeGain divide by zero (1f / 0f = +Inf gain,
         // destroying the whole audio path). A corrupt or
         // hand-edited store can hold anything.
-        threshold = (getKey<Float>(COMPRESSOR_THRESHOLD_KEY) ?: -24f).coerceIn(-30f, 0f)
-        ratio = (getKey<Float>(COMPRESSOR_RATIO_KEY) ?: 8f).coerceIn(1f, 20f)
-        attackMs = (getKey<Float>(COMPRESSOR_ATTACK_KEY) ?: 5f).coerceIn(1f, 400f)
-        releaseMs = (getKey<Float>(COMPRESSOR_RELEASE_KEY) ?: 400f).coerceIn(2f, 800f)
-        makeupGain = (getKey<Float>(COMPRESSOR_MAKEUP_KEY) ?: 12f).coerceIn(0f, 24f)
+        // Audit-21 #8: coerceIn does NOT clean NaN (every
+        // comparison with NaN is false, so it passes through
+        // unchanged) — a NaN ratio/threshold from a corrupt or
+        // hand-edited store made computeGain produce NaN gain:
+        // PCM16 output went all-zero, float output all-NaN.
+        // Non-finite values fall back to the defaults first.
+        fun sane(v: Float?, def: Float): Float = v?.takeIf { it.isFinite() } ?: def
+        threshold = sane(getKey<Float>(COMPRESSOR_THRESHOLD_KEY), -24f).coerceIn(-30f, 0f)
+        ratio = sane(getKey<Float>(COMPRESSOR_RATIO_KEY), 8f).coerceIn(1f, 20f)
+        attackMs = sane(getKey<Float>(COMPRESSOR_ATTACK_KEY), 5f).coerceIn(1f, 400f)
+        releaseMs = sane(getKey<Float>(COMPRESSOR_RELEASE_KEY), 400f).coerceIn(2f, 800f)
+        makeupGain = sane(getKey<Float>(COMPRESSOR_MAKEUP_KEY), 12f).coerceIn(0f, 24f)
     }
 
     private var format       = AudioFormat.NOT_SET
