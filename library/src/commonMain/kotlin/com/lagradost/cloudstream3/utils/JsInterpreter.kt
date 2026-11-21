@@ -223,7 +223,7 @@ private enum class TT {
     NEQ, NEQEQ, LT, LTEQ, GT, GTEQ, AND, OR, NOT, AMP, PIPE, CARET, TILDE,
     LSHIFT, RSHIFT, URSHIFT, PLUSEQ, MINUSEQ, STAREQ, SLASHEQ, PERCENTEQ, POWEQ,
     ANDEQ, OREQ, CARETEQ, LSHIFTEQ, RSHIFTEQ, URSHIFTEQ,
-    PLUSPLUS, MINUSMINUS, DOT, COMMA, SEMI, COLON, QUESTION, LPAREN, RPAREN,
+    PLUSPLUS, MINUSMINUS, DOT, COMMA, SEMI, COLON, QUESTION, QQ, QDOT, LPAREN, RPAREN,
     LBRACE, RBRACE, LBRACKET, RBRACKET, EOF
 }
 
@@ -455,7 +455,11 @@ private class Lexer(private val src: String) {
             ',' -> Token(TT.COMMA, ",", start)
             ';' -> Token(TT.SEMI, ";", start)
             ':' -> Token(TT.COLON, ":", start)
-            '?' -> Token(TT.QUESTION, "?", start)
+            '?' -> when {
+                next == '?' -> adv(TT.QQ, 1)
+                next == '.' && !nn.isDigit() -> adv(TT.QDOT, 1)
+                else -> Token(TT.QUESTION, "?", start)
+            }
             '(' -> Token(TT.LPAREN, "(", start)
             ')' -> Token(TT.RPAREN, ")", start)
             '{' -> Token(TT.LBRACE, "{", start)
@@ -488,13 +492,14 @@ private object UndefinedLit : Node()
 private data class Ident(val name: String) : Node()
 private data class ArrayLit(val elems: List<Node>) : Node()
 private data class ObjLit(val pairs: List<Pair<String, Node>>) : Node()
-private data class MemberExpr(val obj: Node, val prop: Node, val computed: Boolean) : Node()
+private data class MemberExpr(val obj: Node, val prop: Node, val computed: Boolean, val optional: Boolean = false) : Node()
 private data class CallExpr(val callee: Node, val args: List<Node>) : Node()
 private data class NewExpr(val callee: Node, val args: List<Node>) : Node()
 private data class UnaryExpr(val op: String, val expr: Node, val prefix: Boolean) : Node()
 private data class BinExpr(val op: String, val left: Node, val right: Node) : Node()
 private data class AssignExpr(val op: String, val left: Node, val right: Node) : Node()
 private data class CondExpr(val test: Node, val cons: Node, val alt: Node) : Node()
+private data class NullishExpr(val left: Node, val right: Node) : Node()
 private data class TypeofExpr(val expr: Node) : Node()
 private data class SeqExpr(val exprs: List<Node>) : Node()
 private data class FuncExpr(val name: String?, val params: List<String>, val body: List<Node>) : Node()
@@ -791,11 +796,22 @@ private class Parser(private val lex: Lexer) {
     }
 
     private fun parseTernary(): Node {
-        val test = parseOr()
+        val test = parseNullish()
         if (!lex.matchIf(TT.QUESTION)) return test
         val cons = parseAssign()
         lex.expect(TT.COLON)
         return CondExpr(test, cons, parseAssign())
+    }
+
+    // Audit-21 #3: `??` — binds looser than ||/&& here;
+    // real JS also forbids mixing them unparenthesized,
+    // which this interpreter does not enforce.
+    private fun parseNullish(): Node {
+        var left = parseOr()
+        while (lex.matchIf(TT.QQ)) {
+            left = NullishExpr(left, parseOr())
+        }
+        return left
     }
 
     private fun parseOr(): Node = parseBin(::parseAnd, TT.OR to "||")
@@ -880,6 +896,18 @@ private class Parser(private val lex: Lexer) {
                     lex.expect(TT.RBRACKET)
                     MemberExpr(expr, prop, true)
                 }
+                TT.QDOT -> {
+                    lex.consume()
+                    if (lex.peek().type == TT.LBRACKET) {
+                        lex.consume()
+                        val prop = parseAssign()
+                        lex.expect(TT.RBRACKET)
+                        MemberExpr(expr, prop, true, optional = true)
+                    } else {
+                        val prop = lex.expect(TT.IDENT).raw
+                        MemberExpr(expr, StrLit(prop), false, optional = true)
+                    }
+                }
                 TT.LPAREN -> CallExpr(expr, parseArgs())
                 else -> break
             }
@@ -914,6 +942,27 @@ private class Parser(private val lex: Lexer) {
                     val prop = parseAssign()
                     lex.expect(TT.RBRACKET)
                     MemberExpr(expr, prop, true)
+                }
+                // Audit-21 #3: optional chaining — `a?.b`,
+                // `a?.[k]`, `a?.()`. The member carries the
+                // optional flag; a bare `?.()` is just a call
+                // (a nullish callee already evaluates to
+                // Unit through callAny).
+                TT.QDOT -> {
+                    lex.consume()
+                    when (lex.peek().type) {
+                        TT.LBRACKET -> {
+                            lex.consume()
+                            val prop = parseAssign()
+                            lex.expect(TT.RBRACKET)
+                            MemberExpr(expr, prop, true, optional = true)
+                        }
+                        TT.LPAREN -> CallExpr(expr, parseArgs())
+                        else -> {
+                            val prop = lex.expect(TT.IDENT).raw
+                            MemberExpr(expr, StrLit(prop), false, optional = true)
+                        }
+                    }
                 }
                 else -> break
             }
@@ -1780,6 +1829,10 @@ private class JsInterpreter(
         is BinExpr -> evalBinary(node, scope)
         is AssignExpr -> evalAssign(node, scope)
         is CondExpr -> if (toBoolean(evalExpr(node.test, scope))) evalExpr(node.cons, scope) else evalExpr(node.alt, scope)
+        is NullishExpr -> {
+            val l = evalExpr(node.left, scope)
+            if (l == null || l is Unit) evalExpr(node.right, scope) else l
+        }
         is MemberExpr -> evalMember(node, scope)
         is CallExpr -> evalCall(node, scope)
         is NewExpr -> evalNew(node, scope)
@@ -1953,6 +2006,7 @@ private class JsInterpreter(
 
     private fun evalMember(node: MemberExpr, scope: Scope): Any? {
         val obj = evalExpr(node.obj, scope)
+        if (node.optional && (obj == null || obj is Unit)) return Unit
         val key = propKey(node.prop, node.computed, scope)
         return getMember(obj, key)
     }
