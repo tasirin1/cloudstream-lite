@@ -506,6 +506,7 @@ private data class IfStmt(val test: Node, val cons: Node, val alt: Node?) : Node
 private data class WhileStmt(val test: Node, val body: Node) : Node()
 private data class ForStmt(val init: Node?, val test: Node?, val update: Node?, val body: Node) : Node()
 private data class ForInStmt(val decl: String, val obj: Node, val body: Node, val declared: Boolean = true) : Node()
+private data class ForOfStmt(val decl: String, val obj: Node, val body: Node, val declared: Boolean) : Node()
 private object BreakStmt : Node()
 private object ContinueStmt : Node()
 private data class TryCatch(val body: List<Node>, val catchParam: String?, val catchBody: List<Node>?, val finallyBody: List<Node>?) : Node()
@@ -682,6 +683,17 @@ private class Parser(private val lex: Lexer) {
                 lex.expect(TT.RPAREN)
                 return ForInStmt(varName, obj, parseStatement())
             }
+            // Audit-21 #2: `for (var x of ...)` — parseFor
+            // used to fall through to the classic-for
+            // reconstruction, where "of" became the loop
+            // TEST (an undefined identifier), so the body
+            // silently never ran.
+            if (lex.peek().type == TT.IDENT && lex.peek().raw == "of") {
+                lex.consume()
+                val obj = parseAssign()
+                lex.expect(TT.RPAREN)
+                return ForOfStmt(varName, obj, parseStatement(), declared = true)
+            }
             // backtrack is hard so we just reconstruct as normal for
             // Audit-20 #1: ALL declarators — the old form
             // rebuilt only the first, so a comma left the
@@ -707,12 +719,13 @@ private class Parser(private val lex: Lexer) {
         // failed the whole eval. Only an identifier directly
         // followed by `in` takes this branch; anything else
         // keeps the classic-for path below.
-        if (lex.peek().type == TT.IDENT && lex.peek(1).type == TT.IDENT && lex.peek(1).raw == "in") {
+        if (lex.peek().type == TT.IDENT && lex.peek(1).type == TT.IDENT && (lex.peek(1).raw == "in" || lex.peek(1).raw == "of")) {
             val name = lex.consume().raw
-            lex.consume() // "in"
+            val isOf = lex.consume().raw == "of"
             val obj = parseAssign()
             lex.expect(TT.RPAREN)
-            return ForInStmt(name, obj, parseStatement(), declared = false)
+            return if (isOf) ForOfStmt(name, obj, parseStatement(), declared = false)
+            else ForInStmt(name, obj, parseStatement(), declared = false)
         }
         // Audit-20 #1: init/update are sequence expressions
         // in JS — parseSeq, not parseAssign, so comma lists
@@ -1670,6 +1683,36 @@ private class JsInterpreter(
                             // did); a Double key made
                             // k === "0" never true.
                             bindKey(i.toString())
+                            try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
+                        }
+                        else -> {}
+                    }
+                } catch (_: BreakSignal) {}
+                Unit
+            }
+            is ForOfStmt -> {
+                // Audit-21 #2: iterate VALUES (arrays and
+                // strings); anything else is not iterable
+                // here and the body is skipped, mirroring
+                // for-in over a non-object. The declared
+                // form defines in the function scope like
+                // for-in (Audit-20 #2); the bare form
+                // assigns. The element list is snapshotted
+                // so the body may mutate the source.
+                val obj = evalExpr(node.obj, scope)
+                val inner = Scope(scope)
+                val loopVarScope = scope.functionScope()
+                fun bindValue(v: Any?) {
+                    if (node.declared) loopVarScope.define(node.decl, v) else scope.set(node.decl, v)
+                }
+                try {
+                    when (obj) {
+                        is JsList -> for (el in obj.elements.toList()) {
+                            bindValue(el)
+                            try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
+                        }
+                        is CharSequence -> for (ch in obj) {
+                            bindValue(ch.toString())
                             try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
                         }
                         else -> {}
