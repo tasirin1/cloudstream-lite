@@ -1815,9 +1815,15 @@ private class JsInterpreter(
         is ArrayLit -> JsList(node.elems.map { evalExpr(it, scope) }.toMutableList())
         is ObjLit -> JsObject(node.pairs.associate { (k, v) -> k to evalExpr(v, scope) }.toMutableMap())
         is FuncExpr -> {
-            val fn = JsFunction(node.name, node.params, node.body, scope)
-            if (node.name != null) scope.define(node.name, fn)
-            fn
+            // Audit-21 #6: a named function EXPRESSION's name
+            // is bound only inside its own body in JS. Defining
+            // it here leaked it into the enclosing scope
+            // (`typeof g` was "function" after
+            // `var f = function g(){}`). Declarations are
+            // rewritten to VarDecl by the parser, so they keep
+            // their binding from there; the in-body binding is
+            // installed at call time in callAny.
+            JsFunction(node.name, node.params, node.body, scope)
         }
         is SeqExpr -> node.exprs.fold(Unit as Any?) { _, e -> evalExpr(e, scope) }
         is TypeofExpr -> {
@@ -2310,7 +2316,13 @@ private class JsInterpreter(
     private fun callAny(callee: Any?, args: List<Any?>, thisVal: Any?): Any? = when (callee) {
         is NativeFn -> callee.fn(args)
         is JsFunction -> {
-            val fnScope = Scope(callee.closure, isFunctionRoot = true)
+            // Audit-21 #6: the function's own name lives in a
+            // scope between the closure and the call scope —
+            // visible to the body (recursion) but not outside,
+            // and still shadowed by a same-named parameter.
+            val nameScope = Scope(callee.closure)
+            if (callee.name != null) nameScope.define(callee.name, callee)
+            val fnScope = Scope(nameScope, isFunctionRoot = true)
             fnScope.define("this", thisVal)
             fnScope.define("arguments", JsList(args.toMutableList()))
             callee.params.forEachIndexed { i, p -> fnScope.define(p, args.getOrElse(i) { Unit }) }
