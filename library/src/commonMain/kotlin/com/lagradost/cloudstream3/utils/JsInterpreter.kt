@@ -505,7 +505,7 @@ private data class ReturnStmt(val expr: Node?) : Node()
 private data class IfStmt(val test: Node, val cons: Node, val alt: Node?) : Node()
 private data class WhileStmt(val test: Node, val body: Node) : Node()
 private data class ForStmt(val init: Node?, val test: Node?, val update: Node?, val body: Node) : Node()
-private data class ForInStmt(val decl: String, val obj: Node, val body: Node) : Node()
+private data class ForInStmt(val decl: String, val obj: Node, val body: Node, val declared: Boolean = true) : Node()
 private object BreakStmt : Node()
 private object ContinueStmt : Node()
 private data class TryCatch(val body: List<Node>, val catchParam: String?, val catchBody: List<Node>?, val finallyBody: List<Node>?) : Node()
@@ -699,6 +699,20 @@ private class Parser(private val lex: Lexer) {
             val update = if (lex.peek().type != TT.RPAREN) parseSeq() else null
             lex.expect(TT.RPAREN)
             return ForStmt(init, test, update, parseStatement())
+        }
+        // Audit-21 #1: `for (k in obj)` with a bare
+        // identifier — the old code parsed the init as a
+        // sequence expression, turning `in` into a binary
+        // operator and then desyncing on the object, which
+        // failed the whole eval. Only an identifier directly
+        // followed by `in` takes this branch; anything else
+        // keeps the classic-for path below.
+        if (lex.peek().type == TT.IDENT && lex.peek(1).type == TT.IDENT && lex.peek(1).raw == "in") {
+            val name = lex.consume().raw
+            lex.consume() // "in"
+            val obj = parseAssign()
+            lex.expect(TT.RPAREN)
+            return ForInStmt(name, obj, parseStatement(), declared = false)
         }
         // Audit-20 #1: init/update are sequence expressions
         // in JS — parseSeq, not parseAssign, so comma lists
@@ -1637,9 +1651,16 @@ private class JsInterpreter(
                 // it through the parent chain.
                 val loopVarScope = scope.functionScope()
                 try {
+                    // Audit-21 #1: the undeclared form
+                    // (`for (k in obj)`) ASSIGNS to the
+                    // existing binding (or a sloppy global)
+                    // instead of defining a loop variable.
+                    fun bindKey(key: String) {
+                        if (node.declared) loopVarScope.define(node.decl, key) else scope.set(node.decl, key)
+                    }
                     when (obj) {
                         is JsObject -> for (key in obj.props.keys) {
-                            loopVarScope.define(node.decl, key)
+                            bindKey(key)
                             try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
                         }
                         is JsList -> for (i in obj.elements.indices) {
@@ -1648,7 +1669,7 @@ private class JsInterpreter(
                             // (the object branch above already
                             // did); a Double key made
                             // k === "0" never true.
-                            loopVarScope.define(node.decl, i.toString())
+                            bindKey(i.toString())
                             try { execNode(node.body, inner) } catch (_: ContinueSignal) {}
                         }
                         else -> {}
