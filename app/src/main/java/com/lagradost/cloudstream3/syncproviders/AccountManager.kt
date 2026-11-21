@@ -101,11 +101,22 @@ abstract class AccountManager {
         // held in the Android KeyStore. If the keystore is somehow
         // unavailable, storage falls back to plaintext instead of
         // breaking logins entirely.
+        // Audit-21 #10: guards the check-then-generate in
+        // tokenKey() — two concurrent first-time callers both
+        // passed the existence check and both generated, and
+        // the second generateKey() overwrote the first key,
+        // orphaning every ciphertext made with it.
+        private val tokenKeyLock = Any()
+
         private fun tokenKey(): javax.crypto.SecretKey? = runCatching {
             val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore")
                 .apply { load(null) }
             (keyStore.getEntry(TOKEN_KEY_ALIAS, null) as?
-                java.security.KeyStore.SecretKeyEntry)?.secretKey ?: run {
+                java.security.KeyStore.SecretKeyEntry)?.secretKey ?: synchronized(tokenKeyLock) {
+                // Re-check inside the lock: another caller may
+                // have created the key while this one waited.
+                (keyStore.getEntry(TOKEN_KEY_ALIAS, null) as?
+                    java.security.KeyStore.SecretKeyEntry)?.secretKey ?: run {
                 val generator = javax.crypto.KeyGenerator
                     .getInstance(android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
                 generator.init(
@@ -120,6 +131,7 @@ abstract class AccountManager {
                         .build()
                 )
                 generator.generateKey()
+                }
             }
         }.getOrNull()
 
