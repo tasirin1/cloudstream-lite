@@ -178,7 +178,7 @@ object VideoDownloadManager {
 
     /** the user pressed stop, so no need to download anything else */
     private val DOWNLOAD_STOPPED =
-        DownloadStatus(retrySame = false, tryNext = false, success = true)
+        DownloadStatus(retrySame = false, tryNext = false, success = true, stopped = true)
 
     /** the process failed due to some reason, so we retry and also try the next mirror */
     private val DOWNLOAD_FAILED = DownloadStatus(retrySame = true, tryNext = true, success = false)
@@ -2403,6 +2403,22 @@ object VideoDownloadManager {
                     // mirror was being attempted ends the loop
                     // quietly — it is neither success nor failure.
                     if (isCancelled) break
+
+                    // Audit-21 #4: DOWNLOAD_STOPPED also arrives
+                    // WITHOUT an instance stop — the file watcher
+                    // (or the post-join missing-file check) stops
+                    // the metadata when the partial file is
+                    // deleted outside the app. Its success=true
+                    // only means "do not retry / try the next
+                    // mirror"; mapping it to isCompleted recorded
+                    // a vanished file as a finished download and
+                    // discarded the resume package. Adopt it as
+                    // an instance stop instead, so cleanup runs
+                    // the stopped path.
+                    if (connectionResult.stopped) {
+                        isCancelled = true
+                        break
+                    }
 
                     if (connectionResult.success) { // SUCCESS
                         isCompleted = true

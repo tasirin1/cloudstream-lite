@@ -188,6 +188,10 @@ object DownloadObjects {
         val tryNext: Boolean,
         /** if the result is what the user intended */
         val success: Boolean,
+        /** Audit-21 #4: the download was stopped before finishing.
+         * Needed because DOWNLOAD_SUCCESS and DOWNLOAD_STOPPED
+         * share every other field value. */
+        val stopped: Boolean = false,
     )
 
     data class CreateNotificationMetadata(
