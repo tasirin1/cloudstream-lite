@@ -1358,6 +1358,10 @@ private fun looseEq(a: Any?, b: Any?): Boolean {
 }
 
 private class JsList(val elements: MutableList<Any?> = mutableListOf()) {
+    // Audit-21 #7: negative indices are ordinary named
+    // properties in JS (`a[-1] = 5` sets property "-1",
+    // length unchanged) — kept apart from the elements.
+    val negProps: MutableMap<Int, Any?> = mutableMapOf()
     var length: Int
         get() = elements.size
         set(v) {
@@ -1372,8 +1376,15 @@ private class JsList(val elements: MutableList<Any?> = mutableListOf()) {
             while (elements.size > v) elements.removeAt(elements.size - 1)
         }
 
-    operator fun get(idx: Int): Any? = elements.getOrElse(idx) { Unit }
+    operator fun get(idx: Int): Any? =
+        if (idx < 0) negProps[idx] ?: Unit else elements.getOrElse(idx) { Unit }
     operator fun set(idx: Int, v: Any?) {
+        // Audit-21 #7: a negative index used to throw here
+        // and abort the whole eval; it is a named property.
+        if (idx < 0) {
+            negProps[idx] = v
+            return
+        }
         // Audit-14 #2: sparse-index assignment is the same
         // bypass — `a[2e9] = 1` padded the list to the index.
         if (idx !in 0 until JS_MAX_NATIVE_SIZE) {
