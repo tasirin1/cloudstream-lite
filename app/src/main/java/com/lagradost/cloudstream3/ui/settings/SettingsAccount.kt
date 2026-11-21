@@ -282,32 +282,46 @@ class SettingsAccount {
                                 )
                             )
 
-                            val pollJob = ioSafe {
-                                // Audit-19 #13: the interval is
-                                // provider-controlled and was
-                                // never validated — interval 0
-                                // made rem() throw on every tick,
-                                // so login was never attempted
-                                // and the dialog just counted
-                                // down. Treat a non-positive
-                                // interval as "poll every tick".
-                                val interval = pinCodeData.interval.takeIf { it > 0 } ?: 1
-                                if (secondsUntilFinished.rem(interval) == 0 && api.login(
-                                        pinCodeData
-                                    )
-                                ) {
-                                    showToast(
-                                        txt(
-                                            R.string.authenticated_user,
-                                            api.name
+                            // Audit-19 #13: the interval is
+                            // provider-controlled and was
+                            // never validated — interval 0
+                            // made rem() throw on every tick,
+                            // so login was never attempted
+                            // and the dialog just counted
+                            // down. Treat a non-positive
+                            // interval as "poll every tick".
+                            val interval = pinCodeData.interval.takeIf { it > 0 } ?: 1
+                            // Audit-21 #9: the poll was anchored
+                            // to the REMAINING seconds
+                            // (rem == 0), whose largest tick value
+                            // is expiresIn - 1 — so with
+                            // interval >= expiresIn no tick ever
+                            // qualified and login was never
+                            // attempted at all. Anchor to ELAPSED
+                            // seconds instead, and give a
+                            // never-schedulable interval one
+                            // final attempt on the last tick.
+                            val elapsedSeconds =
+                                pinCodeData.expiresIn - secondsUntilFinished
+                            val due =
+                                (elapsedSeconds > 0 && elapsedSeconds.rem(interval) == 0) ||
+                                    (interval >= pinCodeData.expiresIn && secondsUntilFinished <= 1)
+                            if (due) {
+                                val pollJob = ioSafe {
+                                    if (api.login(pinCodeData)) {
+                                        showToast(
+                                            txt(
+                                                R.string.authenticated_user,
+                                                api.name
+                                            )
                                         )
-                                    )
-                                    dialog.dismissSafe(activity)
-                                    cancel()
+                                        dialog.dismissSafe(activity)
+                                        cancel()
+                                    }
                                 }
+                                pinPollJobs.add(pollJob)
+                                pollJob.invokeOnCompletion { pinPollJobs.remove(pollJob) }
                             }
-                            pinPollJobs.add(pollJob)
-                            pollJob.invokeOnCompletion { pinPollJobs.remove(pollJob) }
                         }
 
                         override fun onFinish() {
