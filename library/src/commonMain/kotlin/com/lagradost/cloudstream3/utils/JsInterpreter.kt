@@ -1409,8 +1409,15 @@ private class Scope(val parent: Scope? = null, val isFunctionRoot: Boolean = fal
 
     fun set(name: String, value: Any?) {
         val scope = findOwner(name)
-        if (scope != null) scope.vars[name] = value else vars[name] = value
+        // Audit-21 #5: an assignment to a name nobody
+        // declared is a sloppy-mode GLOBAL in JS. The old
+        // fallback defined it in the CURRENT scope, so a
+        // global created inside a function vanished when
+        // the function returned.
+        if (scope != null) scope.vars[name] = value else rootScope().vars[name] = value
     }
+
+    private fun rootScope(): Scope = parent?.rootScope() ?: this
 
     fun define(name: String, value: Any?) { vars[name] = value }
 
